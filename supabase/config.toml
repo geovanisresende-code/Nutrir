@@ -1,0 +1,4 @@
+project_id = "odgfayddqknxnpzwyrqh"
+
+[functions.portal-cliente]
+verify_jwt = false

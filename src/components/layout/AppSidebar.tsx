@@ -1,0 +1,313 @@
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard, Map, Sprout, FlaskRound, ShoppingCart, FileText,
+  Brain, Satellite, FlaskConical, MapPin, TestTube, Globe, Box, Users,
+  Building2, Settings, CreditCard, Plug, ChevronRight, ShieldCheck, Route as RouteIcon,
+  Leaf, Beaker, Package, FileSpreadsheet, Briefcase, DollarSign, BarChart3,
+  ClipboardList, Receipt, Boxes, AlertCircle, UserCog, Activity, BookOpen, Calculator,
+  Database, Layers,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Logo } from "@/components/Logo";
+import { useState, useMemo } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { usePosition } from "@/hooks/usePosition";
+import { can } from "@/lib/permissions";
+
+/*
+  ── Sidebar Unificado (Agromap × Nutrir Core) ──
+  Estruturado conforme a especificação:
+    1) Área do Representante  (com submenus aninhados)
+    2) Área do Gerente        (autorizações controladas pelo ADM)
+    3) Gestão do Programa     (somente ADM)
+*/
+
+type LeafItem = { to: string; label: string; icon: any; end?: boolean; badge?: string };
+type GroupItem = { label: string; icon: any; badge?: string; children: LeafItem[] };
+type AnyItem = LeafItem | GroupItem;
+type NavSection = { title: string; items: AnyItem[] };
+
+const isGroup = (i: AnyItem): i is GroupItem => "children" in i;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 1 — Área do Representante
+// ─────────────────────────────────────────────────────────────────────────────
+const repSection: NavSection = {
+  title: "Área do Representante",
+  items: [
+    { to: "/app/rep", label: "Dashboard Rep.", icon: LayoutDashboard, end: true },
+    { to: "/app/rep/roteiro", label: "Roteiro do dia", icon: RouteIcon, badge: "IA" },
+    {
+      label: "Relatório de Visitas",
+      icon: ClipboardList,
+      children: [
+        { to: "/app/rep/visitas",          label: "Registrar Visita",       icon: ClipboardList },
+        { to: "/app/rep/estoque-cliente",  label: "Estoque do Cliente",     icon: Boxes },
+        { to: "/app/rep/contas-receber",   label: "Contas a Receber",       icon: Receipt },
+        { to: "/app/rep/comissoes",        label: "Comissões",              icon: DollarSign },
+        { to: "/app/rep/campos-teste",     label: "Campos de Teste",        icon: TestTube },
+      ],
+    },
+    { to: "/app/rep/rdv",       label: "RDV",      icon: FileSpreadsheet },
+    { to: "/app/rep/clientes",  label: "Clientes", icon: Briefcase },
+    {
+      label: "Programa Nutrir",
+      icon: Sprout,
+      children: [
+        { to: "/app/nutrir",                   label: "Hub Nutrir",                       icon: Sprout, end: true },
+        { to: "/app/nutrir/orcamento",         label: "Orçamento de Consultoria",         icon: FileSpreadsheet },
+        { to: "/app/nutrir/orcamento-nutricao",label: "Orçamento + Nutrição",             icon: Leaf, badge: "novo" },
+        { to: "/app/nutrir/painel-custo",      label: "Painel Custo de Análise",          icon: Calculator },
+        { to: "/app/nutrir/orcamentos",        label: "Orçamentos salvos",                icon: FileText },
+      ],
+    },
+    { to: "/app/nutrir/produtos", label: "Produtos", icon: Package },
+    { to: "/app/rep/pedidos",     label: "Pedidos",  icon: ShoppingCart },
+    {
+      label: "Mapas e Talhões",
+      icon: Map,
+      children: [
+        { to: "/app/mapas",          label: "Criar Mapas",       icon: Map },
+        { to: "/app/nutrir/ndvi",    label: "Análise NDVI",      icon: Satellite },
+        { to: "/app/nutrir/coleta",  label: "Coletar Amostras",  icon: MapPin },
+      ],
+    },
+    {
+      label: "IA Agronômica",
+      icon: Brain,
+      children: [
+        { to: "/app/ia/solo",      label: "Análise de Solo",            icon: FlaskConical },
+        { to: "/app/ia/sintomas",  label: "Sintomas Foliares",          icon: Leaf },
+      ],
+    },
+    { to: "/app/relatorios", label: "Relatórios", icon: FileText },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 2 — Área do Gerente
+// ─────────────────────────────────────────────────────────────────────────────
+const gerenteSection: NavSection = {
+  title: "Área do Gerente",
+  items: [
+    { to: "/app/gerente/dashboard",   label: "Dashboard Comercial",  icon: BarChart3 },
+    { to: "/app/gerente/ouvidoria",   label: "Ouvidoria",            icon: AlertCircle, badge: "alertas" },
+    { to: "/app/gerente/equipe",      label: "Equipe Regional",      icon: Users },
+    { to: "/app/gerente/aprovacoes",  label: "Aprovações",           icon: ShieldCheck },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 3 — Gestão do Programa (somente ADM)
+// ─────────────────────────────────────────────────────────────────────────────
+const gestaoSection: NavSection = {
+  title: "Gestão do Programa",
+  items: [
+    { to: "/app/gestao/orcamento-consultoria", label: "Orçamento Consultoria",  icon: Activity, badge: "motor" },
+    { to: "/app/gestao/clientes",              label: "BD de Clientes",          icon: Database },
+    {
+      label: "Banco de Dados de Produtos",
+      icon: Package,
+      children: [
+        { to: "/app/gestao/produtos",       label: "Produtos",                  icon: Package },
+        { to: "/app/gestao/precificacao",   label: "Precificação de Produtos",  icon: DollarSign },
+        { to: "/app/nutrir/modalidades",    label: "Modalidades",               icon: Layers },
+      ],
+    },
+    { to: "/app/nutrir/regionais",     label: "Regionais",                       icon: Globe },
+    { to: "/app/gestao/colaboradores", label: "Representantes e Colaboradores",  icon: UserCog },
+    { to: "/app/gestao/rdv-relatorios",label: "Relatórios de Despesas Colab.",   icon: Receipt },
+    { to: "/app/gestao/culturas",      label: "Banco de Dados de Culturas",      icon: Sprout },
+    {
+      label: "Motor de Cálculos",
+      icon: FlaskConical,
+      badge: "core",
+      children: [
+        { to: "/app/gestao/motor-calculos",     label: "Calculadora Nutrir",       icon: Calculator },
+        { to: "/app/nutrir/materias-primas",    label: "Matérias-primas",          icon: Beaker },
+        { to: "/app/nutrir/embalagens",         label: "Embalagens",               icon: Box },
+        { to: "/app/nutrir/complexadores",      label: "Complexadores",            icon: FlaskRound },
+        { to: "/app/nutrir/fontes-formulas",    label: "Fontes & Fórmulas",        icon: BookOpen },
+        { to: "/app/gestao/importacoes",        label: "Importações CSV/Excel",    icon: FileSpreadsheet },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 4 — Financeiro & Operações (opcional, controlado por permissão)
+// ─────────────────────────────────────────────────────────────────────────────
+const operacaoSection: NavSection = {
+  title: "Financeiro & Operações",
+  items: [
+    { to: "/app/financeiro",            label: "Financeiro",         icon: DollarSign },
+    { to: "/app/crm",                   label: "CRM Pipeline",       icon: BarChart3 },
+    {
+      label: "Estoque",
+      icon: Boxes,
+      children: [
+        { to: "/app/estoque/lotes",      label: "Estoque por Lotes", icon: Boxes },
+        { to: "/app/estoque/romaneios",  label: "Romaneios",         icon: ClipboardList },
+      ],
+    },
+    { to: "/app/admin/portal",          label: "Portal do Cliente",  icon: ShieldCheck },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 5 — Administração geral (organização, planos, configurações)
+// ─────────────────────────────────────────────────────────────────────────────
+const adminSection: NavSection = {
+  title: "Administração",
+  items: [
+    { to: "/app",                  label: "Dashboard",           icon: LayoutDashboard, end: true },
+    { to: "/app/admin/usuarios",   label: "Usuários",            icon: ShieldCheck },
+    { to: "/app/equipe",           label: "Equipe",              icon: Users },
+    { to: "/app/organizacao",      label: "Organização",         icon: Building2 },
+    { to: "/app/billing",          label: "Planos & Cobrança",   icon: CreditCard },
+    { to: "/app/integracoes",      label: "Integrações",         icon: Plug },
+    { to: "/app/configuracoes",    label: "Configurações",       icon: Settings },
+  ],
+};
+
+// Mínimo p/ viewer (cliente)
+const viewerSection: NavSection = {
+  title: "Minha Área",
+  items: [
+    { to: "/app",                label: "Dashboard",     icon: LayoutDashboard, end: true },
+    { to: "/app/relatorios",     label: "Relatórios",    icon: FileText },
+    { to: "/app/configuracoes",  label: "Configurações", icon: Settings },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────────────────────────────────────────
+export const AppSidebar = () => {
+  const { isAdmin, isDirector, loading: r1 } = useUserRole();
+  const { position, loading: r2 } = usePosition();
+  const loading = r1 || r2;
+
+  const sections = useMemo<NavSection[]>(() => {
+    if (loading) return [];
+    if (position === "cliente") return [viewerSection];
+    const out: NavSection[] = [];
+    if (can(position, "rep.area"))      out.push(repSection);
+    if (can(position, "gerente.area"))  out.push(gerenteSection);
+    if (can(position, "gestao.area") || isAdmin || isDirector) out.push(gestaoSection);
+    if (can(position, "operacao.area")) out.push(operacaoSection);
+    if (can(position, "org.manage") || isAdmin || isDirector)  out.push(adminSection);
+    if (out.length === 0) out.push(viewerSection);
+    return out;
+  }, [loading, position, isAdmin, isDirector]);
+
+  return (
+    <aside className="w-64 shrink-0 bg-gradient-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 border-r border-sidebar-border">
+      <div className="px-4 py-3 border-b border-sidebar-border bg-white/[0.02]">
+        <div className="flex items-center justify-center bg-white/95 rounded-lg py-2 px-3 shadow-soft">
+          <Logo className="h-8" />
+        </div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/50 text-center mt-2">
+          AgroMap · Nutrir
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-2">
+        {sections.map((section) => (
+          <SidebarSection key={section.title} section={section} />
+        ))}
+      </nav>
+    </aside>
+  );
+};
+
+const SidebarSection = ({ section }: { section: NavSection }) => {
+  const { pathname } = useLocation();
+  const hasActive = section.items.some(item =>
+    isGroup(item)
+      ? item.children.some(c => (c.end ? pathname === c.to : pathname.startsWith(c.to)))
+      : (item.end ? pathname === item.to : pathname.startsWith(item.to))
+  );
+  const [open, setOpen] = useState(hasActive || section.title === "Área do Representante");
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-base"
+      >
+        <span>{section.title}</span>
+        <ChevronRight className={cn("h-3 w-3 transition-base", open && "rotate-90")} />
+      </button>
+      {open && (
+        <div className="px-2 space-y-0.5">
+          {section.items.map((item, idx) =>
+            isGroup(item)
+              ? <NavGroup key={item.label + idx} group={item} />
+              : <NavItemRow key={item.to} item={item} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const NavGroup = ({ group }: { group: GroupItem }) => {
+  const { pathname } = useLocation();
+  const childActive = group.children.some(c =>
+    c.end ? pathname === c.to : pathname.startsWith(c.to)
+  );
+  const [open, setOpen] = useState(childActive);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={cn(
+          "w-full group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-base",
+          childActive
+            ? "bg-sidebar-accent/40 text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
+        )}
+      >
+        <group.icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 truncate text-left">{group.label}</span>
+        {group.badge && (
+          <span className="text-[9px] uppercase font-bold tracking-wider bg-sidebar-primary text-sidebar-primary-foreground px-1.5 py-0.5 rounded">
+            {group.badge}
+          </span>
+        )}
+        <ChevronRight className={cn("h-3.5 w-3.5 transition-base opacity-60", open && "rotate-90")} />
+      </button>
+      {open && (
+        <div className="ml-3 pl-2 mt-0.5 space-y-0.5 border-l border-sidebar-border/40">
+          {group.children.map(item => <NavItemRow key={item.to} item={item} compact />)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const NavItemRow = ({ item, compact = false }: { item: LeafItem; compact?: boolean }) => (
+  <NavLink
+    to={item.to}
+    end={item.end}
+    className={({ isActive }) =>
+      cn(
+        "group flex items-center gap-2.5 rounded-md text-sm transition-base",
+        compact ? "px-2 py-1" : "px-3 py-1.5",
+        isActive
+          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-soft"
+          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+      )
+    }
+  >
+    <item.icon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+    <span className="flex-1 truncate">{item.label}</span>
+    {item.badge && (
+      <span className="text-[9px] uppercase font-bold tracking-wider bg-sidebar-primary text-sidebar-primary-foreground px-1.5 py-0.5 rounded">
+        {item.badge}
+      </span>
+    )}
+  </NavLink>
+);
