@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/layout/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "o
 export default function CamposTeste() {
   const { current } = useOrg();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const clienteFiltroDaUrl = searchParams.get("cliente");
   const [items, setItems] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [produtosDB, setProdutosDB] = useState<{ id: string; nome: string }[]>([]);
@@ -91,6 +94,21 @@ export default function CamposTeste() {
     setProdutosDB((prods as any[]) ?? []);
   };
   useEffect(() => { load(); }, [current?.id]);
+
+  // Auto-seleciona o teste do cliente quando vier via query param (?cliente=ID)
+  useEffect(() => {
+    if (!clienteFiltroDaUrl || items.length === 0) return;
+    const ativo = items.find(
+      (i) => i.cliente_id === clienteFiltroDaUrl && i.status === "em_andamento"
+    ) ?? items.find((i) => i.cliente_id === clienteFiltroDaUrl);
+    if (ativo) {
+      setSelected(ativo);
+      loadRelatorios(ativo.id);
+      loadNdvi(ativo.id);
+      toast.info(`Teste do cliente carregado automaticamente`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteFiltroDaUrl, items.length]);
 
   const loadRelatorios = async (campoId: string) => {
     const { data } = await supabase
@@ -221,19 +239,71 @@ export default function CamposTeste() {
     if (!confirm("Gerar relatório final com IA e finalizar este teste?")) return;
     setGenIA(true);
     try {
-      const { data, error } = await supabase.functions.invoke("campo-teste-relatorio", {
+      const { error } = await supabase.functions.invoke("campo-teste-relatorio", {
         body: { campo_teste_id: selected.id },
       });
       if (error) throw error;
-      toast.success("Relatório gerado!");
-      // recarrega registro
+      toast.success("Relatório IA gerado! Gerando PDF…");
+
+      // Recarrega o registro com o relatório IA salvo
       const { data: refreshed } = await supabase
         .from("nutrir_campos_teste" as any).select("*").eq("id", selected.id).single();
       setSelected(refreshed);
+
+      // Carrega dados auxiliares pra o PDF
+      const { data: cli } = await supabase
+        .from("nutrir_clientes" as any).select("razao_social, cidade, uf")
+        .eq("id", (refreshed as any)?.cliente_id).maybeSingle();
+      const { data: rels } = await supabase
+        .from("nutrir_campos_teste_relatorios" as any).select("*")
+        .eq("campo_teste_id", selected.id).order("data", { ascending: true });
+      const { data: ndvi } = await supabase
+        .from("nutrir_campos_teste_ndvi" as any).select("*")
+        .eq("campo_teste_id", selected.id).order("data", { ascending: true });
+
+      // Gera PDF Canva-style e baixa
+      const { gerarCampoTestePDF, baixarBlob } = await import("@/lib/nutrir/campo-teste-pdf");
+      const blob = await gerarCampoTestePDF({
+        campo: refreshed,
+        cliente: cli as any,
+        relatorios: (rels as any[]) ?? [],
+        ndvi_serie: (ndvi as any[]) ?? [],
+      });
+      const nomeArq = `campo-teste-${((refreshed as any)?.titulo ?? "relatorio").replace(/\s+/g, "_").toLowerCase()}.pdf`;
+      baixarBlob(blob, nomeArq);
+      toast.success("PDF baixado!");
       load();
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao gerar relatório");
     } finally { setGenIA(false); }
+  };
+
+  // Permite baixar PDF de novo se o relatório já existir
+  const baixarRelatorioPDF = async () => {
+    if (!selected) return;
+    try {
+      toast.info("Gerando PDF…");
+      const { data: cli } = await supabase
+        .from("nutrir_clientes" as any).select("razao_social, cidade, uf")
+        .eq("id", (selected as any)?.cliente_id).maybeSingle();
+      const { data: rels } = await supabase
+        .from("nutrir_campos_teste_relatorios" as any).select("*")
+        .eq("campo_teste_id", selected.id).order("data", { ascending: true });
+      const { data: ndvi } = await supabase
+        .from("nutrir_campos_teste_ndvi" as any).select("*")
+        .eq("campo_teste_id", selected.id).order("data", { ascending: true });
+      const { gerarCampoTestePDF, baixarBlob } = await import("@/lib/nutrir/campo-teste-pdf");
+      const blob = await gerarCampoTestePDF({
+        campo: selected,
+        cliente: cli as any,
+        relatorios: (rels as any[]) ?? [],
+        ndvi_serie: (ndvi as any[]) ?? [],
+      });
+      baixarBlob(blob, `campo-teste-${((selected as any)?.titulo ?? "relatorio").replace(/\s+/g, "_").toLowerCase()}.pdf`);
+      toast.success("PDF baixado!");
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao gerar PDF");
+    }
   };
 
   const removerTeste = async (id: string) => {
@@ -584,8 +654,15 @@ export default function CamposTeste() {
 
                     <TabsContent value="relatorio" className="mt-3">
                       {selected.relatorio_final_resumo ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown>{selected.relatorio_final_resumo}</ReactMarkdown>
+                        <div className="space-y-3">
+                          <div className="flex justify-end">
+                            <Button size="sm" variant="outline" onClick={baixarRelatorioPDF}>
+                              <FileText className="h-4 w-4 mr-1.5" />Baixar PDF
+                            </Button>
+                          </div>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{selected.relatorio_final_resumo}</ReactMarkdown>
+                          </div>
                         </div>
                       ) : (
                         <div className="text-sm text-muted-foreground py-6 text-center">

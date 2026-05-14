@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Plus, Trash2, ShoppingCart, FileSignature, FileText as FileIcon, Send, X, CalendarIcon, Download, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/AppShell";
+import VendedorBadge from "@/components/representante/VendedorBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -388,6 +389,7 @@ export default function PedidosRep() {
 
   return (
     <>
+      <div className="px-3 md:px-6 pt-3"><VendedorBadge /></div>
       <PageHeader
         title="Pedidos"
         description="Crie pedidos no campo, colha assinatura digital e envie para a central"

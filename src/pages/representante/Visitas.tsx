@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useNavigate } from "react-router-dom";
+import VendedorBadge from "@/components/representante/VendedorBadge";
 
 type MotivoEnum =
   | "rotina_relacionamento" | "prospeccao_venda" | "acompanhamento_teste"
@@ -237,7 +238,7 @@ export default function Visitas() {
         action: (
           <button
             className="text-xs underline"
-            onClick={() => navigate("/app/rep/campos-teste")}
+            onClick={() => navigate(`/app/rep/campos-teste?cliente=${clienteId}`)}
           >Abrir Campos de Teste</button>
         ) as any,
       });
@@ -252,6 +253,7 @@ export default function Visitas() {
 
   return (
     <div className="space-y-6">
+      <VendedorBadge />
       <PageHeader
         title="Relatório de Visitas"
         description="Registre suas visitas, fotos e alertas para a Ouvidoria"
@@ -335,8 +337,8 @@ export default function Visitas() {
                 {motivo === "acompanhamento_teste" && clienteId !== "livre" && (
                   <div className="border rounded-md p-3 bg-blue-500/5 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-sm"><FlaskConical className="w-4 h-4 text-blue-600" />
-                      <span>Após salvar, abra <strong>Campos de Teste</strong> para registrar o acompanhamento.</span></div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => navigate("/app/rep/campos-teste")}>Abrir</Button>
+                      <span>Após salvar, abra <strong>Campos de Teste deste cliente</strong> para registrar o acompanhamento.</span></div>
+                    <Button type="button" size="sm" variant="outline" onClick={() => navigate(`/app/rep/campos-teste?cliente=${clienteId}`)}>Abrir teste do cliente</Button>
                   </div>
                 )}
 

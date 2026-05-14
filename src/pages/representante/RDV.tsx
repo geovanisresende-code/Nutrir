@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Camera, Trash2, Send, FileText } from "lucide-react";
+import VendedorBadge from "@/components/representante/VendedorBadge";
 
 const CATEGORIAS = [
   { v: "combustivel", l: "Combustível" },
@@ -254,6 +255,35 @@ export default function RDV() {
         title="RDV — Despesas de Viagem"
         description="Combustível, alimentação, hospedagem e mais"
         actions={
+          <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={async () => {
+            try {
+              const fim = new Date();
+              const inicio = new Date(fim.getFullYear(), fim.getMonth(), 1);
+              const doMes = items.filter(i => {
+                if (!i.data) return false;
+                const d = new Date(i.data);
+                return d >= inicio && d <= fim;
+              });
+              if (doMes.length === 0) {
+                toast({ title: "Sem lançamentos no mês atual" });
+                return;
+              }
+              const { gerarRdvPDF, baixarBlobRDV } = await import("@/lib/nutrir/rdv-pdf");
+              const blob = await gerarRdvPDF({
+                rdvs: doMes,
+                vendedor: { nome: user?.email ?? "Vendedor" },
+                periodo: { inicio, fim },
+              });
+              const mes = `${inicio.getFullYear()}-${String(inicio.getMonth()+1).padStart(2,"0")}`;
+              baixarBlobRDV(blob, `rdv-${mes}.pdf`);
+              toast({ title: "PDF baixado!" });
+            } catch (e: any) {
+              toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
+            }
+          }}>
+            <FileText className="h-4 w-4 mr-1" /> Baixar PDF do mês
+          </Button>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-primary"><Plus className="h-4 w-4 mr-1" /> Nova despesa</Button>
@@ -372,10 +402,12 @@ export default function RDV() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         }
       />
 
       <div className="p-6 space-y-4">
+        <VendedorBadge />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total no mês</div><div className="text-2xl font-bold">{fmt(totalMes)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total lançado</div><div className="text-2xl font-bold">{fmt(total)}</div></CardContent></Card>
