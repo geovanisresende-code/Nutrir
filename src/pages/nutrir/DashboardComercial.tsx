@@ -1,13 +1,26 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useOrgTable } from "@/lib/nutrir/useNutrirData";
 import { formatBRL } from "@/lib/nutrir/precos-engine";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, ShoppingCart, Users, Package, BarChart3 } from "lucide-react";
+import { TrendingUp, ShoppingCart, Users, Package, BarChart3, Receipt, Target, MapPin, UserPlus } from "lucide-react";
 import {
-  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend
+  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
+
+const RDV_CATEGORIA_LABEL: Record<string, string> = {
+  combustivel: "Combustível",
+  alimentacao: "Alimentação",
+  hospedagem: "Hospedagem",
+  pedagio: "Pedágio",
+  manutencao: "Manutenção",
+  estacionamento: "Estacionamento",
+  outros: "Outros",
+};
 
 interface Pedido { id: string; cliente_id: string | null; representante_id: string | null; regional_id: string | null; total: number; status: string; created_at: string; }
 interface PedItem { id: string; pedido_id: string; produto_id: string; quantidade: number; subtotal: number; }
@@ -25,6 +38,28 @@ export default function DashboardComercial() {
   const { data: representantes } = useOrgTable<Repr>("nutrir_representantes", { select: "id,nome" });
   const { data: regionais } = useOrgTable<Reg>("nutrir_regionais", { select: "id,nome" });
   const { data: produtos } = useOrgTable<Prod>("nutrir_produtos", { select: "id,nome" });
+  const { data: rdvs } = useOrgTable<any>("nutrir_rdv", { select: "id,categoria,valor,data" });
+  const { data: visitas } = useOrgTable<any>("nutrir_visitas", { select: "id,latitude,longitude,motivo,data_visita,cliente_id,alerta_nivel" });
+
+  // Despesas RDV agrupadas por categoria (último 30 dias)
+  const rdvPorCategoria = useMemo(() => {
+    const corte = new Date(); corte.setDate(corte.getDate() - 30);
+    const recentes = rdvs.filter((r: any) => r.data && new Date(r.data) >= corte);
+    const map = new Map<string, number>();
+    recentes.forEach((r: any) => {
+      const k = r.categoria ?? "outros";
+      map.set(k, (map.get(k) ?? 0) + Number(r.valor || 0));
+    });
+    return Array.from(map.entries()).map(([k, v]) => ({
+      name: RDV_CATEGORIA_LABEL[k] ?? k,
+      value: v,
+    })).sort((a, b) => b.value - a.value);
+  }, [rdvs]);
+
+  // Visitas com geolocalização válida
+  const visitasGeo = useMemo(() => visitas.filter(
+    (v: any) => v.latitude != null && v.longitude != null
+  ), [visitas]);
 
   const stats = useMemo(() => {
     const ativos = pedidos.filter(p => p.status !== "cancelado");
@@ -178,6 +213,63 @@ export default function DashboardComercial() {
                 ))}
               </tbody>
             </table>
+          </Card>
+        </div>
+
+        {/* RDV por categoria + Visitas no mapa */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Receipt className="w-4 h-4" />Despesas (RDV) por categoria — últimos 30 dias
+            </h3>
+            {rdvPorCategoria.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma despesa nos últimos 30 dias</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={rdvPorCategoria} dataKey="value" nameKey="name"
+                    cx="50%" cy="50%" outerRadius={80} label={(e) => `${e.name}`}>
+                    {rdvPorCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatBRL(v)}/>
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <MapPin className="w-4 h-4" />Visitas georreferenciadas
+            </h3>
+            {visitasGeo.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-12 text-center">
+                Nenhuma visita com GPS ainda. Capture localização ao registrar a visita.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                <p className="text-xs text-muted-foreground">
+                  {visitasGeo.length} visita{visitasGeo.length === 1 ? "" : "s"} com GPS · clica pra abrir no Google Maps
+                </p>
+                {visitasGeo.slice(0, 20).map((v: any) => (
+                  <a key={v.id}
+                     href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
+                     target="_blank" rel="noreferrer"
+                     className="block border rounded p-2 hover:bg-muted/40 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {v.data_visita ? new Date(v.data_visita).toLocaleDateString("pt-BR") : "—"}
+                        {" · "}{v.motivo?.replaceAll("_", " ")}
+                      </span>
+                      {v.alerta_nivel === "muito_urgente" && <Badge variant="destructive" className="text-[9px]">URGENTE</Badge>}
+                      {v.alerta_nivel === "ponto_atencao" && <Badge className="text-[9px] bg-amber-500">ATENÇÃO</Badge>}
+                    </div>
+                    <div className="text-muted-foreground font-mono text-[10px] mt-0.5">
+                      {Number(v.latitude).toFixed(5)}, {Number(v.longitude).toFixed(5)}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 

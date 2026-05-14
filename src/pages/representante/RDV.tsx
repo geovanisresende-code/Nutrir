@@ -13,8 +13,9 @@ import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Camera, Trash2, Send, FileText } from "lucide-react";
+import { Plus, Camera, Trash2, Send, FileText, ScanLine } from "lucide-react";
 import VendedorBadge from "@/components/representante/VendedorBadge";
+import DocumentScanner from "@/components/representante/DocumentScanner";
 
 const CATEGORIAS = [
   { v: "combustivel", l: "Combustível" },
@@ -130,6 +131,7 @@ export default function RDV() {
   // hospedagem
   const [hotelNome, setHotelNome] = useState("");
   const [cupom, setCupom] = useState<File | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const load = async () => {
     if (!current || !user) return;
@@ -385,14 +387,31 @@ export default function RDV() {
                 <div className="space-y-1.5"><Label>Descrição</Label><Textarea rows={2} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Observações…" /></div>
 
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1.5"><Camera className="h-4 w-4" /> Cupom / nota fiscal</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => setCupom(e.target.files?.[0] ?? null)}
+                  <Label className="flex items-center gap-1.5"><ScanLine className="h-4 w-4" /> Cupom / nota fiscal</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" onClick={() => setScannerOpen(true)} className="flex-1 min-w-[150px]">
+                      <ScanLine className="h-4 w-4 mr-1.5" />
+                      {cupom ? "Reescanear NF" : "Escanear NF / Cupom"}
+                    </Button>
+                    {cupom && (
+                      <>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {cupom.name.length > 20 ? cupom.name.slice(0, 20) + "…" : cupom.name}
+                        </Badge>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => setCupom(null)}>
+                          <Trash2 className="h-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    O scanner corrige contraste/brilho da foto automaticamente. Disponível "P&B alto contraste" pra notas térmicas apagadas.
+                  </p>
+                  <DocumentScanner
+                    open={scannerOpen}
+                    onOpenChange={setScannerOpen}
+                    onCapture={(f) => setCupom(f)}
                   />
-                  <p className="text-[11px] text-muted-foreground">No celular abre a câmera automaticamente.</p>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={loading} className="bg-gradient-primary">
