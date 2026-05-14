@@ -1,5 +1,5 @@
 // Service Worker simples — cache "stale-while-revalidate" para o shell e fallback offline.
-const CACHE = "nutrir-shell-v1";
+const CACHE = "nutrir-shell-v3";
 const SHELL = ["/", "/app", "/manifest.webmanifest", "/icon-512.png", "/favicon.ico"];
 
 self.addEventListener("install", (event) => {

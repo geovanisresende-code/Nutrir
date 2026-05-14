@@ -2,62 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===========================================================
-   NUTRIR ENTERPRISE — Design System v2 (Sensix-like)
-   Inspiração: paineis agrotech (mapa fullscreen, sidebar
-   escura, topbar branco com itens de navegação principal,
-   acentos verde-folha e amarelo-colheita).
-   Todas as cores em HSL.
-   =========================================================== */
+/* ================================================================
+   NUTRIR ENTERPRISE — Design System v5 "Pro"
+   Mantém 100% das variáveis e classes existentes.
+   Adiciona: tabelas, animações, scrollbar, focus ring premium.
+   ================================================================ */
 
 @layer base {
   :root {
-    /* Superfícies */
     --background: 150 25% 97.5%;
     --foreground: 155 30% 10%;
-
     --card: 0 0% 100%;
     --card-foreground: 155 30% 10%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 155 30% 10%;
-
-    /* Verde-folha (marca Nutrir) */
     --primary: 152 62% 24%;
     --primary-foreground: 60 30% 98%;
     --primary-glow: 148 70% 42%;
-
-    /* Terra clara */
     --secondary: 36 30% 94%;
     --secondary-foreground: 30 30% 18%;
-
     --muted: 150 14% 95%;
     --muted-foreground: 150 8% 42%;
-
-    /* Solar / colheita (CTA accent) */
     --accent: 42 95% 56%;
     --accent-foreground: 30 60% 14%;
-
     --destructive: 0 78% 52%;
     --destructive-foreground: 0 0% 98%;
-
     --success: 142 60% 38%;
     --warning: 38 92% 50%;
     --info: 200 80% 45%;
-
     --border: 150 18% 90%;
     --input: 150 18% 92%;
     --ring: 152 62% 32%;
-
     --radius: 0.625rem;
-
-    /* Topbar (Sensix-like = branca com sombra suave) */
     --topbar-background: 0 0% 100%;
     --topbar-foreground: 155 30% 14%;
     --topbar-border: 150 18% 90%;
     --topbar-height: 56px;
-
-    /* Sidebar (escura como Sensix) */
     --sidebar-background: 155 38% 9%;
     --sidebar-foreground: 60 18% 92%;
     --sidebar-primary: 42 95% 56%;
@@ -67,23 +47,18 @@
     --sidebar-border: 152 25% 16%;
     --sidebar-ring: 148 70% 42%;
     --sidebar-section: 150 12% 60%;
-
-    /* Gradientes */
     --gradient-primary: linear-gradient(135deg, hsl(152 62% 22%), hsl(148 70% 38%));
     --gradient-earth: linear-gradient(135deg, hsl(35 40% 88%), hsl(42 60% 80%));
     --gradient-hero: linear-gradient(135deg, hsl(152 62% 18%) 0%, hsl(160 55% 26%) 50%, hsl(42 80% 50%) 100%);
     --gradient-sidebar: linear-gradient(180deg, hsl(155 40% 10%) 0%, hsl(155 35% 7%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(150 20% 98%) 100%);
-
-    /* Sombras (estilo Sensix — suaves e elevadas) */
-    --shadow-soft: 0 1px 2px 0 hsl(150 30% 15% / 0.04), 0 1px 3px 0 hsl(150 30% 15% / 0.06);
-    --shadow-card: 0 2px 4px -1px hsl(150 30% 15% / 0.05), 0 4px 6px -1px hsl(150 30% 15% / 0.07);
+    --shadow-soft:    0 1px 2px 0 hsl(150 30% 15% / 0.04), 0 1px 3px 0 hsl(150 30% 15% / 0.06);
+    --shadow-card:    0 0 0 1px hsl(150 18% 88% / 0.8), 0 2px 4px -1px hsl(150 30% 15% / 0.06), 0 4px 12px -2px hsl(150 30% 15% / 0.08);
+    --shadow-elevated:0 0 0 1px hsl(150 18% 88% / 0.6), 0 4px 8px -2px hsl(150 30% 15% / 0.08), 0 12px 24px -4px hsl(150 30% 15% / 0.12);
     --shadow-elegant: 0 10px 30px -10px hsl(152 62% 24% / 0.20);
-    --shadow-glow: 0 0 40px hsl(148 70% 42% / 0.30);
-    --shadow-topbar: 0 1px 3px 0 hsl(150 30% 15% / 0.08);
-
-    /* Transições */
-    --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-glow:    0 0 40px hsl(148 70% 42% / 0.30);
+    --shadow-topbar:  0 1px 0 hsl(150 18% 90%), 0 2px 8px hsl(150 30% 15% / 0.04);
+    --transition-base:   180ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: 280ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -120,44 +95,102 @@
     --sidebar-border: 150 25% 14%;
     --sidebar-ring: 148 65% 48%;
     --sidebar-section: 150 8% 55%;
+    --shadow-card:     0 0 0 1px hsl(150 18% 16%), 0 2px 8px hsl(0 0% 0% / 0.24);
+    --shadow-elevated: 0 0 0 1px hsl(150 18% 16%), 0 8px 24px hsl(0 0% 0% / 0.32);
   }
-}
 
-@layer base {
   * { @apply border-border; }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv11", "ss01";
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
   }
-  h1,h2,h3,h4 { @apply tracking-tight; font-weight: 600; }
+
+  h1, h2, h3, h4 { @apply tracking-tight; font-weight: 600; }
   h1 { @apply text-2xl md:text-3xl; }
   h2 { @apply text-xl md:text-2xl; }
+
+  /* Scrollbar global refinada */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Seleção de texto */
+  ::selection {
+    background: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary));
+  }
 }
 
 @layer utilities {
-  .bg-gradient-primary { background-image: var(--gradient-primary); }
-  .bg-gradient-hero { background-image: var(--gradient-hero); }
-  .bg-gradient-earth { background-image: var(--gradient-earth); }
-  .bg-gradient-sidebar { background-image: var(--gradient-sidebar); }
-  .bg-gradient-card { background-image: var(--gradient-card); }
-  .shadow-elegant { box-shadow: var(--shadow-elegant); }
-  .shadow-glow { box-shadow: var(--shadow-glow); }
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-topbar { box-shadow: var(--shadow-topbar); }
-  .transition-base { transition: all var(--transition-base); }
-  .transition-smooth { transition: all var(--transition-smooth); }
-  .topbar-h { height: var(--topbar-height); }
+  /* ── Gradientes (MANTER — usados em Landing, Auth, Sidebar) ── */
+  .bg-gradient-primary  { background-image: var(--gradient-primary); }
+  .bg-gradient-hero     { background-image: var(--gradient-hero); }
+  .bg-gradient-earth    { background-image: var(--gradient-earth); }
+  .bg-gradient-sidebar  { background-image: var(--gradient-sidebar); }
+  .bg-gradient-card     { background-image: var(--gradient-card); }
 
-  /* Scrollbar fina para sidebars/painéis */
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  /* ── Sombras (MANTER — usadas em cards/hover) ── */
+  .shadow-soft     { box-shadow: var(--shadow-soft); }
+  .shadow-card     { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-elegant  { box-shadow: var(--shadow-elegant); }
+  .shadow-glow     { box-shadow: var(--shadow-glow); }
+  .shadow-topbar   { box-shadow: var(--shadow-topbar); }
+
+  /* ── Layout ── */
+  .topbar-h { height: var(--topbar-height); }
+  .transition-base   { transition: all var(--transition-base); }
+  .transition-smooth { transition: all var(--transition-smooth); }
+
+  /* ── Scrollbar fina sidebar ── */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.25);
-    border-radius: 3px;
+    background: hsl(var(--sidebar-border));
+    border-radius: 99px;
   }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.45);
+
+  /* ── Animações ── */
+  .animate-fade-in  { animation: fadeIn  200ms cubic-bezier(0.4,0,0.2,1) both; }
+  .animate-scale-in { animation: scaleIn 180ms cubic-bezier(0.4,0,0.2,1) both; }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@keyframes scaleIn { from { opacity:0; transform:scale(0.97); }     to { opacity:1; transform:scale(1); } }
+
+/* ── Tabelas enterprise ─────────────────────────────────────── */
+@layer components {
+  .data-table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+    padding: 10px 14px;
+    border-bottom: 1px solid hsl(var(--border));
+    white-space: nowrap;
+    background: hsl(var(--muted) / 0.5);
+  }
+  .data-table tbody td {
+    padding: 11px 14px;
+    font-size: 13.5px;
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover td {
+    background: hsl(var(--muted) / 0.45);
+    transition: background 120ms ease;
   }
 }

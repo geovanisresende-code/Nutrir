@@ -1,7 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Map, Building2, Search, ChevronsUpDown, Menu } from "lucide-react";
+import { Map, Building2, Search, ChevronsUpDown, Menu, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
@@ -14,12 +13,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-interface TopbarProps {
-  onOpenSidebar?: () => void;
-}
+interface TopbarProps { onOpenSidebar?: () => void; }
 
 const primaryNav = [
-  { to: "/app/mapas", label: "Mapas", icon: Map },
+  { to: "/app/mapas",    label: "Mapas",    icon: Map },
   { to: "/app/fazendas", label: "Fazendas", icon: Building2 },
 ];
 
@@ -28,103 +25,115 @@ export const Topbar = ({ onOpenSidebar }: TopbarProps) => {
   const { user, signOut } = useAuth();
   const { pathname } = useLocation();
 
+  const initials = (user?.email ?? "?").split("@")[0].slice(0, 2).toUpperCase();
+
   return (
-    <header className="topbar-h sticky top-0 z-30 bg-topbar text-topbar-foreground border-b border-topbar-border shadow-topbar">
-      <div className="h-full flex items-center gap-3 px-3 md:px-5">
+    <header
+      className="topbar-h sticky top-0 z-30 bg-topbar text-topbar-foreground border-b border-topbar-border"
+      style={{ boxShadow: "var(--shadow-topbar)" }}
+    >
+      <div className="h-full flex items-center gap-2 px-3 md:px-4">
+
         {/* Mobile menu */}
-        <Button
-          variant="ghost" size="icon" className="md:hidden -ml-1"
-          onClick={onOpenSidebar} aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={onOpenSidebar}>
+          <Menu className="h-4 w-4" />
         </Button>
 
-        {/* Brand */}
-        <NavLink to="/app" className="flex items-center gap-2 shrink-0 mr-2">
-          <Logo className="h-7 md:h-8" />
+        {/* Logo */}
+        <NavLink to="/app" className="hidden md:flex items-center shrink-0">
+          <Logo className="h-7" />
         </NavLink>
 
-        {/* Primary nav (Sensix-style: itens principais sempre visíveis na top) */}
-        <nav className="hidden md:flex items-center gap-1 ml-2">
-          {primaryNav.map((item) => {
-            const active = pathname.startsWith(item.to);
+        <div className="hidden md:block h-4 w-px bg-border mx-1" />
+
+        {/* Nav */}
+        <nav className="hidden md:flex items-center gap-0.5">
+          {primaryNav.map(({ to, label, icon: Icon }) => {
+            const active = pathname.startsWith(to);
             return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-2 px-3 h-9 rounded-md text-sm font-medium transition-base",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
+              <NavLink key={to} to={to} className={cn(
+                "flex items-center gap-1.5 px-3 h-8 rounded-md text-[13px] font-medium transition-colors duration-150",
+                active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}>
+                <Icon className="h-3.5 w-3.5" />{label}
               </NavLink>
             );
           })}
         </nav>
 
         {/* Search */}
-        <div className="flex-1 max-w-xl mx-auto hidden lg:block">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente, fazenda, talhão, produto…"
-              className="pl-9 h-9 bg-muted/40 border-transparent focus-visible:bg-card focus-visible:border-input"
-            />
+        <div className="flex-1 max-w-sm mx-auto hidden lg:block">
+          <div className={cn(
+            "flex items-center gap-2 h-8 px-3 rounded-md",
+            "border border-border bg-muted/50 text-[13px] text-muted-foreground",
+            "hover:bg-muted hover:border-border/80 cursor-text transition-colors duration-150",
+          )}>
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1">Buscar cliente, fazenda, produto…</span>
+            <kbd className="hidden xl:flex items-center gap-0.5 text-[10px] text-muted-foreground/50 font-mono border border-border/60 rounded px-1 py-0.5">
+              <Command className="h-2.5 w-2.5" />K
+            </kbd>
           </div>
         </div>
 
-        {/* Right cluster */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* Right */}
+        <div className="ml-auto flex items-center gap-1.5">
           <OfflineIndicator />
 
-          {/* Workspace switcher */}
+          {/* Workspace */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 hidden sm:flex gap-2 max-w-[180px]">
+              <Button variant="outline" size="sm" className="hidden sm:flex h-8 gap-1.5 max-w-[180px] text-[13px] border-border/70 shadow-none">
                 <span className="truncate">{current?.name ?? "—"}</span>
-                <ChevronsUpDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
+                <ChevronsUpDown className="h-3 w-3 opacity-40 shrink-0" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-60" align="end">
-              <DropdownMenuLabel>Suas organizações</DropdownMenuLabel>
+            <DropdownMenuContent className="w-60" align="end" sideOffset={6}>
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                Organizações
+              </DropdownMenuLabel>
               {orgs.map(o => (
-                <DropdownMenuItem key={o.id} onClick={() => switchOrg(o.id)}>
+                <DropdownMenuItem
+                  key={o.id} onClick={() => switchOrg(o.id)}
+                  className={cn("text-[13px]", o.id === current?.id && "bg-primary/8 font-medium")}
+                >
                   <span className="flex-1 truncate">{o.name}</span>
-                  <Badge variant="secondary" className="ml-2 text-[10px]">{o.plan_tier}</Badge>
+                  <Badge variant="secondary" className="ml-2 text-[10px] py-0">{o.plan_tier}</Badge>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <NavLink to="/app/organizacao/nova">+ Nova organização</NavLink>
+              <DropdownMenuItem asChild className="text-[13px]">
+                <NavLink to="/app/organizacao/nova" className="text-primary">+ Nova organização</NavLink>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <NotificationBell />
 
-          {/* User menu */}
+          {/* Avatar */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                <div className="h-8 w-8 rounded-full bg-primary/10 grid place-items-center text-xs font-semibold text-primary">
-                  {user?.email?.[0]?.toUpperCase() ?? "?"}
-                </div>
-              </Button>
+              <button className={cn(
+                "h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0",
+                "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
+                "ring-2 ring-background hover:ring-primary/25 transition-all duration-150",
+              )}>
+                {initials}
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel className="font-normal">
-                <div className="text-xs text-muted-foreground">Conta</div>
-                <div className="font-medium truncate">{user?.email}</div>
-              </DropdownMenuLabel>
+            <DropdownMenuContent className="w-56" align="end" sideOffset={6}>
+              <div className="px-3 py-2.5 border-b border-border/60">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Conta</div>
+                <div className="text-[13px] font-medium truncate mt-0.5">{user?.email}</div>
+              </div>
+              <div className="py-1">
+                <DropdownMenuItem asChild className="text-[13px]"><NavLink to="/app/configuracoes">Configurações</NavLink></DropdownMenuItem>
+                <DropdownMenuItem asChild className="text-[13px]"><NavLink to="/app/equipe">Equipe</NavLink></DropdownMenuItem>
+              </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild><NavLink to="/app/configuracoes">Configurações</NavLink></DropdownMenuItem>
-              <DropdownMenuItem asChild><NavLink to="/app/equipe">Equipe</NavLink></DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="text-destructive">Sair</DropdownMenuItem>
+              <DropdownMenuItem onClick={signOut} className="text-[13px] text-destructive focus:text-destructive focus:bg-destructive/8">
+                Sair
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
