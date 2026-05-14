@@ -399,16 +399,28 @@ export default function Pedidos() {
                   <tr key={it._key} className="border-b">
                     <td className="px-2 py-1 min-w-[180px]">
                       <Select value={it.produto_id || ""} onValueChange={v => updateItem(it._key!, { produto_id: v })}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Selecionar"/></SelectTrigger>
-                        <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+                        <SelectTrigger className="h-8"><SelectValue placeholder={produtos.length === 0 ? "Sem produtos cadastrados" : "Selecionar"}/></SelectTrigger>
+                        <SelectContent>
+                          {produtos.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-muted-foreground">
+                              Nenhum produto cadastrado.{" "}
+                              <a href="/app/gestao/produtos" className="text-primary underline">Cadastrar produto →</a>
+                            </div>
+                          ) : produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
                       </Select>
                     </td>
                     <td className="px-2 py-1 min-w-[140px]">
                       <Select value={it.embalagem_id ?? "none"} onValueChange={v => updateItem(it._key!, { embalagem_id: v === "none" ? null : v })}>
-                        <SelectTrigger className="h-8"><SelectValue/></SelectTrigger>
+                        <SelectTrigger className="h-8"><SelectValue placeholder={embalagens.length === 0 ? "Sem embalagens" : ""}/></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">—</SelectItem>
-                          {embalagens.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+                          {embalagens.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-muted-foreground">
+                              Nenhuma embalagem.{" "}
+                              <a href="/app/nutrir/embalagens" className="text-primary underline">Cadastrar →</a>
+                            </div>
+                          ) : embalagens.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </td>

@@ -10,6 +10,7 @@ import { useOrgTable, useGlobalTable } from "@/lib/nutrir/useNutrirData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Map, Save, FileDown, MessageCircle, Lock } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import { abrirWhatsApp } from "@/lib/nutrir/whatsapp";
 import {
   calcularItem, calcularValorAmostraOperacional, type ParametrosConsultoria, type CulturaConsultoria,
@@ -34,6 +35,8 @@ const novaLinha = (): Linha => ({
 
 export default function OrcamentoConsultoria() {
   const { current } = useOrg();
+  const { isAdmin, isDirector } = useUserRole();
+  const canSeeAdminFields = isAdmin || isDirector;
   const [searchParams] = useSearchParams();
   const { data: fields } = useOrgTable<Field>("fields", { orderBy: "name", select: "id,name,hectares,cultura,client_id" });
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
@@ -226,27 +229,28 @@ export default function OrcamentoConsultoria() {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <h3 className="font-semibold">Parâmetros operacionais</h3>
-            <span className="text-[11px] text-muted-foreground">(somente leitura — controlados pelo ADM no Motor)</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">Valor por amostra</div>
-              <div className="font-mono font-semibold">{fmtBRL(valorAmostra)}</div>
+        {canSeeAdminFields && (
+          <Card className="p-4 border-dashed border-muted-foreground/30 bg-muted/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-muted-foreground">Parâmetros operacionais (interno — não aparece pro cliente)</h3>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Meta de lucratividade</div>
-              <div className="font-mono">{params.meta_lucratividade.toFixed(1)}%</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground">Valor por amostra</div>
+                <div className="font-mono font-semibold">{fmtBRL(valorAmostra)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Meta de lucratividade</div>
+                <div className="font-mono">{params.meta_lucratividade.toFixed(1)}%</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">GRIDE mínimo cereais</div>
+                <div className="font-mono">{params.grid_min_cereais} ha/amostra</div>
+              </div>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Grid mínimo cereais</div>
-              <div className="font-mono">{params.grid_min_cereais} ha/amostra</div>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         <Card className="p-4">
           <div className="grid md:grid-cols-3 gap-4 items-end">
@@ -311,7 +315,7 @@ export default function OrcamentoConsultoria() {
                       <Select value={l.metodo_amostragem} onValueChange={v => update(l._key, { metodo_amostragem: v as MetodoAmostragem })}>
                         <SelectTrigger className="h-8 w-28"><SelectValue/></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="grade">Grade</SelectItem>
+                          <SelectItem value="grade">GRIDE</SelectItem>
                           <SelectItem value="talhoes">Talhões</SelectItem>
                         </SelectContent>
                       </Select>

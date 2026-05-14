@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,16 +38,40 @@ const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "o
 };
 
 const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const num = (s: string) => Number((s || "").toString().replace(",", ".")) || 0;
+const num = (s: string) => {
+  // Aceita "1.234,56" (br) ou "1234.56" — sempre retorna number
+  if (!s) return 0;
+  const cleaned = s.toString().replace(/[^\d,.-]/g, "");
+  // se tem vírgula, é decimal br — remove pontos (milhar) e troca vírgula por ponto
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+  return Number(normalized) || 0;
+};
 
-// Input com prefixo/sufixo fixo (ex.: R$, L). Mantém o símbolo visível e nunca exibe "0" inicial.
+// Formata um valor numérico no padrão br: "1.234,56"
+const fmtBR = (n: number, decimals = 2) =>
+  isFinite(n)
+    ? n.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    : "";
+
+// Input com prefixo/sufixo fixo (R$, L, ha) — formatação BR ao perder foco.
+// Durante digitação aceita texto livre; ao sair completa "1.234,56".
 function Affixed({
-  prefix, suffix, value, onChange, disabled, required, readOnly,
+  prefix, suffix, value, onChange, disabled, required, readOnly, decimals = 2,
 }: {
   prefix?: string; suffix?: string;
   value: string; onChange?: (v: string) => void;
   disabled?: boolean; required?: boolean; readOnly?: boolean;
+  decimals?: number;
 }) {
+  const [focused, setFocused] = React.useState(false);
+
+  // Display: formatado quando sem foco, raw quando focado
+  const display = focused
+    ? value
+    : (value ? fmtBR(num(value), decimals) : "");
+
   return (
     <div className={`flex items-stretch rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring ${disabled || readOnly ? "opacity-70" : ""}`}>
       {prefix && <span className="px-2.5 flex items-center text-sm text-muted-foreground bg-muted/40 border-r border-input select-none">{prefix}</span>}
@@ -55,10 +79,18 @@ function Affixed({
         type="text"
         inputMode="decimal"
         className="flex-1 px-3 py-2 text-sm bg-transparent outline-none disabled:cursor-not-allowed"
-        value={value}
+        value={display}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          // Ao sair, normaliza o valor armazenado pro número limpo
+          if (onChange && value) {
+            const n = num(value);
+            onChange(n === 0 ? "" : String(n));
+          }
+        }}
         onChange={(e) => {
           if (readOnly || !onChange) return;
-          // aceita apenas dígitos, vírgula e ponto; remove zeros à esquerda
           let v = e.target.value.replace(/[^\d.,]/g, "");
           v = v.replace(/^0+(?=\d)/, "");
           onChange(v);

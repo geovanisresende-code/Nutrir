@@ -360,13 +360,21 @@ export default function OrcamentoConsultoriaNutricao() {
                     <Badge variant="secondary">{calcAmostras(c)} amostras</Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                    {(["n180","n180_boro","n180_micros","n32","n32_boro","npk","foliar"] as const).map(k => (
+                    {([
+                      { k: "n180",        label: "N180" },
+                      { k: "n180_boro",   label: "N180 + Boro" },
+                      { k: "n180_micros", label: "N180 + Micros (NitroPlus)" },
+                      { k: "n32",         label: "N32 Foliar" },
+                      { k: "n32_boro",    label: "N32 + Boro Foliar" },
+                      { k: "npk",         label: "Adubação NPK" },
+                      { k: "foliar",      label: "Adubação Foliar" },
+                    ] as const).map(({ k, label }) => (
                       <label key={k} className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-accent">
                         <Checkbox
                           checked={c.adubacoes[k]}
                           onCheckedChange={v => updateCultivo(c.id, { adubacoes: { ...c.adubacoes, [k]: v as boolean } })}
                         />
-                        <span className="uppercase font-mono text-[10px]">{k.replace("_", "+")}</span>
+                        <span className="text-[11px] font-medium">{label}</span>
                       </label>
                     ))}
                   </div>
@@ -508,9 +516,14 @@ function CultivoForm({
               });
             }}
           >
-            <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={culturasCatalogo.length === 0 ? "Sem culturas cadastradas" : "Selecionar…"} /></SelectTrigger>
             <SelectContent>
-              {culturasCatalogo.map(cu => <SelectItem key={cu.id} value={cu.id}>{cu.nome}</SelectItem>)}
+              {culturasCatalogo.length === 0 ? (
+                <div className="px-3 py-3 text-xs text-muted-foreground">
+                  Nenhuma cultura cadastrada.{" "}
+                  <a href="/app/gestao/culturas" className="text-primary underline">Cadastrar →</a>
+                </div>
+              ) : culturasCatalogo.map(cu => <SelectItem key={cu.id} value={cu.id}>{cu.nome}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

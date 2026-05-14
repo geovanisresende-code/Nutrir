@@ -63,7 +63,9 @@ export default function Onboarding() {
     if (error) { toast.error(error.message); return; }
     toast.success("Organização criada!");
     await refreshOrgs();
-    await setStep(1);
+    // Pula passos de fazenda/talhão/tour — usuário cadastra esses depois nos módulos próprios
+    await markCompleted();
+    navigate("/app", { replace: true });
   };
 
   // ---- Step 1: farm ----
@@ -124,12 +126,10 @@ export default function Onboarding() {
         <div className="mb-6 text-center">
           <Badge variant="secondary" className="mb-3">
             <Sparkles className="w-3 h-3 mr-1" />
-            Configuração inicial
+            Bem-vindo
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight">Vamos começar 🌱</h1>
-          <p className="text-muted-foreground mt-2">Em poucos passos seu workspace está pronto para uso.</p>
-          <Progress value={progress} className="mt-4 h-2" />
-          <p className="text-xs text-muted-foreground mt-2">Passo {Math.min(step + 1, TOTAL_STEPS)} de {TOTAL_STEPS}</p>
+          <p className="text-muted-foreground mt-2">Crie seu workspace para usar a plataforma.</p>
         </div>
 
         <Card>

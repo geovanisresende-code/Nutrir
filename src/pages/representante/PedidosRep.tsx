@@ -510,9 +510,14 @@ export default function PedidosRep() {
                             <Input value={it.produto_nome} disabled />
                           ) : (
                             <Select value={it.produto_id} onValueChange={(v) => updItem(i, { produto_id: v })}>
-                              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder={produtos.length === 0 ? "Sem produtos cadastrados" : "Selecionar"} /></SelectTrigger>
                               <SelectContent className="max-h-64">
-                                {produtos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                                {produtos.length === 0 ? (
+                                  <div className="px-3 py-3 text-xs text-muted-foreground">
+                                    Nenhum produto cadastrado.{" "}
+                                    <a href="/app/gestao/produtos" className="text-primary underline">Cadastrar →</a>
+                                  </div>
+                                ) : produtos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           )}
@@ -524,10 +529,15 @@ export default function PedidosRep() {
                             onValueChange={(v) => updItem(i, { embalagem_id: v === "none" ? null : v })}
                             disabled={isConsultoria}
                           >
-                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={embalagens.length === 0 ? "Sem embalagens" : "—"} /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">—</SelectItem>
-                              {embalagens.map((e) => (
+                              {embalagens.length === 0 ? (
+                                <div className="px-3 py-3 text-xs text-muted-foreground">
+                                  Nenhuma embalagem.{" "}
+                                  <a href="/app/nutrir/embalagens" className="text-primary underline">Cadastrar →</a>
+                                </div>
+                              ) : embalagens.map((e) => (
                                 <SelectItem key={e.id} value={e.id}>
                                   {e.nome} · múltiplo de {fmtInt(Number(e.volume ?? 1))} {e.unidade}
                                 </SelectItem>

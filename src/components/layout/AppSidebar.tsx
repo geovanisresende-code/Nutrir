@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Map, Sprout, FlaskRound, ShoppingCart, FileText,
   Brain, Satellite, FlaskConical, MapPin, TestTube, Globe, Box, Users,
-  Building2, Settings, CreditCard, Plug, ChevronRight, ShieldCheck, Route as RouteIcon,
+  Building2, Settings, CreditCard, Plug, ChevronRight, ShieldCheck,
   Leaf, Beaker, Package, FileSpreadsheet, Briefcase, DollarSign, BarChart3,
   ClipboardList, Receipt, Boxes, AlertCircle, UserCog, Activity, BookOpen, Calculator,
   Database, Layers,
@@ -35,34 +35,47 @@ const isGroup = (i: AnyItem): i is GroupItem => "children" in i;
 const repSection: NavSection = {
   title: "Área do Representante",
   items: [
-    { to: "/app/rep", label: "Dashboard Rep.", icon: LayoutDashboard, end: true },
-    { to: "/app/rep/roteiro", label: "Roteiro do dia", icon: RouteIcon, badge: "IA" },
+    { to: "/app/rep", label: "Dashboard", icon: LayoutDashboard, end: true },
+
+    // ── Operação diária — visitas e clientes ──
     {
       label: "Relatório de Visitas",
       icon: ClipboardList,
       children: [
-        { to: "/app/rep/visitas",          label: "Registrar Visita",       icon: ClipboardList },
-        { to: "/app/rep/estoque-cliente",  label: "Estoque do Cliente",     icon: Boxes },
-        { to: "/app/rep/contas-receber",   label: "Contas a Receber",       icon: Receipt },
-        { to: "/app/rep/comissoes",        label: "Comissões",              icon: DollarSign },
-        { to: "/app/rep/campos-teste",     label: "Campos de Teste",        icon: TestTube },
+        { to: "/app/rep/visitas",          label: "Registrar Visita",   icon: ClipboardList },
+        { to: "/app/rep/campos-teste",     label: "Campos de Teste",    icon: TestTube },
       ],
     },
-    { to: "/app/rep/rdv",       label: "RDV",      icon: FileSpreadsheet },
-    { to: "/app/rep/clientes",  label: "Clientes", icon: Briefcase },
+    { to: "/app/rep/clientes",         label: "Clientes",            icon: Briefcase },
+    { to: "/app/rep/estoque-cliente",  label: "Estoque do Cliente",  icon: Boxes },
+
+    // ── Comercial — pedidos, comissões e contas ──
+    { to: "/app/rep/pedidos",          label: "Pedidos",             icon: ShoppingCart },
+    {
+      label: "Comissões & Contas",
+      icon: DollarSign,
+      children: [
+        { to: "/app/rep/comissoes",      label: "Comissões",         icon: DollarSign },
+        { to: "/app/rep/contas-receber", label: "Contas a Receber",  icon: Receipt },
+      ],
+    },
+    { to: "/app/rep/rdv",              label: "RDV",                 icon: FileSpreadsheet },
+
+    // ── Programa Nutrir ──
     {
       label: "Programa Nutrir",
       icon: Sprout,
       children: [
-        { to: "/app/nutrir",                   label: "Hub Nutrir",                       icon: Sprout, end: true },
-        { to: "/app/nutrir/orcamento",         label: "Orçamento de Consultoria",         icon: FileSpreadsheet },
-        { to: "/app/nutrir/orcamento-nutricao",label: "Orçamento + Nutrição",             icon: Leaf, badge: "novo" },
-        { to: "/app/nutrir/painel-custo",      label: "Painel Custo de Análise",          icon: Calculator },
-        { to: "/app/nutrir/orcamentos",        label: "Orçamentos salvos",                icon: FileText },
+        { to: "/app/nutrir",                   label: "Hub Nutrir",                  icon: Sprout, end: true },
+        { to: "/app/nutrir/orcamento",         label: "Orçamento de Consultoria",    icon: FileSpreadsheet },
+        { to: "/app/nutrir/orcamento-nutricao",label: "Orçamento + Nutrição",        icon: Leaf, badge: "novo" },
+        { to: "/app/nutrir/painel-custo",      label: "Painel Custo de Análise",     icon: Calculator },
+        { to: "/app/nutrir/orcamentos",        label: "Orçamentos Salvos",           icon: FileText },
       ],
     },
-    { to: "/app/nutrir/produtos", label: "Produtos", icon: Package },
-    { to: "/app/rep/pedidos",     label: "Pedidos",  icon: ShoppingCart },
+    { to: "/app/nutrir/produtos",      label: "Produtos",            icon: Package },
+
+    // ── Mapas e Inteligência ──
     {
       label: "Mapas e Talhões",
       icon: Map,
@@ -76,11 +89,12 @@ const repSection: NavSection = {
       label: "IA Agronômica",
       icon: Brain,
       children: [
-        { to: "/app/ia/solo",      label: "Análise de Solo",            icon: FlaskConical },
-        { to: "/app/ia/sintomas",  label: "Sintomas Foliares",          icon: Leaf },
+        { to: "/app/ia/solo",      label: "Análise de Solo",    icon: FlaskConical },
+        { to: "/app/ia/sintomas",  label: "Sintomas Foliares",  icon: Leaf },
       ],
     },
-    { to: "/app/relatorios", label: "Relatórios", icon: FileText },
+
+    { to: "/app/relatorios",           label: "Relatórios",          icon: FileText },
   ],
 };
 
