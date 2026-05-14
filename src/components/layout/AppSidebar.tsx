@@ -8,6 +8,7 @@ import {
   Database, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import nutrirLogo from "@/assets/logo-nutrir-3d.png";
 import { useState, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePosition } from "@/hooks/usePosition";
@@ -217,14 +218,8 @@ export const AppSidebar = () => {
   return (
     <aside className="w-[220px] shrink-0 bg-sidebar flex flex-col h-screen sticky top-0 border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-14 border-b border-sidebar-border shrink-0">
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary shrink-0">
-          <Leaf className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <div>
-          <div className="text-[13px] font-semibold text-sidebar-foreground tracking-tight leading-none">AgroMap</div>
-          <div className="text-[10px] text-sidebar-section font-medium tracking-wide mt-0.5">Nutrir Core</div>
-        </div>
+      <div className="flex items-center justify-center px-4 h-14 border-b border-sidebar-border shrink-0">
+        <img src={nutrirLogo} alt="Nutrir" className="h-9 w-auto object-contain" />
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-3">
