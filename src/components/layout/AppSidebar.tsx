@@ -8,7 +8,6 @@ import {
   Database, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/Logo";
 import { useState, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePosition } from "@/hooks/usePosition";
@@ -216,17 +215,19 @@ export const AppSidebar = () => {
   }, [loading, position, isAdmin, isDirector]);
 
   return (
-    <aside className="w-64 shrink-0 bg-gradient-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 border-r border-sidebar-border">
-      <div className="px-4 py-3 border-b border-sidebar-border bg-white/[0.02]">
-        <div className="flex items-center justify-center bg-white/95 rounded-lg py-2 px-3 shadow-soft">
-          <Logo className="h-8" />
+    <aside className="w-[220px] shrink-0 bg-sidebar flex flex-col h-screen sticky top-0 border-r border-sidebar-border">
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-5 h-14 border-b border-sidebar-border shrink-0">
+        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary shrink-0">
+          <Leaf className="h-4 w-4 text-primary-foreground" />
         </div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/50 text-center mt-2">
-          AgroMap · Nutrir
+        <div>
+          <div className="text-[13px] font-semibold text-sidebar-foreground tracking-tight leading-none">AgroMap</div>
+          <div className="text-[10px] text-sidebar-section font-medium tracking-wide mt-0.5">Nutrir Core</div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin py-2">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-3">
         {sections.map((section) => (
           <SidebarSection key={section.title} section={section} />
         ))}
@@ -245,16 +246,16 @@ const SidebarSection = ({ section }: { section: NavSection }) => {
   const [open, setOpen] = useState(hasActive || section.title === "Área do Representante");
 
   return (
-    <div className="mb-1">
+    <div className="mb-4">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-base"
+        className="w-full flex items-center justify-between px-2 py-1 mb-1 text-[10.5px] font-semibold uppercase tracking-widest text-sidebar-section hover:text-sidebar-foreground/60 transition-colors duration-150"
       >
         <span>{section.title}</span>
-        <ChevronRight className={cn("h-3 w-3 transition-base", open && "rotate-90")} />
+        <ChevronRight className={cn("h-3 w-3 transition-transform duration-150", open && "rotate-90")} />
       </button>
       {open && (
-        <div className="px-2 space-y-0.5">
+        <div className="space-y-0.5">
           {section.items.map((item, idx) =>
             isGroup(item)
               ? <NavGroup key={item.label + idx} group={item} />
@@ -278,23 +279,23 @@ const NavGroup = ({ group }: { group: GroupItem }) => {
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          "w-full group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-base",
+          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-colors duration-150",
           childActive
-            ? "bg-sidebar-accent/40 text-sidebar-accent-foreground font-medium"
-            : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
+            ? "text-sidebar-primary font-medium"
+            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
         )}
       >
-        <group.icon className="h-4 w-4 shrink-0" />
+        <group.icon className="h-[15px] w-[15px] shrink-0" />
         <span className="flex-1 truncate text-left">{group.label}</span>
         {group.badge && (
-          <span className="text-[9px] uppercase font-bold tracking-wider bg-sidebar-primary text-sidebar-primary-foreground px-1.5 py-0.5 rounded">
+          <span className="text-[9px] uppercase font-bold tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded-sm">
             {group.badge}
           </span>
         )}
-        <ChevronRight className={cn("h-3.5 w-3.5 transition-base opacity-60", open && "rotate-90")} />
+        <ChevronRight className={cn("h-3 w-3 opacity-40 transition-transform duration-150", open && "rotate-90")} />
       </button>
       {open && (
-        <div className="ml-3 pl-2 mt-0.5 space-y-0.5 border-l border-sidebar-border/40">
+        <div className="ml-4 pl-3 mt-0.5 space-y-0.5 border-l-2 border-sidebar-border">
           {group.children.map(item => <NavItemRow key={item.to} item={item} compact />)}
         </div>
       )}
@@ -308,18 +309,18 @@ const NavItemRow = ({ item, compact = false }: { item: LeafItem; compact?: boole
     end={item.end}
     className={({ isActive }) =>
       cn(
-        "group flex items-center gap-2.5 rounded-md text-sm transition-base",
-        compact ? "px-2 py-1" : "px-3 py-1.5",
+        "group flex items-center gap-2 rounded-md text-[13px] transition-colors duration-150",
+        compact ? "px-2 py-1" : "px-2 py-1.5",
         isActive
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-soft"
-          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+          ? "bg-sidebar-accent text-sidebar-primary font-semibold border-l-[3px] border-primary rounded-l-none pl-[5px]"
+          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
       )
     }
   >
-    <item.icon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+    <item.icon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-[15px] w-[15px]")} />
     <span className="flex-1 truncate">{item.label}</span>
     {item.badge && (
-      <span className="text-[9px] uppercase font-bold tracking-wider bg-sidebar-primary text-sidebar-primary-foreground px-1.5 py-0.5 rounded">
+      <span className="text-[9px] uppercase font-bold tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded-sm">
         {item.badge}
       </span>
     )}

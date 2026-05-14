@@ -128,13 +128,13 @@ const Dashboard = () => {
 
         {/* ── KPI Row ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          <Stat icon={MapIcon}     label="Talhões"    value={stats.fields}                    color="blue"   />
-          <Stat icon={Sprout}      label="Hectares"   value={stats.hectares.toLocaleString()} color="green"  />
-          <Stat icon={FlaskConical}label="Amostras"   value={stats.samples}                   color="violet" />
-          <Stat icon={Brain}       label="Análises IA"value={stats.ai}                         color="orange" />
-          <Stat icon={Satellite}   label="NDVI"       value={stats.ndvi}                       color="sky"    />
-          <Stat icon={Users}       label="Equipe"     value={stats.members}                    color="indigo" />
-          <Stat icon={FileText}    label="Relatórios" value={stats.reports}                    color="slate"  />
+          <Stat label="Talhões"     value={stats.fields} />
+          <Stat label="Hectares"    value={stats.hectares.toLocaleString()} />
+          <Stat label="Amostras"    value={stats.samples} />
+          <Stat label="Análises IA" value={stats.ai} />
+          <Stat label="NDVI"        value={stats.ndvi} />
+          <Stat label="Equipe"      value={stats.members} />
+          <Stat label="Relatórios"  value={stats.reports} />
         </div>
 
         {/* ── Alertas NDVI ─────────────────────────────────────────── */}
@@ -309,30 +309,20 @@ const Dashboard = () => {
 
 /* ── Componentes visuais ──────────────────────────────────────────────── */
 
-const ICON_COLORS: Record<string, { bg: string; text: string }> = {
-  blue:   { bg: "bg-blue-50",    text: "text-blue-600"   },
-  green:  { bg: "bg-emerald-50", text: "text-emerald-600" },
-  violet: { bg: "bg-violet-50",  text: "text-violet-600" },
-  orange: { bg: "bg-orange-50",  text: "text-orange-600" },
-  sky:    { bg: "bg-sky-50",     text: "text-sky-600"    },
-  indigo: { bg: "bg-indigo-50",  text: "text-indigo-600" },
-  slate:  { bg: "bg-slate-100",  text: "text-slate-500"  },
-};
-
-const Stat = ({ icon: I, label, value, color = "blue" }: { icon: any; label: string; value: any; color?: string }) => {
-  const c = ICON_COLORS[color] ?? ICON_COLORS.blue;
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${c.bg} ${c.text} mb-3`}>
-          <I className="h-4 w-4" />
+const Stat = ({ label, value, delta }: { label: string; value: any; delta?: string }) => (
+  <div className="relative overflow-hidden rounded-xl bg-card border border-border">
+    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary to-emerald-400" />
+    <div className="p-5 pt-6">
+      <div className="text-[10.5px] font-700 uppercase tracking-widest text-muted-foreground mb-3">{label}</div>
+      <div className="text-[38px] font-black tracking-tighter text-foreground leading-none">{value}</div>
+      {delta && (
+        <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+          ↑ {delta}
         </div>
-        <div className="text-2xl font-bold tracking-tight text-foreground leading-none">{value}</div>
-        <div className="text-xs text-muted-foreground mt-1.5 font-medium">{label}</div>
-      </CardContent>
-    </Card>
-  );
-};
+      )}
+    </div>
+  </div>
+);
 
 const NutrirStat = ({ icon: I, label, value, accent }: { icon: any; label: string; value: string; accent?: boolean }) => (
   <div className="rounded-lg border border-border/60 bg-card p-3.5 flex flex-col gap-2">

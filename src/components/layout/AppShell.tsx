@@ -66,21 +66,17 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
 };
 
 export const PageHeader = ({ title, description, actions, hideBack }: { title: any; description?: string; actions?: ReactNode; hideBack?: boolean }) => (
-  <header className="border-b bg-card/80 backdrop-blur-sm">
-    {/* Accent line */}
-    <div className="h-[2px] bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-    <div className="px-3 md:px-6 pt-2 md:pt-2.5">
-      {!hideBack && <BackButton />}
-    </div>
-    <div className="px-3 md:px-6 pb-3 md:pb-4 pt-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
+  <header className="bg-card border-b border-border">
+    <div className="px-5 md:px-7 py-5 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
       <div className="min-w-0">
-        <h1 className="text-[17px] md:text-[22px] font-semibold tracking-tight text-foreground leading-snug truncate">{title}</h1>
+        {!hideBack && <BackButton />}
+        <h1 className="text-[22px] md:text-[28px] font-black tracking-tight text-foreground leading-none">{title}</h1>
         {description && (
-          <p className="text-[12px] md:text-[13px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{description}</p>
+          <p className="text-[13px] text-muted-foreground mt-2 line-clamp-2">{description}</p>
         )}
       </div>
       {actions && (
-        <div className="flex gap-2 flex-wrap md:shrink-0 -mx-1 px-1 overflow-x-auto md:overflow-visible">
+        <div className="flex gap-2 flex-wrap md:shrink-0">
           {actions}
         </div>
       )}

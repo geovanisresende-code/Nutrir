@@ -10,7 +10,7 @@
 
 @layer base {
   :root {
-    --background: 150 25% 97.5%;
+    --background: 150 18% 96%;
     --foreground: 155 30% 10%;
     --card: 0 0% 100%;
     --card-foreground: 155 30% 10%;
@@ -34,19 +34,19 @@
     --input: 150 18% 92%;
     --ring: 152 62% 32%;
     --radius: 0.625rem;
-    --topbar-background: 0 0% 100%;
-    --topbar-foreground: 155 30% 14%;
-    --topbar-border: 150 18% 90%;
-    --topbar-height: 56px;
-    --sidebar-background: 155 38% 9%;
-    --sidebar-foreground: 60 18% 92%;
-    --sidebar-primary: 42 95% 56%;
-    --sidebar-primary-foreground: 30 60% 14%;
-    --sidebar-accent: 152 30% 14%;
-    --sidebar-accent-foreground: 60 18% 96%;
-    --sidebar-border: 152 25% 16%;
-    --sidebar-ring: 148 70% 42%;
-    --sidebar-section: 150 12% 60%;
+    --topbar-background: 142 65% 15%;
+    --topbar-foreground: 0 0% 97%;
+    --topbar-border: 142 55% 11%;
+    --topbar-height: 58px;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 22%;
+    --sidebar-primary: 152 62% 24%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 152 50% 96%;
+    --sidebar-accent-foreground: 152 62% 18%;
+    --sidebar-border: 220 13% 92%;
+    --sidebar-ring: 152 62% 32%;
+    --sidebar-section: 220 10% 58%;
     --gradient-primary: linear-gradient(135deg, hsl(152 62% 22%), hsl(148 70% 38%));
     --gradient-earth: linear-gradient(135deg, hsl(35 40% 88%), hsl(42 60% 80%));
     --gradient-hero: linear-gradient(135deg, hsl(152 62% 18%) 0%, hsl(160 55% 26%) 50%, hsl(42 80% 50%) 100%);
