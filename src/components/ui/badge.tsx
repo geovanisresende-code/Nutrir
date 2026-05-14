@@ -1,19 +1,17 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide transition-colors",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default:     "bg-primary/12 text-primary border border-primary/20",
-        secondary:   "bg-muted text-muted-foreground border border-border/60",
-        destructive: "bg-destructive/10 text-destructive border border-destructive/20",
-        outline:     "border border-border text-foreground bg-transparent",
-        success:     "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.22)]",
-        warning:     "bg-[hsl(var(--warning)/0.12)] text-[hsl(38_60%_28%)] border border-[hsl(var(--warning)/0.22)]",
-        info:        "bg-[hsl(var(--info)/0.1)] text-[hsl(var(--info))] border border-[hsl(var(--info)/0.2)]",
+        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
       },
     },
     defaultVariants: {
