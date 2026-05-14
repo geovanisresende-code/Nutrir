@@ -44,16 +44,13 @@ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER AS $$
   );
 $$;
 
--- Gerente regional / Manager?
+-- Gerente regional? (verifica cargo na tabela nutrir_colaboradores;
+-- o enum app_role NÃO tem 'manager' - só owner/admin/member/viewer)
 CREATE OR REPLACE FUNCTION public.is_regional_manager(p_org uuid, p_user uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT EXISTS (
     SELECT 1 FROM nutrir_colaboradores
     WHERE organization_id = p_org AND user_id = p_user AND cargo = 'gerente_regional'
-  )
-  OR EXISTS (
-    SELECT 1 FROM organization_members
-    WHERE organization_id = p_org AND user_id = p_user AND role = 'manager'
   );
 $$;
 
@@ -87,11 +84,11 @@ CREATE POLICY clientes_select_hier ON public.nutrir_clientes
     OR user_id = auth.uid()
     OR (
       is_regional_manager(organization_id, auth.uid())
-      AND user_regional_id(organization_id, auth.uid()) = (
-        SELECT regional_id FROM nutrir_representantes r
+      AND EXISTS (
+        SELECT 1 FROM nutrir_representantes r
         WHERE r.user_id = nutrir_clientes.user_id
           AND r.organization_id = nutrir_clientes.organization_id
-        LIMIT 1
+          AND r.regional_id = user_regional_id(nutrir_clientes.organization_id, auth.uid())
       )
     )
   );
@@ -125,11 +122,11 @@ CREATE POLICY rdv_select_hier ON public.nutrir_rdv
     OR user_id = auth.uid()
     OR (
       is_regional_manager(organization_id, auth.uid())
-      AND user_regional_id(organization_id, auth.uid()) = (
-        SELECT regional_id FROM nutrir_representantes r
+      AND EXISTS (
+        SELECT 1 FROM nutrir_representantes r
         WHERE r.user_id = nutrir_rdv.user_id
           AND r.organization_id = nutrir_rdv.organization_id
-        LIMIT 1
+          AND r.regional_id = user_regional_id(nutrir_rdv.organization_id, auth.uid())
       )
     )
   );
@@ -162,9 +159,10 @@ CREATE POLICY comissoes_select_hier ON public.nutrir_comissoes
     )
     OR (
       is_regional_manager(organization_id, auth.uid())
-      AND user_regional_id(organization_id, auth.uid()) = (
-        SELECT regional_id FROM nutrir_representantes r
-        WHERE r.id = nutrir_comissoes.representante_id LIMIT 1
+      AND EXISTS (
+        SELECT 1 FROM nutrir_representantes r
+        WHERE r.id = nutrir_comissoes.representante_id
+          AND r.regional_id = user_regional_id(organization_id, auth.uid())
       )
     )
   );
