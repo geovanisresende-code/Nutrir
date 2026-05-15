@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Map, Building2, Search, ChevronsUpDown, Menu, Command } from "lucide-react";
-import nutrirLogo from "@/assets/logo-nutrir-3d.png";
 import { Button } from "@/components/ui/button";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,14 +34,6 @@ export const Topbar = ({ onOpenSidebar }: TopbarProps) => {
         <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-white/70 hover:text-white hover:bg-white/10" onClick={onOpenSidebar}>
           <Menu className="h-4 w-4" />
         </Button>
-
-        {/* Logo */}
-        <NavLink to="/app" className="hidden md:flex items-center shrink-0 mr-3">
-          <img src={nutrirLogo} alt="Nutrir" className="h-9 w-auto object-contain" />
-        </NavLink>
-
-        {/* Separador */}
-        <div className="hidden md:block h-5 w-px bg-white/15 mr-1" />
 
         {/* Nav primary */}
         <nav className="hidden md:flex items-center gap-0.5">
