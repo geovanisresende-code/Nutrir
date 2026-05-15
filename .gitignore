@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Bun lockfile — esse projeto usa npm, não bun
+bun.lockb
+bun.lock
+
 # Env vars (NUNCA commitar — contém chaves sensíveis)
 .env
 .env.*
