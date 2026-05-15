@@ -99,7 +99,28 @@ const repSection: NavSection = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOCO 2 — Área do Gerente
+// BLOCO 2 — Programa Nutrir (visível para todos com nutrir.area)
+// ─────────────────────────────────────────────────────────────────────────────
+const nutrirSection: NavSection = {
+  title: "Programa Nutrir",
+  items: [
+    { to: "/app/nutrir",                    label: "Hub Nutrir",               icon: Sprout, end: true },
+    { to: "/app/nutrir/orcamento",          label: "Orçamento Consultoria",    icon: FileSpreadsheet },
+    { to: "/app/nutrir/orcamento-nutricao", label: "Orçamento + Nutrição",     icon: Leaf, badge: "novo" },
+    { to: "/app/nutrir/orcamentos",         label: "Orçamentos Salvos",        icon: FileText },
+    { to: "/app/nutrir/produtos",           label: "Produtos",                 icon: Package },
+    { to: "/app/mapas",                     label: "Mapas e Talhões",          icon: Map },
+    { to: "/app/nutrir/ndvi",               label: "Análise NDVI",             icon: Satellite },
+    { to: "/app/nutrir/coleta",             label: "Coletar Amostras",         icon: MapPin },
+    { to: "/app/ia/solo",                   label: "IA: Análise de Solo",      icon: Brain },
+    { to: "/app/ia/sintomas",               label: "IA: Sintomas Foliares",    icon: FlaskConical },
+    { to: "/app/gestao/motor-calculos",     label: "Motor de Cálculos",        icon: Calculator, badge: "core" },
+    { to: "/app/relatorios",                label: "Relatórios",               icon: FileText },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 3 — Área do Gerente
 // ─────────────────────────────────────────────────────────────────────────────
 const gerenteSection: NavSection = {
   title: "Área do Gerente",
@@ -207,6 +228,7 @@ export const AppSidebar = () => {
     if (position === "cliente") return [viewerSection];
     const out: NavSection[] = [];
     if (can(position, "rep.area"))      out.push(repSection);
+    if (can(position, "nutrir.area"))   out.push(nutrirSection);
     if (can(position, "gerente.area"))  out.push(gerenteSection);
     if (can(position, "gestao.area") || isAdmin || isDirector) out.push(gestaoSection);
     if (can(position, "operacao.area")) out.push(operacaoSection);
