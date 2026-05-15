@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import logoUrl from "@/assets/logo-nutrir-3d.png";
+import logoUrl from "@/assets/1.png";
 import type { CalcResult } from "@/lib/nutrir/nutrir-engine";
 
 const moeda = (v: number) =>

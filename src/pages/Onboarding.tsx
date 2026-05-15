@@ -130,6 +130,10 @@ export default function Onboarding() {
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight">Vamos começar 🌱</h1>
           <p className="text-muted-foreground mt-2">Crie seu workspace para usar a plataforma.</p>
+          <div className="mt-4 max-w-sm mx-auto">
+            <Progress value={progress} className="h-1.5" />
+            <p className="text-xs text-muted-foreground mt-1">Passo {Math.min(step + 1, TOTAL_STEPS)} de {TOTAL_STEPS}</p>
+          </div>
         </div>
 
         <Card>

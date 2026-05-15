@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Map, Brain, Satellite, FlaskConical, Building2, ShieldCheck, Zap, ArrowRight } from "lucide-react";
-import nutrirLogo from "@/assets/logo-nutrir-3d.png";
+import nutrirLogo from "@/assets/1.png";
 
 const Landing = () => (
   <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
@@ -72,69 +72,4 @@ const Landing = () => (
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-600 mb-3">Plataforma completa</p>
           <h2 className="text-[32px] font-black text-[#0b2e14] tracking-tight">Cinco módulos integrados</h2>
           <p className="text-gray-500 mt-3 max-w-xl mx-auto text-[15px]">
-            Construído sobre a base do Programa Nutrir, expandido para uma arquitetura empresarial.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
-          {[
-            { icon: Map,          label: "Mapas",     desc: "Talhões e cálculo de área" },
-            { icon: FlaskConical, label: "Nutrição",  desc: "Motor NPK + foliar" },
-            { icon: Brain,        label: "IA",        desc: "Recomendações por amostra" },
-            { icon: Satellite,    label: "Satélite",  desc: "NDVI Sentinel por talhão" },
-            { icon: Building2,    label: "Dashboard", desc: "KPIs e gestão" },
-          ].map(f => (
-            <div key={f.label} className="bg-white rounded-2xl border border-[#e2e8e0] p-6 hover:border-emerald-300 hover:shadow-md transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-[#f0fdf4] group-hover:bg-emerald-100 flex items-center justify-center mb-4 transition-colors">
-                <f.icon className="h-5 w-5 text-emerald-600" />
-              </div>
-              <h3 className="font-bold text-[#0b2e14] mb-1">{f.label}</h3>
-              <p className="text-[13px] text-gray-500">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    {/* ── Features ── */}
-    <section className="bg-white py-24 border-t border-[#e8ede9]">
-      <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-3 gap-10">
-          {[
-            { icon: ShieldCheck, title: "Multi-tenant seguro",  desc: "Isolamento total por organização com RLS no banco. Convide sua equipe com papéis e permissões." },
-            { icon: Zap,         title: "Pronto para escala",   desc: "Planos Free, Pro e Enterprise com limites de uso por workspace. Cresça sem reescrever nada." },
-            { icon: Brain,       title: "IA integrada",         desc: "Recomendações agronômicas automáticas por análise de solo e sintomas foliares." },
-          ].map(f => (
-            <div key={f.title}>
-              <div className="w-11 h-11 rounded-xl bg-[#0b2e14] flex items-center justify-center mb-5">
-                <f.icon className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-[16px] font-bold text-[#0b2e14] mb-2">{f.title}</h3>
-              <p className="text-[14px] text-gray-500 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    {/* ── CTA Final ── */}
-    <section className="bg-[#0b2e14] py-20">
-      <div className="container mx-auto px-6 text-center">
-        <img src={nutrirLogo} alt="Nutrir" className="h-14 w-auto object-contain mx-auto mb-6" />
-        <h2 className="text-[30px] font-black text-white tracking-tight mb-4">
-          Comece hoje, de graça.
-        </h2>
-        <p className="text-white/50 text-[15px] mb-8">Sem cartão de crédito. Cancele quando quiser.</p>
-        <Link to="/auth?mode=signup"
-          className="inline-flex items-center gap-2 px-8 h-12 text-[15px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-colors">
-          Criar conta gratuita <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </section>
-
-    <footer className="bg-[#061a0b] py-8 text-center text-[12px] text-white/25">
-      © {new Date().getFullYear()} Nutrir AgTech · Todos os direitos reservados
-    </footer>
-  </div>
-);
-
-export default Landing;
+            Construído sobre a base do Progra
