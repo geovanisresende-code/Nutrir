@@ -267,4 +267,11 @@ export default function Onboarding() {
 function TourItem({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg border bg-card/50">
-     
+      <div className="p-2 rounded-md bg-primary/10 text-primary mt-0.5">{icon}</div>
+      <div>
+        <div className="font-medium text-sm">{title}</div>
+        <div className="text-xs text-muted-foreground">{desc}</div>
+      </div>
+    </div>
+  );
+}
