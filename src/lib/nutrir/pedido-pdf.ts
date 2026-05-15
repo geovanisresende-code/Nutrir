@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import nutrirLogo from "@/assets/nutrir-logo.jpg";
+import nutrirLogo from "@/assets/logo-nutrir-3d.png";
 import { formatBRL } from "./precos-engine";
 
 export interface PedidoPDFInput {

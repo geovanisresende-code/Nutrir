@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import logoUrl from "@/assets/nutrir-logo.jpg";
+import logoUrl from "@/assets/logo-nutrir-3d.png";
 import type { FoliarResultado } from "@/lib/nutrir/foliar-engine";
 
 const moeda = (v: number) =>
