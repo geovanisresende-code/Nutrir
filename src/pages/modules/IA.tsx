@@ -382,7 +382,7 @@ const ImageTab = () => {
   };
 
   const sevColor: Record<string,string> = {
-    leve: "bg-[#d4a843]/15 text-emerald-700 dark:text-[#e8c975]",
+    leve: "bg-[#d4a843]/15 text-[#8a6200] dark:text-[#e8c975]",
     moderado: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300",
     severo: "bg-destructive/15 text-destructive",
     indeterminado: "bg-muted text-muted-foreground",

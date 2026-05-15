@@ -16,7 +16,7 @@ const tiles = [
   { to: "/app/nutrir/dashboard", label: "Dashboard Comercial", icon: TrendingUp, color: "text-primary", desc: "KPIs e gráficos de vendas" },
   { to: "/app/nutrir/orcamento", label: "Orçamento Consultoria", icon: FileSpreadsheet, color: "text-primary", desc: "Por talhão / GRIDE / valor por amostra" },
   { to: "/app/nutrir/calculadora-foliar", label: "Calc. Foliar Complexada", icon: Leaf, color: "text-[#b08826]", desc: "Convencional × NUTRIR + PDF" },
-  { to: "/app/nutrir/historico-foliar", label: "Histórico Foliar", icon: History, color: "text-emerald-700", desc: "Cálculos foliares salvos" },
+  { to: "/app/nutrir/historico-foliar", label: "Histórico Foliar", icon: History, color: "text-[#b08826]", desc: "Cálculos foliares salvos" },
   { to: "/app/nutrir/calculadora-npk", label: "Calc. NPK Drench", icon: Droplets, color: "text-sky-600", desc: "Fertirrigação por nutriente ou fórmula" },
   { to: "/app/nutrir/historico-npk", label: "Histórico NPK", icon: History, color: "text-sky-700", desc: "Cálculos NPK salvos" },
   { to: "/app/nutrir/pedidos", label: "Pedidos", icon: ShoppingCart, color: "text-amber-600", desc: "Pedidos com preço automático" },

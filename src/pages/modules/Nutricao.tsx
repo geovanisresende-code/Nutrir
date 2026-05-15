@@ -45,7 +45,7 @@ const LEAF_FIELDS = [
 const levelStyle: Record<string, string> = {
   baixo: "bg-destructive/15 text-destructive border-destructive/30",
   medio: "bg-yellow-500/15 text-yellow-700 border-yellow-500/30 dark:text-yellow-300",
-  adequado: "bg-[#d4a843]/15 text-emerald-700 border-[#d4a843]/30 dark:text-[#e8c975]",
+  adequado: "bg-[#d4a843]/15 text-[#8a6200] border-[#d4a843]/30 dark:text-[#e8c975]",
   alto: "bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-300",
 };
 

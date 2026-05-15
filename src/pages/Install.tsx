@@ -51,7 +51,7 @@ export default function Install() {
         {installed && (
           <Card className="mb-6 border-[#d4a843]/30 bg-[#d4a843]/5">
             <CardContent className="pt-6 text-center">
-              <Badge variant="secondary" className="bg-[#d4a843]/20 text-emerald-700">App instalado ✓</Badge>
+              <Badge variant="secondary" className="bg-[#d4a843]/20 text-[#8a6200]">App instalado ✓</Badge>
               <p className="text-sm text-muted-foreground mt-2">Você está usando a versão instalada.</p>
             </CardContent>
           </Card>

@@ -311,12 +311,12 @@ const Dashboard = () => {
 
 const Stat = ({ label, value, delta }: { label: string; value: any; delta?: string }) => (
   <div className="relative overflow-hidden rounded-xl bg-card border border-border">
-    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary to-emerald-400" />
+    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#d4a843] to-[#e8c975]" />
     <div className="p-5 pt-6">
       <div className="text-[10.5px] font-700 uppercase tracking-widest text-muted-foreground mb-3">{label}</div>
       <div className="text-[38px] font-black tracking-tighter text-foreground leading-none">{value}</div>
       {delta && (
-        <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+        <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#8a6200] bg-[#fef3c7] px-2 py-0.5 rounded-full">
           ↑ {delta}
         </div>
       )}

@@ -37,7 +37,7 @@ interface Subscription {
 const TIER_ICONS = { free: Sparkles, pro: Zap, enterprise: Building2 };
 const TIER_COLORS = {
   free: "from-slate-500 to-slate-600",
-  pro: "from-emerald-500 to-teal-600",
+  pro: "from-[#d4a843] to-[#b08826]",
   enterprise: "from-violet-500 to-fuchsia-600",
 };
 

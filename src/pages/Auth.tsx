@@ -62,11 +62,11 @@ const Auth = () => {
           style={{ backgroundImage: "radial-gradient(ellipse at 10% 90%, rgba(34,197,94,0.08) 0%, transparent 55%), radial-gradient(ellipse at 90% 10%, rgba(22,163,74,0.06) 0%, transparent 55%)" }} />
 
         <div className="relative flex flex-col h-full p-12">
-          <Link to="/">
-            <div className="relative inline-block">
-            <div className="absolute inset-0 rounded-full blur-2xl bg-[#d4a843]/25 scale-150" />
-            <img src={nutrirLogo} alt="Nutrir" className="relative h-16 w-auto object-contain drop-shadow-[0_0_20px_rgba(212,168,67,0.5)]" />
-          </div>
+          <Link to="/" className="inline-block">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full blur-2xl bg-white/10 scale-125" />
+              <img src={nutrirLogo} alt="Nutrir" className="relative h-16 w-auto object-contain drop-shadow-[0_2px_14px_rgba(255,255,255,0.2)]" />
+            </div>
           </Link>
 
           <div className="flex-1 flex flex-col justify-center">

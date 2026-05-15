@@ -23,14 +23,16 @@ const Landing = () => (
     {/* ── Hero ── */}
     <section className="bg-[#0b2e14] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none"
-        style={{ backgroundImage: "radial-gradient(ellipse at 20% 100%, rgba(34,197,94,0.10) 0%, transparent 50%), radial-gradient(ellipse at 80% 0%, rgba(22,163,74,0.07) 0%, transparent 50%)" }} />
+        style={{ backgroundImage: "radial-gradient(ellipse at 20% 100%, rgba(212,168,67,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 0%, rgba(212,168,67,0.05) 0%, transparent 50%)" }} />
       <div className="relative container mx-auto px-6 py-28 text-center max-w-4xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4a843]/15 border border-[#d4a843]/25 text-[#d4a843] text-[11px] font-semibold uppercase tracking-wider mb-8">
-          <Zap className="h-3 w-3" /> SaaS multiusuário · Mapas · IA · Satélite
-        </div>
-        <div className="relative inline-block mx-auto mb-8">
-          <div className="absolute inset-0 rounded-full blur-2xl bg-[#d4a843]/30 scale-150" />
-          <img src={nutrirLogo} alt="Nutrir" className="relative h-24 w-auto object-contain drop-shadow-[0_0_24px_rgba(212,168,67,0.5)]" />
+        <div className="flex flex-col items-center">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 rounded-full blur-3xl bg-white/10 scale-125" />
+            <img src={nutrirLogo} alt="Nutrir" className="relative h-24 w-auto object-contain drop-shadow-[0_2px_16px_rgba(255,255,255,0.25)]" />
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4a843]/15 border border-[#d4a843]/25 text-[#d4a843] text-[11px] font-semibold uppercase tracking-wider mb-8">
+            <Zap className="h-3 w-3" /> SaaS multiusuário · Mapas · IA · Satélite
+          </div>
         </div>
         <h1 className="text-[42px] md:text-[58px] font-black tracking-tight text-white leading-[1.05] mb-6">
           Nutrição vegetal<br />
