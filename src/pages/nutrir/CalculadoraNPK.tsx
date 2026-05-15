@@ -370,11 +370,11 @@ export default function CalculadoraNPK() {
                 <Kpi t="Custo NUTRIR" v={moeda(resultado.custoPorHa) + "/ha"} c="text-primary"/>
                 <Kpi t="vs MP simples" v={`${resultado.comparativo.economiaVsMPPct.toFixed(1)}%`}
                   sub={`${moeda(Math.abs(resultado.comparativo.economiaVsMPHa))}/ha`}
-                  c={resultado.comparativo.economiaVsMPHa >= 0 ? "text-emerald-600" : "text-destructive"} icon={TrendingDown}/>
+                  c={resultado.comparativo.economiaVsMPHa >= 0 ? "text-[#b08826]" : "text-destructive"} icon={TrendingDown}/>
                 {resultado.comparativo.economiaVsFormuladoPct !== undefined &&
                   <Kpi t="vs Formulado" v={`${resultado.comparativo.economiaVsFormuladoPct.toFixed(1)}%`}
                     sub={`${moeda(Math.abs(resultado.comparativo.economiaVsFormuladoHa ?? 0))}/ha`}
-                    c={(resultado.comparativo.economiaVsFormuladoHa ?? 0) >= 0 ? "text-emerald-600" : "text-destructive"}/>}
+                    c={(resultado.comparativo.economiaVsFormuladoHa ?? 0) >= 0 ? "text-[#b08826]" : "text-destructive"}/>}
                 <Kpi t="Total na área" v={moeda(resultado.custoTotal)}/>
               </div>
 

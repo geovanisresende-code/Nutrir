@@ -114,7 +114,7 @@ export default function HistoricoFoliar() {
                       <Badge variant="secondary" className="ml-1 text-[10px]">{r.nivel}</Badge>
                     </td>
                     <td className="px-3 py-2 text-right font-mono font-semibold text-primary">{fmtBRL(Number(r.custo_nutrir_rs_ha))}</td>
-                    <td className={`px-3 py-2 text-right font-mono font-semibold ${economiaPositiva ? "text-emerald-600" : "text-destructive"}`}>
+                    <td className={`px-3 py-2 text-right font-mono font-semibold ${economiaPositiva ? "text-[#b08826]" : "text-destructive"}`}>
                       <span className="inline-flex items-center gap-1">
                         {economiaPositiva && <TrendingDown className="w-3 h-3" />}
                         {fmtBRL(Math.abs(Number(r.economia_rs_ha)))}
@@ -135,7 +135,7 @@ export default function HistoricoFoliar() {
                         total: Number(r.economia_total_rs ?? 0),
                         observacao: `Custo NUTRIR: ${fmtBRL(Number(r.custo_nutrir_rs_ha))}/ha · Economia: ${fmtBRL(Number(r.economia_rs_ha))}/ha`,
                       })}>
-                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        <MessageCircle className="w-4 h-4 text-[#b08826]" />
                       </Button>
                       <Button variant="ghost" size="icon" title="Excluir" onClick={() => excluir(r.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />

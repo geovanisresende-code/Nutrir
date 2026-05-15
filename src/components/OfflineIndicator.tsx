@@ -10,7 +10,7 @@ export const OfflineIndicator = () => {
   if (online && pending === 0) {
     return (
       <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Wifi className="w-3.5 h-3.5 text-emerald-500" />
+        <Wifi className="w-3.5 h-3.5 text-[#c49a30]" />
         <span>Online</span>
       </div>
     );

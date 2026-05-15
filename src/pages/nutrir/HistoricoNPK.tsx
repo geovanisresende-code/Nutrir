@@ -113,7 +113,7 @@ export default function HistoricoNPK() {
                       <Badge variant="secondary" className="ml-1 text-[10px]">{r.modo_producao}</Badge>
                     </td>
                     <td className="px-3 py-2 text-right font-mono font-semibold text-primary">{fmtBRL(Number(r.custo_por_ha))}</td>
-                    <td className={`px-3 py-2 text-right font-mono font-semibold ${positiva ? "text-emerald-600" : "text-destructive"}`}>
+                    <td className={`px-3 py-2 text-right font-mono font-semibold ${positiva ? "text-[#b08826]" : "text-destructive"}`}>
                       <span className="inline-flex items-center gap-1">
                         {positiva && <TrendingDown className="w-3 h-3" />}
                         {econ.toFixed(1)}%
@@ -134,7 +134,7 @@ export default function HistoricoNPK() {
                         total: Number(r.custo_total ?? 0),
                         observacao: `Custo: R$ ${Number(r.custo_por_ha).toFixed(2)}/ha · Economia vs MP: ${econ.toFixed(1)}%`,
                       })}>
-                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        <MessageCircle className="w-4 h-4 text-[#b08826]" />
                       </Button>
                       <Button variant="ghost" size="icon" title="Excluir" onClick={() => excluir(r.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />

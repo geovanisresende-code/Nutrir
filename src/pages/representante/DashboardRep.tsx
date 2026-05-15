@@ -289,7 +289,7 @@ function KpiCard({
 }) {
   const accentMap = {
     primary: "text-primary bg-primary/10",
-    success: "text-emerald-600 bg-emerald-500/10",
+    success: "text-[#b08826] bg-[#d4a843]/10",
     warning: "text-amber-600 bg-amber-500/10",
   };
   return (

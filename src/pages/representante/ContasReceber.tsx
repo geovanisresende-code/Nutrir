@@ -84,7 +84,7 @@ export default function ContasReceber() {
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Em aberto</div><div className="text-xl font-bold">{money(totais.em_aberto)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Vencendo (15d)</div><div className="text-xl font-bold text-amber-600">{money(totais.vencendo)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Vencido</div><div className="text-xl font-bold text-destructive">{money(totais.vencido)}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Pago</div><div className="text-xl font-bold text-emerald-600">{money(totais.pago)}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Pago</div><div className="text-xl font-bold text-[#b08826]">{money(totais.pago)}</div></CardContent></Card>
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
@@ -135,12 +135,12 @@ export default function ContasReceber() {
                             title="Cobrar via WhatsApp"
                             onClick={() => openWhatsapp(wppPhone, wppTemplates.contaVencendo(cli!.nome, Number(i.valor), new Date(i.data_vencimento).toLocaleDateString("pt-BR")))}
                           >
-                            <MessageCircle className="h-4 w-4 text-emerald-600" />
+                            <MessageCircle className="h-4 w-4 text-[#b08826]" />
                           </Button>
                         )}
                         {i.status !== "pago" && i.status !== "cancelado" && (
                           <Button size="sm" variant="outline" onClick={() => baixar(i.id, Number(i.valor))}>
-                            <CheckCircle2 className="h-4 w-4 mr-1 text-emerald-600" /> Baixar
+                            <CheckCircle2 className="h-4 w-4 mr-1 text-[#b08826]" /> Baixar
                           </Button>
                         )}
                       </TableCell>

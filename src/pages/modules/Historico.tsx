@@ -45,7 +45,7 @@ const ICONS: Record<EventType, any> = {
 
 const COLORS: Record<EventType, string> = {
   soil_sample: "bg-amber-500/15 text-amber-700 border-amber-200",
-  leaf_sample: "bg-emerald-500/15 text-emerald-700 border-emerald-200",
+  leaf_sample: "bg-[#d4a843]/15 text-emerald-700 border-emerald-200",
   ai_recommendation: "bg-violet-500/15 text-violet-700 border-violet-200",
   ai_image_diagnosis: "bg-fuchsia-500/15 text-fuchsia-700 border-fuchsia-200",
   ndvi_reading: "bg-green-500/15 text-green-700 border-green-200",

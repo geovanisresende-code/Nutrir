@@ -199,7 +199,7 @@ export default function EstoqueCliente() {
                     <TableCell className="text-xs">{new Date(m.created_at).toLocaleString()}</TableCell>
                     <TableCell>
                       <span className="inline-flex items-center gap-1 capitalize">
-                        {m.tipo === "entrada" ? <ArrowDown className="h-3 w-3 text-emerald-600" /> :
+                        {m.tipo === "entrada" ? <ArrowDown className="h-3 w-3 text-[#b08826]" /> :
                          m.tipo === "saida" ? <ArrowUp className="h-3 w-3 text-destructive" /> : <RefreshCw className="h-3 w-3" />}
                         {m.tipo}
                       </span>

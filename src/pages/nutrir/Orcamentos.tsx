@@ -35,8 +35,8 @@ export default function Orcamentos() {
   };
 
   const statusBadge = (o: Orcamento, ped?: Pedido) => {
-    if (ped) return <Badge className="bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="w-3 h-3 mr-1"/>Convertido</Badge>;
-    if (o.status === "convertido") return <Badge className="bg-emerald-600 hover:bg-emerald-700">Convertido</Badge>;
+    if (ped) return <Badge className="bg-[#c49a30] hover:bg-[#a07820]"><CheckCircle2 className="w-3 h-3 mr-1"/>Convertido</Badge>;
+    if (o.status === "convertido") return <Badge className="bg-[#c49a30] hover:bg-[#a07820]">Convertido</Badge>;
     return <Badge variant="secondary">{o.status || "rascunho"}</Badge>;
   };
 
@@ -98,7 +98,7 @@ export default function Orcamentos() {
                         identificador: o.titulo,
                         total: Number(o.total_geral),
                         observacao: `Área total: ${Number(o.area_total_ha).toFixed(1)} ha`,
-                      })}><MessageCircle className="w-4 h-4 text-emerald-600"/></Button>
+                      })}><MessageCircle className="w-4 h-4 text-[#b08826]"/></Button>
                       <AuditoriaStatusDialog entidade="orcamento" entidadeId={o.id} titulo={o.titulo} />
                       <Button variant="ghost" size="icon" onClick={() => excluir(o.id)}><Trash2 className="w-4 h-4 text-destructive"/></Button>
                     </td>

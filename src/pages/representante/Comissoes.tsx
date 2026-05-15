@@ -94,7 +94,7 @@ export default function Comissoes() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Vendas no mês</div><div className="text-2xl font-bold">{money(totais.base)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Comissão base</div><div className="text-2xl font-bold">{money(totais.com)}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Bônus por meta</div><div className="text-2xl font-bold text-emerald-600">{money(totais.bonus)}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Bônus por meta</div><div className="text-2xl font-bold text-[#b08826]">{money(totais.bonus)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total a receber</div><div className="text-2xl font-bold">{money(totais.total)}</div></CardContent></Card>
         </div>
 

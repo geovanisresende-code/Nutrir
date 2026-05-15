@@ -171,8 +171,8 @@ export default function DashboardNutrir() {
 
         {/* KPIs - linha 2 (impacto) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Kpi icon={PiggyBank} label="Economia gerada" value={formatBRL(kpis.economiaTotal)} accent="text-emerald-600" hint="Convencional × NUTRIR"/>
-          <Kpi icon={Activity} label="Economia média" value={`${kpis.economiaMediaPct.toFixed(1)}%`} accent="text-emerald-600"/>
+          <Kpi icon={PiggyBank} label="Economia gerada" value={formatBRL(kpis.economiaTotal)} accent="text-[#b08826]" hint="Convencional × NUTRIR"/>
+          <Kpi icon={Activity} label="Economia média" value={`${kpis.economiaMediaPct.toFixed(1)}%`} accent="text-[#b08826]"/>
           <Kpi icon={Sprout} label="Hectares orçados" value={`${kpis.haOrcadosTotal.toFixed(1)} ha`}/>
           <Kpi icon={BarChart3} label="Conversão orç→pedido" value={`${kpis.conversao.toFixed(0)}%`}/>
         </div>
@@ -265,7 +265,7 @@ export default function DashboardNutrir() {
                         <td className="py-1.5 font-medium">{r.nome}</td>
                         <td className="text-right font-mono">{r.pedidos}</td>
                         <td className="text-right font-mono">{formatBRL(r.faturamento)}</td>
-                        <td className="text-right font-mono text-emerald-600">{formatBRL(r.ticket)}</td>
+                        <td className="text-right font-mono text-[#b08826]">{formatBRL(r.ticket)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -300,7 +300,7 @@ export default function DashboardNutrir() {
         {/* Economia média por cultura */}
         {economiaPorCultura.length > 0 && (
           <Card className="p-4">
-            <h3 className="font-semibold mb-3 flex items-center gap-2"><PiggyBank className="w-4 h-4 text-emerald-600"/> Economia média por cultura (R$/ha)</h3>
+            <h3 className="font-semibold mb-3 flex items-center gap-2"><PiggyBank className="w-4 h-4 text-[#b08826]"/> Economia média por cultura (R$/ha)</h3>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={economiaPorCultura}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3}/>

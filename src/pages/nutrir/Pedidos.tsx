@@ -287,7 +287,7 @@ export default function Pedidos() {
                             total: Number(p.total),
                             observacao: `Status: ${st?.l ?? p.status} · Data: ${new Date(p.data_pedido).toLocaleDateString("pt-BR")}`,
                           });
-                        }}><MessageCircle className="w-4 h-4 text-emerald-600"/></Button>
+                        }}><MessageCircle className="w-4 h-4 text-[#b08826]"/></Button>
                         {p.status === "rascunho" && (
                           <Button variant="ghost" size="icon" title="Confirmar" onClick={() => mudarStatus(p.id, "confirmado")}><CheckCircle2 className="w-4 h-4 text-green-600"/></Button>
                         )}

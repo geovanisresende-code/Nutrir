@@ -443,7 +443,7 @@ export default function PedidosRep() {
                       </PopoverContent>
                     </Popover>
                     <p className="text-[11px] text-muted-foreground">
-                      Condição: <strong className={condicaoPagamento === "a_vista" ? "text-emerald-600" : "text-amber-600"}>
+                      Condição: <strong className={condicaoPagamento === "a_vista" ? "text-[#b08826]" : "text-amber-600"}>
                         {condicaoPagamento === "a_vista" ? "À vista" : "A prazo"}
                       </strong>
                       {" "}(à vista até último dia do mês seguinte ao pedido)
@@ -692,7 +692,7 @@ export default function PedidosRep() {
                 )}
 
                 {selected.assinatura_path ? (
-                  <div className="text-sm rounded-md border p-3 mb-3 bg-emerald-500/5">
+                  <div className="text-sm rounded-md border p-3 mb-3 bg-[#d4a843]/5">
                     <div className="text-xs text-muted-foreground mb-1">Assinatura</div>
                     <div>
                       <strong>{selected.assinatura_nome}</strong> em{" "}

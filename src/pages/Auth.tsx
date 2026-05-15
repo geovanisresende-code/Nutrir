@@ -63,11 +63,14 @@ const Auth = () => {
 
         <div className="relative flex flex-col h-full p-12">
           <Link to="/">
-            <img src={nutrirLogo} alt="Nutrir" className="h-16 w-auto object-contain" />
+            <div className="relative inline-block">
+            <div className="absolute inset-0 rounded-full blur-2xl bg-[#d4a843]/25 scale-150" />
+            <img src={nutrirLogo} alt="Nutrir" className="relative h-16 w-auto object-contain drop-shadow-[0_0_20px_rgba(212,168,67,0.5)]" />
+          </div>
           </Link>
 
           <div className="flex-1 flex flex-col justify-center">
-            <p className="text-emerald-400 text-[11px] font-bold uppercase tracking-[0.2em] mb-4">
+            <p className="text-[#d4a843] text-[11px] font-bold uppercase tracking-[0.2em] mb-4">
               Plataforma AgTech
             </p>
             <h2 className="text-white text-[38px] font-black tracking-tight leading-[1.1] mb-4">
@@ -80,8 +83,8 @@ const Auth = () => {
             <div className="mt-10 grid grid-cols-2 gap-3">
               {features.map(({ icon: Icon, label, desc }) => (
                 <div key={label} className="flex items-start gap-3 bg-white/[0.05] border border-white/[0.08] rounded-xl p-3.5">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20 shrink-0">
-                    <Icon className="h-4 w-4 text-emerald-400" />
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#d4a843]/20 shrink-0">
+                    <Icon className="h-4 w-4 text-[#d4a843]" />
                   </div>
                   <div>
                     <div className="text-white text-[12px] font-semibold leading-none">{label}</div>
@@ -99,7 +102,7 @@ const Auth = () => {
       {/* ── Painel direito ── */}
       <div className="flex-1 flex flex-col bg-[#f5f8f5]">
         <div className="md:hidden flex items-center justify-center h-16 bg-[#0b2e14]">
-          <img src={nutrirLogo} alt="Nutrir" className="h-10 w-auto object-contain" />
+          <img src={nutrirLogo} alt="Nutrir" className="h-10 w-auto object-contain drop-shadow-[0_0_14px_rgba(212,168,67,0.45)]" />
         </div>
 
         <div className="flex-1 flex items-center justify-center p-6">
@@ -134,7 +137,7 @@ const Auth = () => {
                         onChange={e => setEmail(e.target.value)}
                         placeholder="seu@email.com"
                         required
-                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-emerald-500 focus:ring-emerald-500/20"
+                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-[#d4a843] focus:ring-[#d4a843]/20"
                       />
                     </div>
                     <div>
@@ -146,7 +149,7 @@ const Auth = () => {
                         onChange={e => setPassword(e.target.value)}
                         placeholder="••••••••"
                         required
-                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-emerald-500 focus:ring-emerald-500/20"
+                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-[#d4a843] focus:ring-[#d4a843]/20"
                       />
                     </div>
                     <Button
@@ -190,7 +193,7 @@ const Auth = () => {
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="João Silva"
-                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-emerald-500 focus:ring-emerald-500/20"
+                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-[#d4a843] focus:ring-[#d4a843]/20"
                       />
                     </div>
                     <div>
@@ -202,7 +205,7 @@ const Auth = () => {
                         onChange={e => setEmail(e.target.value)}
                         placeholder="seu@email.com"
                         required
-                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-emerald-500 focus:ring-emerald-500/20"
+                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-[#d4a843] focus:ring-[#d4a843]/20"
                       />
                     </div>
                     <div>
@@ -215,13 +218,13 @@ const Auth = () => {
                         placeholder="mínimo 6 caracteres"
                         required
                         minLength={6}
-                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-emerald-500 focus:ring-emerald-500/20"
+                        className="mt-1.5 h-10 text-[13px] border-[#d1d9d1] focus:border-[#d4a843] focus:ring-[#d4a843]/20"
                       />
                     </div>
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-lg"
+                      className="w-full h-10 bg-[#c49a30] hover:bg-[#a07820] text-white text-[13px] font-semibold rounded-lg"
                     >
                       {loading ? "Criando conta…" : "Criar conta grátis"}
                     </Button>

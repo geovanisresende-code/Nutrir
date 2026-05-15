@@ -178,7 +178,7 @@ export default function Financeiro() {
               <DialogHeader><DialogTitle>Novo lançamento</DialogTitle></DialogHeader>
               <Tabs value={tipo} onValueChange={v => setTipo(v as any)}>
                 <TabsList className="grid grid-cols-2 w-full">
-                  <TabsTrigger value="receita" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">Receita</TabsTrigger>
+                  <TabsTrigger value="receita" className="data-[state=active]:bg-[#c49a30] data-[state=active]:text-white">Receita</TabsTrigger>
                   <TabsTrigger value="despesa" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Despesa</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -219,9 +219,9 @@ export default function Financeiro() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><TrendingUp className="h-4 w-4" />Receitas no mês</div><p className="text-xl font-bold text-emerald-600 mt-1">{fmt(kpis.receitas)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><TrendingUp className="h-4 w-4" />Receitas no mês</div><p className="text-xl font-bold text-[#b08826] mt-1">{fmt(kpis.receitas)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><TrendingDown className="h-4 w-4" />Despesas no mês</div><p className="text-xl font-bold text-red-600 mt-1">{fmt(kpis.despesas)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><DollarSign className="h-4 w-4" />Resultado</div><p className={`text-xl font-bold mt-1 ${kpis.lucro >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmt(kpis.lucro)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><DollarSign className="h-4 w-4" />Resultado</div><p className={`text-xl font-bold mt-1 ${kpis.lucro >= 0 ? "text-[#b08826]" : "text-red-600"}`}>{fmt(kpis.lucro)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs">Pendente líquido</div><p className="text-xl font-bold mt-1">{fmt(kpis.pendentes)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><Wallet className="h-4 w-4" />Saldo atual</div><p className="text-xl font-bold mt-1">{fmt(kpis.saldoAtual)}</p></CardContent></Card>
       </div>
@@ -259,9 +259,9 @@ export default function Financeiro() {
                   const cat = cats.find(c => c.id === l.categoria_id);
                   return <tr key={l.id} className="border-t hover:bg-muted/20">
                     <td className="p-2">{new Date(l.data + "T12:00").toLocaleDateString("pt-BR")}</td>
-                    <td className="p-2 flex items-center gap-2">{l.tipo === "receita" ? <ArrowUpCircle className="h-4 w-4 text-emerald-600" /> : <ArrowDownCircle className="h-4 w-4 text-red-600" />}{l.descricao}</td>
+                    <td className="p-2 flex items-center gap-2">{l.tipo === "receita" ? <ArrowUpCircle className="h-4 w-4 text-[#b08826]" /> : <ArrowDownCircle className="h-4 w-4 text-red-600" />}{l.descricao}</td>
                     <td className="p-2">{cat?.nome ?? "-"}</td>
-                    <td className={`p-2 text-right font-medium ${l.tipo === "receita" ? "text-emerald-600" : "text-red-600"}`}>{fmt(Number(l.valor))}</td>
+                    <td className={`p-2 text-right font-medium ${l.tipo === "receita" ? "text-[#b08826]" : "text-red-600"}`}>{fmt(Number(l.valor))}</td>
                     <td className="p-2 text-center"><Badge variant={l.status === "pago" ? "default" : "secondary"} className="cursor-pointer" onClick={() => togglePago(l)}>{l.status}</Badge></td>
                   </tr>;
                 })}

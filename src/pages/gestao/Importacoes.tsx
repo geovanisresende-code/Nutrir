@@ -254,7 +254,7 @@ export default function Importacoes() {
                           <td className="p-2 text-muted-foreground">{i + 1}</td>
                           <td className="p-2">
                             {r.ok ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              <CheckCircle2 className="h-4 w-4 text-[#b08826]" />
                             ) : (
                               <AlertCircle className="h-4 w-4 text-destructive" />
                             )}

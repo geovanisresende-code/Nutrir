@@ -15,7 +15,7 @@ import { ptBR } from "date-fns/locale";
 
 const typeIcon = (type: Notification["type"]) => {
   switch (type) {
-    case "success": return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    case "success": return <CheckCircle2 className="w-4 h-4 text-[#c49a30]" />;
     case "warning": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
     case "error": return <AlertCircle className="w-4 h-4 text-destructive" />;
     default: return <Info className="w-4 h-4 text-primary" />;

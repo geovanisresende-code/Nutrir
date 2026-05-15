@@ -107,7 +107,7 @@ export const Topbar = ({ onOpenSidebar }: TopbarProps) => {
           {/* Avatar */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 bg-emerald-400 text-emerald-900 hover:bg-emerald-300 transition-colors duration-150">
+              <button className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 bg-[#e8c975] text-[#3d2800] hover:bg-[#e8c975] transition-colors duration-150">
                 {initials}
               </button>
             </DropdownMenuTrigger>

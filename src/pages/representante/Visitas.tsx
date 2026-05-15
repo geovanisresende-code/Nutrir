@@ -292,9 +292,9 @@ export default function Visitas() {
                 </div>
 
                 {motivo === "entrega_produto" && (
-                  <div className="border rounded-md p-3 space-y-2 bg-emerald-500/5">
+                  <div className="border rounded-md p-3 space-y-2 bg-[#d4a843]/5">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2"><Truck className="w-4 h-4 text-emerald-600" />
+                      <div className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#b08826]" />
                         <Label className="text-sm font-semibold">Produtos entregues (entram no estoque do cliente)</Label></div>
                       <Button type="button" size="sm" variant="outline" onClick={addEntrega}><Plus className="w-3 h-3 mr-1" /> Item</Button>
                     </div>

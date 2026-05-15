@@ -301,7 +301,7 @@ export default function CalculadoraFoliar() {
               {/* KPIs */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Kpi t="R$/ha NUTRIR" v={moeda(resultado.comparativo.nutrirRsHa)} c="text-primary"/>
-                <Kpi t="Economia/ha" v={moeda(Math.abs(resultado.comparativo.economiaRsHa))} sub={`${fmtNum(resultado.comparativo.economiaPercent, 1)}%`} c={resultado.comparativo.economiaRsHa >= 0 ? "text-emerald-600" : "text-destructive"} icon={TrendingDown}/>
+                <Kpi t="Economia/ha" v={moeda(Math.abs(resultado.comparativo.economiaRsHa))} sub={`${fmtNum(resultado.comparativo.economiaPercent, 1)}%`} c={resultado.comparativo.economiaRsHa >= 0 ? "text-[#b08826]" : "text-destructive"} icon={TrendingDown}/>
                 <Kpi t="Volume foliar" v={fmtQty(arredondaAplicacao(resultado.aplicacaoFoliarLHa), "L/ha")}/>
                 <Kpi t="Nº batidas" v={fmtInt(resultado.numeroBatidas)} sub={`${fmtInt(resultado.diasParaCobrir)} dias p/ cobrir`}/>
               </div>
@@ -321,7 +321,7 @@ export default function CalculadoraFoliar() {
                   </BarChart>
                 </ResponsiveContainer>
                 <div className="text-center text-sm text-muted-foreground mt-2">
-                  Total na área: <strong className={resultado.comparativo.economiaRsHa >= 0 ? "text-emerald-600" : "text-destructive"}>
+                  Total na área: <strong className={resultado.comparativo.economiaRsHa >= 0 ? "text-[#b08826]" : "text-destructive"}>
                     {resultado.comparativo.economiaRsHa >= 0 ? "Economia " : "Investimento extra "}
                     {moeda(Math.abs(resultado.comparativo.economiaTotalRs))}
                   </strong>

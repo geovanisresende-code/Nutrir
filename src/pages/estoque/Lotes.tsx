@@ -55,7 +55,7 @@ export default function Lotes() {
     if (dias < 0) return { label: "Vencido", cls: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" };
     if (dias <= 30) return { label: `${dias}d`, cls: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" };
     if (dias <= 90) return { label: `${dias}d`, cls: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" };
-    return { label: `${dias}d`, cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+    return { label: `${dias}d`, cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-[#e8c975]" };
   };
 
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

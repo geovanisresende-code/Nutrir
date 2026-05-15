@@ -139,7 +139,7 @@ export default function RelatoriosRDV() {
 
       <div className="grid grid-cols-3 gap-3">
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Total</p><p className="text-2xl font-bold">{fmtBRL(total)}</p></CardContent></Card>
-        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Aprovado</p><p className="text-2xl font-bold text-emerald-600">{fmtBRL(aprovados)}</p></CardContent></Card>
+        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Aprovado</p><p className="text-2xl font-bold text-[#b08826]">{fmtBRL(aprovados)}</p></CardContent></Card>
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Pendente</p><p className="text-2xl font-bold text-amber-600">{fmtBRL(pendentes)}</p></CardContent></Card>
       </div>
 

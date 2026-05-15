@@ -37,7 +37,7 @@ export function DescontoInput({ value, onChange, label = "Desconto (%)", classNa
   const nivel = nivelDesconto(value);
 
   const cor =
-    nivel === "ok" ? "border-emerald-500/60 focus-visible:ring-emerald-500" :
+    nivel === "ok" ? "border-[#d4a843]/60 focus-visible:ring-[#d4a843]" :
     nivel === "atencao" ? "border-yellow-500/70 focus-visible:ring-yellow-500" :
     nivel === "alerta" ? "border-red-500/70 focus-visible:ring-red-500" :
     "border-red-700 focus-visible:ring-red-700";
@@ -78,7 +78,7 @@ export function DescontoMensagem({ pct }: { pct: number }) {
   const n = nivelDesconto(pct);
   if (n === "ok") {
     return (
-      <p className="text-[11px] flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+      <p className="text-[11px] flex items-center gap-1 text-[#b08826] dark:text-[#d4a843]">
         <Check className="h-3 w-3" /> Desconto autorizado (até {LIMITE_DESCONTO_AUTORIZADO}%).
       </p>
     );

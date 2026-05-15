@@ -351,7 +351,7 @@ export default function ColetarAmostras() {
                 </>
               )}
               {pontos.length > 0 && (
-                <Button onClick={salvarColeta} variant="default" className="bg-emerald-600 hover:bg-emerald-700">
+                <Button onClick={salvarColeta} variant="default" className="bg-[#c49a30] hover:bg-[#a07820]">
                   <Save className="w-4 h-4 mr-1.5" />Salvar ({pontos.length})
                 </Button>
               )}

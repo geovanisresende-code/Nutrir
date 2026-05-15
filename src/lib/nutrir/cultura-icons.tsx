@@ -34,7 +34,7 @@ const FLOWER: IconConfig = { icon: Flower2, tone: "text-pink-600 bg-pink-50" };
 const COFFEE_C: IconConfig = { icon: Coffee, tone: "text-amber-800 bg-amber-50" };
 const NUT: IconConfig = { icon: Nut, tone: "text-stone-700 bg-stone-100" };
 const VINE: IconConfig = { icon: Grape, tone: "text-purple-700 bg-purple-50" };
-const HERB: IconConfig = { icon: Leaf, tone: "text-emerald-600 bg-emerald-50" };
+const HERB: IconConfig = { icon: Leaf, tone: "text-[#b08826] bg-emerald-50" };
 const DECID: IconConfig = { icon: TreeDeciduous, tone: "text-lime-700 bg-lime-50" };
 const CHERRYISH: IconConfig = { icon: Cherry, tone: "text-red-600 bg-red-50" };
 
@@ -75,7 +75,7 @@ const MAP: Record<string, IconConfig> = {
   manga: FRUIT,
   maracujá: { icon: Flower2, tone: "text-violet-600 bg-violet-50" },
   maçã: FRUIT,
-  melancia: { icon: Apple, tone: "text-emerald-600 bg-emerald-50" },
+  melancia: { icon: Apple, tone: "text-[#b08826] bg-emerald-50" },
   melão: { icon: Apple, tone: "text-yellow-600 bg-yellow-50" },
   milheto: GRAIN,
   milho: { icon: Wheat, tone: "text-yellow-600 bg-yellow-50" },

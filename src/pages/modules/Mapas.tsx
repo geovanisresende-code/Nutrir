@@ -231,7 +231,7 @@ const Mapas = () => {
     if (error) { toast.error(error.message); return; }
     if (map.current) {
       const el = document.createElement("div");
-      el.className = `h-3 w-3 rounded-full border-2 border-white shadow-md ${kind === "gps" ? "bg-yellow-400" : kind === "sample" ? "bg-emerald-500" : "bg-sky-500"}`;
+      el.className = `h-3 w-3 rounded-full border-2 border-white shadow-md ${kind === "gps" ? "bg-yellow-400" : kind === "sample" ? "bg-[#d4a843]" : "bg-sky-500"}`;
       const mk = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat])
         .setPopup(new mapboxgl.Popup({ offset: 10 }).setHTML(`<strong>${kind}</strong><br/>${lat.toFixed(5)}, ${lng.toFixed(5)}${notes ? `<br/>${notes}` : ""}`))
         .addTo(map.current);
