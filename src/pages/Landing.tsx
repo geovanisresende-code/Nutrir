@@ -5,24 +5,22 @@ import nutrirLogo from "@/assets/1.png";
 const Landing = () => (
   <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
 
-    {/* ── Header verde escuro ── */}
+    {/* ── Header ── */}
     <header className="sticky top-0 z-50 bg-[#0b2e14] border-b border-white/10">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <img src={nutrirLogo} alt="Nutrir" className="h-10 w-auto object-contain" />
         <nav className="flex items-center gap-3">
-          <Link to="/auth"
-            className="px-4 h-9 flex items-center text-[13px] font-medium text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
+          <Link to="/auth" className="px-4 h-9 flex items-center text-[13px] font-medium text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
             Entrar
           </Link>
-          <Link to="/auth?mode=signup"
-            className="px-5 h-9 flex items-center text-[13px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-colors gap-1.5">
+          <Link to="/auth?mode=signup" className="px-5 h-9 flex items-center text-[13px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-colors gap-1.5">
             Começar grátis <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </nav>
       </div>
     </header>
 
-    {/* ── Hero verde escuro ── */}
+    {/* ── Hero ── */}
     <section className="bg-[#0b2e14] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none"
         style={{ backgroundImage: "radial-gradient(ellipse at 20% 100%, rgba(34,197,94,0.10) 0%, transparent 50%), radial-gradient(ellipse at 80% 0%, rgba(22,163,74,0.07) 0%, transparent 50%)" }} />
@@ -38,18 +36,14 @@ const Landing = () => (
         <p className="text-[17px] text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
           Plataforma agronômica completa para consultorias e cooperativas — motor de formulação, NDVI por talhão e recomendações de IA em workspaces isolados.
         </p>
-        <div className="flex gap-3 justify-center">
-          <Link to="/auth?mode=signup"
-            className="px-7 h-12 flex items-center text-[15px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-colors gap-2">
+        <div className="flex gap-3 justify-center flex-wrap">
+          <Link to="/auth?mode=signup" className="px-7 h-12 flex items-center text-[15px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-colors gap-2">
             Criar conta gratuita <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link to="/auth"
-            className="px-7 h-12 flex items-center text-[15px] font-semibold bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-xl transition-colors">
+          <Link to="/auth" className="px-7 h-12 flex items-center text-[15px] font-semibold bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-xl transition-colors">
             Já tenho conta
           </Link>
         </div>
-
-        {/* Stats */}
         <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
           {[
             { val: "5+", label: "Módulos integrados" },
@@ -75,7 +69,6 @@ const Landing = () => (
             Tudo o que uma consultoria agronômica precisa, em um único workspace multiusuário.
           </p>
         </div>
-
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
           {[
             { icon: Map,          title: "Mapas de Talhões",    desc: "Desenhe e edite talhões no mapa. Cálculo automático de área em hectares." },
@@ -97,7 +90,7 @@ const Landing = () => (
       </div>
     </section>
 
-    {/* ── CTA final ── */}
+    {/* ── CTA ── */}
     <section className="bg-[#0b2e14] py-20">
       <div className="container mx-auto px-6 text-center max-w-2xl">
         <h2 className="text-[32px] font-black text-white tracking-tight mb-4">
@@ -106,8 +99,7 @@ const Landing = () => (
         <p className="text-white/55 text-[16px] mb-8">
           Crie sua conta grátis e configure seu workspace em menos de 2 minutos.
         </p>
-        <Link to="/auth?mode=signup"
-          className="inline-flex items-center gap-2 px-8 h-13 text-[15px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-colors">
+        <Link to="/auth?mode=signup" className="inline-flex items-center gap-2 px-8 py-3 text-[15px] font-bold bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-colors">
           Começar agora <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
