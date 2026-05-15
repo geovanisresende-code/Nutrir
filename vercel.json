@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
+  "installCommand": "rm -f package-lock.json bun.lockb && npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
