@@ -113,7 +113,10 @@ const Landing = () => (
     {/* ── Footer ── */}
     <footer className="bg-[#071a0c] py-8 border-t border-white/5">
       <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3">
-        <img src={nutrirLogo} alt="Nutrir" className="h-8 w-auto object-contain opacity-70" />
+        <div className="relative inline-block">
+            <div className="absolute inset-0 rounded-full blur-xl bg-white/10 scale-125" />
+            <img src={nutrirLogo} alt="Nutrir" className="relative h-8 w-auto object-contain drop-shadow-[0_1px_8px_rgba(255,255,255,0.2)]" />
+          </div>
         <p className="text-white/25 text-[12px]">© {new Date().getFullYear()} Nutrir AgTech · Todos os direitos reservados</p>
         <Link to="/auth" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Acessar plataforma</Link>
       </div>
