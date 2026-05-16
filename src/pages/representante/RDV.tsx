@@ -13,19 +13,37 @@ import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Camera, Trash2, Send, FileText, ScanLine } from "lucide-react";
+import { Plus, Camera, Trash2, Send, FileText, ScanLine, ShieldAlert, TrendingUp, AlertCircle } from "lucide-react";
 import VendedorBadge from "@/components/representante/VendedorBadge";
 import DocumentScanner from "@/components/representante/DocumentScanner";
 
 const CATEGORIAS = [
-  { v: "combustivel", l: "Combustível" },
-  { v: "alimentacao", l: "Alimentação" },
-  { v: "hospedagem", l: "Hospedagem" },
-  { v: "pedagio", l: "Pedágio" },
-  { v: "manutencao", l: "Manutenção" },
+  { v: "combustivel",    l: "Combustível" },
+  { v: "alimentacao",    l: "Alimentação" },
+  { v: "hospedagem",     l: "Hospedagem" },
+  { v: "pedagio",        l: "Pedágio" },
+  { v: "manutencao",     l: "Manutenção" },
   { v: "estacionamento", l: "Estacionamento" },
-  { v: "outros", l: "Outros" },
+  { v: "entretenimento", l: "Entretenimento" },
+  { v: "outros",         l: "Outros" },
 ] as const;
+
+const SUBCATEGORIAS: Record<string, { v: string; l: string }[]> = {
+  alimentacao: [
+    { v: "restaurante",  l: "Restaurante" },
+    { v: "lanchonete",   l: "Lanchonete" },
+    { v: "padaria",      l: "Café / Padaria" },
+    { v: "mercado",      l: "Mercado / Supermercado" },
+    { v: "delivery",     l: "Delivery" },
+    { v: "outros",       l: "Outros" },
+  ],
+  entretenimento: [
+    { v: "cliente",      l: "Entretenimento com cliente" },
+    { v: "equipe",       l: "Confraternização de equipe" },
+    { v: "evento",       l: "Evento / Feira" },
+    { v: "outros",       l: "Outros" },
+  ],
+};
 
 const COMBUSTIVEIS = [
   { v: "gasolina", l: "Gasolina" },
@@ -113,10 +131,13 @@ export default function RDV() {
   const [items, setItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [limiteMensal, setLimiteMensal] = useState<number | null>(null);
+  const [antifraude, setAntifraude] = useState<{ id: string; alerta: string } | null>(null);
 
   // form
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [categoria, setCategoria] = useState<string>("combustivel");
+  const [subcategoria, setSubcategoria] = useState<string>("");
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [cidade, setCidade] = useState("");
@@ -142,6 +163,16 @@ export default function RDV() {
       .order("data", { ascending: false })
       .limit(200);
     setItems((rows as any[]) ?? []);
+
+    // Tenta carregar limite mensal do perfil do usuário
+    const { data: perfil } = await supabase
+      .from("profiles")
+      .select("rdv_limite_mensal")
+      .eq("id", user.id)
+      .maybeSingle();
+    if ((perfil as any)?.rdv_limite_mensal) {
+      setLimiteMensal(Number((perfil as any).rdv_limite_mensal));
+    }
   };
   useEffect(() => { load(); }, [current?.id, user?.id]);
 
@@ -172,7 +203,7 @@ export default function RDV() {
 
   const reset = () => {
     setData(new Date().toISOString().slice(0, 10));
-    setCategoria("combustivel"); setValor(""); setDescricao("");
+    setCategoria("combustivel"); setSubcategoria(""); setValor(""); setDescricao("");
     setCidade(""); setUf("");
     setCombTipo("gasolina"); setLitros(""); setPrecoLitro("");
     setKmIni(""); setKmFim(""); setPrimeiroAbastecimento(false);
@@ -196,6 +227,7 @@ export default function RDV() {
         user_id: user.id,
         data,
         categoria,
+        subcategoria: subcategoria || null,
         descricao: descricao || null,
         valor: num(valor),
         cidade: cidade || null,
@@ -213,10 +245,28 @@ export default function RDV() {
       if (categoria === "hospedagem") {
         payload.hotel_nome = hotelNome || null;
       }
-      const { error } = await supabase.from("nutrir_rdv" as any).insert(payload);
+      const { data: insertedRow, error } = await supabase.from("nutrir_rdv" as any).insert(payload).select().single();
       if (error) throw error;
       toast.success("Despesa lançada");
       setOpen(false); reset(); load();
+
+      // IA antifraude (assíncrono — não bloqueia o fluxo)
+      if (insertedRow) {
+        supabase.functions.invoke("rdv-antifraude", {
+          body: {
+            rdv_id: (insertedRow as any).id,
+            valor: num(valor),
+            categoria,
+            subcategoria: subcategoria || null,
+            descricao: descricao || null,
+          },
+        }).then(({ data: res }) => {
+          if (res?.alerta) {
+            setAntifraude({ id: (insertedRow as any).id, alerta: res.alerta });
+            toast.warning("⚠️ IA detectou possível anomalia — verifique a despesa.");
+          }
+        }).catch(() => { /* silencioso */ });
+      }
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao salvar");
     } finally {
@@ -297,7 +347,7 @@ export default function RDV() {
                   <div className="space-y-1.5"><Label>Data</Label><Input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></div>
                   <div className="space-y-1.5">
                     <Label>Categoria</Label>
-                    <Select value={categoria} onValueChange={setCategoria}>
+                    <Select value={categoria} onValueChange={(v) => { setCategoria(v); setSubcategoria(""); }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CATEGORIAS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
@@ -305,6 +355,19 @@ export default function RDV() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Subcategoria (alimentação / entretenimento) */}
+                {SUBCATEGORIAS[categoria] && (
+                  <div className="space-y-1.5">
+                    <Label>Subcategoria</Label>
+                    <Select value={subcategoria} onValueChange={setSubcategoria}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {SUBCATEGORIAS[categoria].map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-1.5">
@@ -427,8 +490,44 @@ export default function RDV() {
 
       <div className="p-6 space-y-4">
         <VendedorBadge />
+
+        {/* Alerta antifraude IA */}
+        {antifraude && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+            <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-amber-800">IA Antifraude detectou anomalia</div>
+              <div className="text-xs text-amber-700 mt-0.5">{antifraude.alerta}</div>
+            </div>
+            <button onClick={() => setAntifraude(null)} className="ml-auto text-amber-500 hover:text-amber-700 text-xs">✕</button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total no mês</div><div className="text-2xl font-bold">{fmt(totalMes)}</div></CardContent></Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Total no mês</div>
+              <div className="text-2xl font-bold">{fmt(totalMes)}</div>
+              {limiteMensal != null && (
+                <>
+                  <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${totalMes / limiteMensal > 0.9 ? "bg-red-500" : totalMes / limiteMensal > 0.7 ? "bg-amber-500" : "bg-emerald-500"}`}
+                      style={{ width: `${Math.min(100, (totalMes / limiteMensal) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Limite: {fmt(limiteMensal)} · Disponível: {fmt(Math.max(0, limiteMensal - totalMes))}
+                  </div>
+                  {totalMes > limiteMensal && (
+                    <div className="flex items-center gap-1 text-[11px] text-red-600 font-medium mt-0.5">
+                      <AlertCircle className="h-3 w-3" /> Limite excedido em {fmt(totalMes - limiteMensal)}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total lançado</div><div className="text-2xl font-bold">{fmt(total)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Lançamentos</div><div className="text-2xl font-bold">{meus.length}</div></CardContent></Card>
         </div>

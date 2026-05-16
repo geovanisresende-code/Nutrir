@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, Trash2, ShoppingCart, FileSignature, FileText as FileIcon, Send, X, CalendarIcon, Download, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, FileSignature, FileText as FileIcon, Send, X, CalendarIcon, Download, AlertTriangle, Info, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/AppShell";
 import VendedorBadge from "@/components/representante/VendedorBadge";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,26 @@ const TIPOS_VENDA = [
   { value: "grupo_compra", label: "Grupo de Compra" },
   { value: "revenda", label: "Revenda" },
   { value: "venda_direta", label: "Venda Direta" },
+  { value: "venda_agenciada", label: "Venda Agenciada" },
 ] as const;
+
+// ── Cálculo de juros de mora ────────────────────────────────────
+// Carência: 30 dias após vencimento. Após: 1,9% ao mês (diário).
+const JUROS_CARENCIA_DIAS = 30;
+const JUROS_MES = 0.019; // 1,9% ao mês
+const JUROS_DIA = JUROS_MES / 30;
+
+function calcularJuros(total: number, dataVenc: Date | null | undefined, hoje = new Date()): {
+  diasAtraso: number; diasCorridos: number; juros: number; totalComJuros: number;
+} | null {
+  if (!dataVenc || total <= 0) return null;
+  const diffMs = hoje.getTime() - dataVenc.getTime();
+  const diasCorridos = Math.floor(diffMs / 86_400_000);
+  if (diasCorridos <= 0) return null; // ainda dentro do prazo
+  const diasAtraso = Math.max(0, diasCorridos - JUROS_CARENCIA_DIAS);
+  const juros = diasAtraso > 0 ? total * JUROS_DIA * diasAtraso : 0;
+  return { diasAtraso, diasCorridos, juros, totalComJuros: total + juros };
+}
 
 // ── Ordem padrão de embalagens (apenas exibição) ────────────────
 // 1L cx12 → 5L cx20 → 10L → 20L → 25L → 50L → IBC 1000L
@@ -123,9 +142,12 @@ export default function PedidosRep() {
   const [descontoPct, setDescontoPct] = useState(0);
   const [itens, setItens] = useState<Item[]>([]);
 
+  // cascade linha → produto
+  const [linhaFiltro, setLinhaFiltro] = useState<Record<number, string>>({}); // index → linha
+
   const reset = () => {
     setClienteId(""); setTipoVenda("b2b"); setDataVencimento(undefined); setDataEntrega(undefined);
-    setOrcamentoOrigemId(""); setObservacoes(""); setDescontoPct(0); setItens([]);
+    setOrcamentoOrigemId(""); setObservacoes(""); setDescontoPct(0); setItens([]); setLinhaFiltro({});
   };
 
   const load = async () => {
@@ -150,6 +172,20 @@ export default function PedidosRep() {
   useEffect(() => { load(); }, [current?.id]);
 
   const clienteAtivo = useMemo(() => clientes.find(c => c.id === clienteId), [clientes, clienteId]);
+
+  // linhas únicas extraídas dos produtos
+  const linhasDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    produtos.forEach(p => { if (p.linha) set.add(p.linha); });
+    return Array.from(set).sort();
+  }, [produtos]);
+
+  // produtos filtrados pela linha selecionada (por índice do item)
+  const produtosFiltradosPorLinha = (idx: number) => {
+    const l = linhaFiltro[idx];
+    if (!l) return produtos;
+    return produtos.filter(p => p.linha === l);
+  };
   const dataPedido = useMemo(() => new Date(), []);
   const condicaoPagamento: "a_vista" | "a_prazo" = isAVista(dataPedido, dataVencimento) ? "a_vista" : "a_prazo";
 
@@ -275,7 +311,12 @@ export default function PedidosRep() {
 
     setSaving(true);
     try {
-      const numero = `R-${Date.now().toString().slice(-6)}`;
+      // Numeração sequencial por organização
+      const { count: totalPedidos } = await supabase
+        .from("nutrir_pedidos" as any)
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", current.id);
+      const numero = `R-${String((totalPedidos ?? 0) + 1).padStart(4, "0")}`;
       const { data: pedido, error } = await supabase
         .from("nutrir_pedidos" as any)
         .insert({
@@ -428,6 +469,24 @@ export default function PedidosRep() {
                   </div>
                 </div>
 
+                {/* Alerta B2B: cotação sem preços expostos */}
+                {tipoVenda === "b2b" && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-amber-800">
+                      <strong>Modo Cotação B2B:</strong> Os preços <strong>não serão exibidos</strong> ao cliente no PDF — apenas quantidades e produtos. O gerente/administrador receberá notificação para aprovação antes do envio.
+                    </div>
+                  </div>
+                )}
+                {tipoVenda === "venda_agenciada" && (
+                  <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3">
+                    <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-blue-800">
+                      <strong>Venda Agenciada:</strong> Este pedido é intermediado pelo representante. O faturamento será realizado diretamente entre a empresa e o cliente final.
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label>Data de vencimento</Label>
@@ -504,9 +563,29 @@ export default function PedidosRep() {
                     const qtdInvalida = it.embalagem_id != null && mult > 1 && it.quantidade > 0 && it.quantidade % mult !== 0;
                     const subtotalLinha = it.quantidade * it.preco_unitario * (1 - (it.desconto_pct || 0) / 100);
                     const isConsultoria = !it.produto_id && it.produto_nome.startsWith("Consultoria");
+                    const prodsFiltrados = produtosFiltradosPorLinha(i);
                     return (
                       <div key={i} className="grid grid-cols-12 gap-2 items-end border rounded-md p-2">
-                        <div className="col-span-12 md:col-span-4 space-y-1">
+                        {/* Filtro de linha (cascade) */}
+                        {!isConsultoria && linhasDisponiveis.length > 0 && (
+                          <div className="col-span-12 md:col-span-3 space-y-1">
+                            <Label className="text-xs">Linha</Label>
+                            <Select
+                              value={linhaFiltro[i] ?? ""}
+                              onValueChange={(v) => {
+                                setLinhaFiltro(prev => ({ ...prev, [i]: v === "__todas__" ? "" : v }));
+                                updItem(i, { produto_id: "", produto_nome: "", embalagem_id: null, preco_unitario: 0 });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__todas__">Todas as linhas</SelectItem>
+                                {linhasDisponiveis.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div className={`${!isConsultoria && linhasDisponiveis.length > 0 ? "col-span-12 md:col-span-4" : "col-span-12 md:col-span-4"} space-y-1`}>
                           <Label className="text-xs">Produto</Label>
                           {isConsultoria ? (
                             <Input value={it.produto_nome} disabled />
@@ -519,7 +598,7 @@ export default function PedidosRep() {
                                     Nenhum produto cadastrado.{" "}
                                     <a href="/app/gestao/produtos" className="text-primary underline">Cadastrar →</a>
                                   </div>
-                                ) : produtos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                                ) : prodsFiltrados.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           )}
@@ -682,6 +761,34 @@ export default function PedidosRep() {
                   <div className="flex justify-between text-sm"><span>Subtotal</span><strong className="font-mono">{fmtBRL(Number(selected.subtotal))}</strong></div>
                   <div className="flex justify-between text-sm"><span>Desconto</span><strong className="font-mono text-destructive">− {fmtBRL(Number(selected.desconto))}</strong></div>
                   <div className="flex justify-between text-base"><span>Total</span><strong className="font-mono text-primary">{fmtBRL(Number(selected.total))}</strong></div>
+                  {/* Juros de mora */}
+                  {(() => {
+                    const venc = selected.data_vencimento ? new Date(selected.data_vencimento + "T00:00:00") : null;
+                    const juros = calcularJuros(Number(selected.total), venc);
+                    if (!juros || juros.juros === 0) return null;
+                    return (
+                      <div className="mt-2 pt-2 border-t space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
+                          <TrendingUp className="h-3.5 w-3.5" /> Juros de mora (1,9%/mês · após 30d de carência)
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Dias em atraso: {juros.diasCorridos}d ({juros.diasAtraso}d com juros)</span>
+                          <span className="text-amber-700 font-mono">+ {fmtBRL(juros.juros)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-semibold">
+                          <span>Total com juros</span>
+                          <strong className="font-mono text-amber-700">{fmtBRL(juros.totalComJuros)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {/* Vencimento e condição */}
+                  {selected.data_vencimento && (
+                    <div className="text-xs text-muted-foreground pt-1 flex gap-3">
+                      <span>Vencimento: {new Date(selected.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                      <span>Cond.: {selected.condicao_pagamento === "a_vista" ? "À vista" : "A prazo"}</span>
+                    </div>
+                  )}
                 </div>
 
                 {selected.observacoes && (

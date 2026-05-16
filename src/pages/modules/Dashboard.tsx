@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useOrg } from "@/contexts/OrganizationContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePosition } from "@/hooks/usePosition";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Map as MapIcon, FlaskConical, Brain, Satellite, Sprout, Users,
   AlertTriangle, FileText, ArrowRight, ShoppingCart, TrendingUp,
-  FileSpreadsheet, BarChart2,
+  FileSpreadsheet, BarChart2, ClipboardList, Car, FlaskConical as Flask,
+  CheckCircle2, Clock, DollarSign,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -25,8 +28,227 @@ const NDVI_COLORS: Record<string, string> = {
   "Sem leitura": "#94a3b8",
 };
 
+// ─── painel por papel ─────────────────────────────────────────────────────────
+function RoleDashboard({ position, userId, orgId }: { position: string | null; userId: string; orgId: string }) {
+  const [repData, setRepData] = useState<any>(null);
+  const [gerenteData, setGerenteData] = useState<any>(null);
+  const [clienteData, setClienteData] = useState<any>(null);
+
+  useEffect(() => {
+    if (!position || !orgId || !userId) return;
+
+    if (position === "representante" || position === "assistente_tecnico") {
+      (async () => {
+        const ym = new Date().toISOString().slice(0, 7);
+        const [peds, campos, rdv] = await Promise.all([
+          (supabase as any).from("nutrir_pedidos").select("total,status,created_at")
+            .eq("organization_id", orgId).eq("created_by", userId).order("created_at", { ascending: false }).limit(5),
+          (supabase as any).from("nutrir_campos_teste").select("id,titulo,status,created_at")
+            .eq("organization_id", orgId).eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+          (supabase as any).from("nutrir_rdv").select("valor,status,data")
+            .eq("organization_id", orgId).eq("user_id", userId).like("data", `${ym}%`),
+        ]);
+        const pedsList = peds.data ?? [];
+        const rdvList = rdv.data ?? [];
+        setRepData({
+          pedidos: pedsList,
+          totalPedidos: pedsList.filter((p: any) => p.status !== "cancelado").reduce((s: number, p: any) => s + Number(p.total || 0), 0),
+          campos: campos.data ?? [],
+          camposAtivos: (campos.data ?? []).filter((c: any) => c.status === "em_andamento").length,
+          rdvTotal: rdvList.reduce((s: number, r: any) => s + Number(r.valor || 0), 0),
+          rdvPendente: rdvList.filter((r: any) => r.status === "rascunho").length,
+        });
+      })();
+    }
+
+    if (position === "gerente" || position === "diretor" || position === "proprietario") {
+      (async () => {
+        const ym = new Date().toISOString().slice(0, 7);
+        const [peds, reps, rdvs] = await Promise.all([
+          (supabase as any).from("nutrir_pedidos").select("total,status,created_at")
+            .eq("organization_id", orgId).like("created_at", `${ym}%`),
+          (supabase as any).from("nutrir_colaboradores").select("id,user_id,nome,cargo")
+            .eq("organization_id", orgId).eq("ativo", true),
+          (supabase as any).from("nutrir_rdv").select("valor,status,user_id")
+            .eq("organization_id", orgId).eq("status", "enviado"),
+        ]);
+        const pedsList = peds.data ?? [];
+        setGerenteData({
+          faturamentoMes: pedsList.filter((p: any) => p.status !== "cancelado").reduce((s: number, p: any) => s + Number(p.total || 0), 0),
+          pedidosMes: pedsList.length,
+          reps: reps.data ?? [],
+          rdvPendente: (rdvs.data ?? []).length,
+        });
+      })();
+    }
+
+    if (position === "cliente") {
+      (async () => {
+        const [fld, smp, rec] = await Promise.all([
+          supabase.from("fields").select("id,name,hectares").eq("organization_id", orgId).limit(10),
+          supabase.from("soil_samples").select("id,classification").eq("organization_id", orgId).limit(5),
+          (supabase as any).from("ai_recommendations").select("id,summary,created_at")
+            .eq("organization_id", orgId).order("created_at", { ascending: false }).limit(3),
+        ]);
+        setClienteData({ fields: fld.data ?? [], samples: smp.data ?? [], recommendations: rec.data ?? [] });
+      })();
+    }
+  }, [position, orgId, userId]);
+
+  if (!position) return null;
+
+  // ── Representante / Assistente técnico ──
+  if ((position === "representante" || position === "assistente_tecnico") && repData) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+        <Card className="border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <ShoppingCart className="h-3.5 w-3.5" /> Meus pedidos (total)
+            </div>
+            <div className="text-xl font-bold">{repData.totalPedidos.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">{repData.pedidos.length} pedido(s)</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Flask className="h-3.5 w-3.5" /> Campos de teste
+            </div>
+            <div className="text-xl font-bold">{repData.camposAtivos}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">em andamento</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Car className="h-3.5 w-3.5" /> RDV do mês
+            </div>
+            <div className="text-xl font-bold">{repData.rdvTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">{repData.rdvPendente} pendente(s)</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-1">
+            <div className="text-xs text-muted-foreground mb-2 font-medium">Ações rápidas</div>
+            <Link to="/app/representante/pedidos" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <ShoppingCart className="h-3 w-3" /> Novo pedido
+            </Link>
+            <Link to="/app/representante/campos-teste" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <Flask className="h-3 w-3" /> Campos de teste
+            </Link>
+            <Link to="/app/representante/rdv" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <Car className="h-3 w-3" /> Lançar despesa
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Gerente / Diretor ──
+  if ((position === "gerente" || position === "diretor") && gerenteData) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+        <Card className="border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <DollarSign className="h-3.5 w-3.5" /> Faturamento do mês
+            </div>
+            <div className="text-xl font-bold">{gerenteData.faturamentoMes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">{gerenteData.pedidosMes} pedido(s)</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Users className="h-3.5 w-3.5" /> Equipe
+            </div>
+            <div className="text-xl font-bold">{gerenteData.reps.length}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">colaboradores ativos</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <ClipboardList className="h-3.5 w-3.5" /> RDV pendentes
+            </div>
+            <div className="text-xl font-bold">{gerenteData.rdvPendente}</div>
+            <div className="text-[11px] text-muted-foreground">
+              <Link to="/app/gestao/rdv" className="text-primary hover:underline">Aprovar →</Link>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-1">
+            <div className="text-xs text-muted-foreground mb-2 font-medium">Ações rápidas</div>
+            <Link to="/app/nutrir/pedidos" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <ShoppingCart className="h-3 w-3" /> Ver pedidos
+            </Link>
+            <Link to="/app/gestao/rdv" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <Car className="h-3 w-3" /> Aprovar RDVs
+            </Link>
+            <Link to="/app/nutrir/clientes" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <Users className="h-3 w-3" /> Clientes
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Cliente ──
+  if (position === "cliente" && clienteData) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Minhas propriedades</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5">
+            {clienteData.fields.length === 0 ? (
+              <div className="text-xs text-muted-foreground">Nenhuma propriedade cadastrada.</div>
+            ) : clienteData.fields.map((f: any) => (
+              <div key={f.id} className="flex justify-between text-sm">
+                <span>{f.name}</span>
+                <span className="text-muted-foreground text-xs">{Number(f.hectares).toFixed(1)} ha</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Últimas análises</CardTitle></CardHeader>
+          <CardContent>
+            {clienteData.samples.length === 0 ? (
+              <div className="text-xs text-muted-foreground">Nenhuma análise ainda.</div>
+            ) : (
+              <div className="text-sm text-muted-foreground">{clienteData.samples.length} amostra(s) registrada(s)</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Recomendações IA</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5">
+            {clienteData.recommendations.length === 0 ? (
+              <div className="text-xs text-muted-foreground">Sem recomendações recentes.</div>
+            ) : clienteData.recommendations.map((r: any) => (
+              <div key={r.id} className="text-xs border-b pb-1 last:border-0">
+                <div className="text-muted-foreground">{new Date(r.created_at).toLocaleDateString("pt-BR")}</div>
+                <div className="line-clamp-2">{r.summary ?? "Análise disponível"}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const { current } = useOrg();
+  const { user } = useAuth();
+  const { position } = usePosition();
   const [stats, setStats] = useState({ fields: 0, hectares: 0, samples: 0, ai: 0, ndvi: 0, members: 0, reports: 0 });
   const [usage, setUsage] = useState<{ day: string; ai: number; ndvi: number }[]>([]);
   const [ndviDist, setNdviDist] = useState<{ name: string; value: number }[]>([]);
@@ -125,6 +347,11 @@ const Dashboard = () => {
     <>
       <PageHeader title={`Olá, ${current?.name}`} description="Visão geral da sua operação" />
       <div className="p-6 space-y-6">
+
+        {/* ── Painel por papel ─────────────────────────────────────── */}
+        {user && current && (
+          <RoleDashboard position={position} userId={user.id} orgId={current.id} />
+        )}
 
         {/* ── KPI Row ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
