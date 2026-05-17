@@ -13,9 +13,10 @@ import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Camera, Trash2, Send, FileText, ScanLine, ShieldAlert, TrendingUp, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Send, FileText, ScanLine, ShieldAlert, AlertCircle, Download } from "lucide-react";
 import VendedorBadge from "@/components/representante/VendedorBadge";
 import DocumentScanner from "@/components/representante/DocumentScanner";
+import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 const CATEGORIAS = [
   { v: "combustivel",    l: "Combustível" },
@@ -301,6 +302,32 @@ export default function RDV() {
     return meus.filter((i) => (i.data ?? "").startsWith(ym)).reduce((a, i) => a + Number(i.valor || 0), 0);
   }, [meus]);
 
+  // Histórico mensal — últimos 6 meses
+  const historicoMensal = useMemo(() => {
+    const result: { mes: string; total: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const ym = d.toISOString().slice(0, 7);
+      const label = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+      const total = meus.filter(r => (r.data ?? "").startsWith(ym)).reduce((a, r) => a + Number(r.valor || 0), 0);
+      result.push({ mes: label, total });
+    }
+    return result;
+  }, [meus]);
+
+  // Export CSV
+  const exportarCSV = () => {
+    const header = "Data,Categoria,Subcategoria,Cidade,UF,Valor,Status,Descrição\n";
+    const body = items.map(i =>
+      [i.data, i.categoria, i.subcategoria ?? "", i.cidade ?? "", i.uf ?? "", i.valor, i.status, (i.descricao ?? "").replace(/,/g, ";")].join(",")
+    ).join("\n");
+    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "rdv-historico.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <PageHeader
@@ -531,6 +558,25 @@ export default function RDV() {
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total lançado</div><div className="text-2xl font-bold">{fmt(total)}</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Lançamentos</div><div className="text-2xl font-bold">{meus.length}</div></CardContent></Card>
         </div>
+
+        {/* Gráfico mensal */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Despesas — últimos 6 meses</h3>
+            <Button size="sm" variant="outline" onClick={exportarCSV}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
+            </Button>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={historicoMensal}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="mes" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => fmt(v)} />
+              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
 
         <Card><CardContent className="p-0">
           {items.length === 0 ? (

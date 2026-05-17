@@ -40,23 +40,33 @@ type LadoItem = {
 };
 
 const TIPOS_TESTE = [
-  "Foliar simples",
-  "Solo",
-  "Foliar + Solo",
+  "TS (Tratamento de Sementes)",
+  "Condicionador de Solos",
+  "Tecnologia de Aplicação",
+  "Bioestimulantes",
+  "Nutrição Foliar",
+  "Biológicos",
   "Complexação",
-  "Micronutrientes",
-  "NPK",
   "Outro",
 ] as const;
 
 const NUTRIENTES = ["N", "P", "K", "Boro", "Micronutrientes"] as const;
 
 const ADUBOS_POR_NUTRIENTE: Record<string, string[]> = {
-  N: ["Ureia", "Ureia Complexada (N180)", "MAP", "DAP", "Nitrato de Amônio", "Sulfato de Amônio"],
-  P: ["MAP", "DAP", "Superfosfato Simples", "Superfosfato Triplo", "Fosfato Monoamônio"],
-  K: ["KCl (Cloreto de Potássio)", "K₂SO₄ (Sulfato de Potássio)", "KNO₃ (Nitrato de Potássio)"],
-  Boro: ["Ácido Bórico", "Bórax", "Borogran", "Boro Complexado (N180+B)"],
-  Micronutrientes: ["Zinco Sulfato", "Manganês Sulfato", "Cobre Sulfato", "Molibdênio", "Zinco + Manganês"],
+  N: ["Ureia (46% N)", "MAP", "DAP", "Nitrato de Amônio", "Sulfato de Amônio", "UAN (Solução Nitrogenada)"],
+  P: ["MAP (48% P₂O₅)", "DAP", "Superfosfato Simples (18%)", "Superfosfato Triplo (41%)", "Termofosfato"],
+  K: ["KCl (60% K₂O)", "K₂SO₄ — Sulfato de Potássio", "KNO₃ — Nitrato de Potássio"],
+  Boro: ["Ácido Bórico (17,4% B)", "Bórax (11,3% B)", "Borogran", "Ulexita"],
+  Micronutrientes: ["Zinco Sulfato", "Manganês Sulfato", "Cobre Sulfato", "Molibdato de Sódio", "FTE BR-12", "Zinco + Manganês (combo)"],
+};
+
+// Para cada nutriente — qual produto Nutrir substitui (auto-fill tratamento)
+const NUTRIR_POR_NUTRIENTE: Record<string, string> = {
+  N:              "N180 Complexado",
+  P:              "Complexador Fosfatado Nutrir",
+  K:              "Complexador Potássico Nutrir",
+  Boro:           "N180+B (Boro Complexado)",
+  Micronutrientes:"Foliar Micro Nutrir",
 };
 
 const ESTAGIOS_APLICACAO = [
@@ -248,7 +258,7 @@ export default function CamposTeste() {
   const updProduto = (i: number, p: Partial<Produto>) =>
     setProdutos(produtos.map((x, k) => (k === i ? { ...x, ...p } : x)));
 
-  /* ─── toggle nutriente ─── */
+  /* ─── toggle nutriente (Complexação) ─── */
   const toggleNutriente = (n: string) => {
     setNutrientesSubstituir((prev) => {
       if (prev.includes(n)) {
@@ -256,8 +266,32 @@ export default function CamposTeste() {
         setAdubosSubstituir((a) => { const c = { ...a }; delete c[n]; return c; });
         return next;
       }
-      return [...prev, n];
+      const next = [...prev, n];
+      // Auto-fill tratamento com o produto Nutrir correspondente (se ainda não preenchido)
+      if (!tratamento.nome) {
+        const nutrir = next.map(x => NUTRIR_POR_NUTRIENTE[x]).filter(Boolean).join(" + ");
+        setTratamento(t => ({ ...t, nome: nutrir, produto_id: null }));
+      }
+      return next;
     });
+  };
+
+  /* ─── ao selecionar adubo convencional → auto-fill testemunha ─── */
+  const onAduboChange = (nutriente: string, adubo: string) => {
+    setAdubosSubstituir((a) => ({ ...a, [nutriente]: adubo }));
+    // Concatena todos os adubos selecionados como nome da testemunha
+    const todosAdubos = { ...adubosSubstituir, [nutriente]: adubo };
+    const nomeTest = nutrientesSubstituir
+      .map(n => todosAdubos[n])
+      .filter(Boolean)
+      .join(" + ");
+    setTestemunha(t => ({ ...t, nome: nomeTest, produto_id: null }));
+    // Atualiza tratamento com todos os Nutrir correspondentes
+    const nomeTrat = nutrientesSubstituir
+      .map(n => NUTRIR_POR_NUTRIENTE[n])
+      .filter(Boolean)
+      .join(" + ");
+    if (nomeTrat) setTratamento(t => ({ ...t, nome: nomeTrat, produto_id: null }));
   };
 
   /* ─── upload foto rotulo ─── */
@@ -572,7 +606,9 @@ export default function CamposTeste() {
                 {/* 5a. Complexação: nutrientes + adubos */}
                 {tipoTeste === "Complexação" && (
                   <div className="border rounded-lg p-3 space-y-3 bg-amber-50/50">
-                    <div className="text-sm font-semibold text-amber-900">Complexação — Nutrientes a substituir</div>
+                    <div className="text-sm font-semibold text-amber-900">
+                      Complexação — Selecione os nutrientes a substituir
+                    </div>
                     <div className="flex flex-wrap gap-3">
                       {NUTRIENTES.map((n) => (
                         <label key={n} className="flex items-center gap-2 cursor-pointer">
@@ -584,20 +620,30 @@ export default function CamposTeste() {
                         </label>
                       ))}
                     </div>
-                    {nutrientesSubstituir.map((n) => (
-                      <div key={n} className="grid grid-cols-2 gap-2 items-center">
-                        <Label className="text-xs text-muted-foreground">Adubo atual para {n}</Label>
-                        <Select
-                          value={adubosSubstituir[n] ?? ""}
-                          onValueChange={(v) => setAdubosSubstituir((a) => ({ ...a, [n]: v }))}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                          <SelectContent>
-                            {ADUBOS_POR_NUTRIENTE[n].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                    {nutrientesSubstituir.length > 0 && (
+                      <div className="space-y-2">
+                        {nutrientesSubstituir.map((n) => (
+                          <div key={n} className="grid grid-cols-2 gap-2 items-center">
+                            <Label className="text-xs text-muted-foreground">
+                              Adubo convencional ({n})
+                            </Label>
+                            <Select
+                              value={adubosSubstituir[n] ?? ""}
+                              onValueChange={(v) => onAduboChange(n, v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                              <SelectContent>
+                                {ADUBOS_POR_NUTRIENTE[n].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                        <div className="rounded-md border bg-white p-2 text-xs space-y-1">
+                          <div><span className="text-muted-foreground">Testemunha (auto):</span> <strong>{testemunha.nome || "—"}</strong></div>
+                          <div><span className="text-muted-foreground">Tratamento Nutrir (auto):</span> <strong className="text-primary">{tratamento.nome || "—"}</strong></div>
+                        </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
 

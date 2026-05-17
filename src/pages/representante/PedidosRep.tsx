@@ -651,42 +651,53 @@ export default function PedidosRep() {
                             </p>
                           )}
                         </div>
-                        <div className="col-span-3 md:col-span-2 space-y-1">
-                          <Label className="text-xs">Preço final</Label>
-                          <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">R$</span>
-                            <Input
-                              className="pl-7 font-mono"
-                              value={it.preco_unitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              disabled
-                              title="Preço final calculado (regional + tipo de venda + embalagem). Não editável."
-                            />
+                        {tipoVenda !== "b2b" && (
+                          <div className="col-span-3 md:col-span-2 space-y-1">
+                            <Label className="text-xs">Preço final</Label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">R$</span>
+                              <Input
+                                className="pl-7 font-mono"
+                                value={it.preco_unitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                disabled
+                                title="Preço final calculado (regional + tipo de venda + embalagem). Não editável."
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <div className="col-span-12 md:col-span-1 flex justify-end">
                           <Button type="button" size="icon" variant="ghost" onClick={() => rmItem(i)}>
                             <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
-                        <div className="col-span-12 text-right text-sm">
-                          Subtotal: <strong className="font-mono">{fmtBRL(subtotalLinha)}</strong>
-                        </div>
+                        {tipoVenda !== "b2b" && (
+                          <div className="col-span-12 text-right text-sm">
+                            Subtotal: <strong className="font-mono">{fmtBRL(subtotalLinha)}</strong>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
 
                 {/* Desconto + totais */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                  <div className="md:col-span-1">
-                    <DescontoInput value={descontoPct} onChange={setDescontoPct} />
+                {tipoVenda === "b2b" ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 text-center">
+                    <strong>Cotação B2B</strong> — preços internos, não exibidos no documento do cliente.
+                    Qtd. de itens: <strong>{itens.length}</strong>
                   </div>
-                  <div className="md:col-span-2 rounded-md border p-3 space-y-1 bg-muted/30">
-                    <div className="flex justify-between text-sm"><span>Subtotal</span><strong className="font-mono">{fmtBRL(subtotal)}</strong></div>
-                    <div className="flex justify-between text-sm"><span>Desconto ({descontoPct.toFixed(1)}%)</span><strong className="font-mono text-destructive">− {fmtBRL(valorDesconto)}</strong></div>
-                    <div className="flex justify-between text-base"><span>Total</span><strong className="font-mono text-primary">{fmtBRL(total)}</strong></div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    <div className="md:col-span-1">
+                      <DescontoInput value={descontoPct} onChange={setDescontoPct} />
+                    </div>
+                    <div className="md:col-span-2 rounded-md border p-3 space-y-1 bg-muted/30">
+                      <div className="flex justify-between text-sm"><span>Subtotal</span><strong className="font-mono">{fmtBRL(subtotal)}</strong></div>
+                      <div className="flex justify-between text-sm"><span>Desconto ({descontoPct.toFixed(1)}%)</span><strong className="font-mono text-destructive">− {fmtBRL(valorDesconto)}</strong></div>
+                      <div className="flex justify-between text-base"><span>Total</span><strong className="font-mono text-primary">{fmtBRL(total)}</strong></div>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-1.5">
                   <Label>Observações</Label>
@@ -694,8 +705,11 @@ export default function PedidosRep() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button type="submit" disabled={saving || bloqueadoDesc} className="bg-gradient-primary">
-                    {saving ? "Salvando…" : bloqueadoDesc ? "Desconto bloqueado" : "Salvar pedido"}
+                  <Button type="submit" disabled={saving || (tipoVenda !== "b2b" && bloqueadoDesc)} className="bg-gradient-primary">
+                    {saving ? "Salvando…"
+                      : tipoVenda === "b2b" ? "Enviar cotação B2B"
+                      : bloqueadoDesc ? "Desconto bloqueado"
+                      : "Salvar pedido"}
                   </Button>
                 </div>
               </form>
