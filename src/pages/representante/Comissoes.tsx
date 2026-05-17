@@ -417,109 +417,17 @@ export default function Comissoes() {
             <TabsList>
               <TabsTrigger value="minha" className="gap-1.5"><Wallet className="h-3.5 w-3.5" /> Minhas</TabsTrigger>
               <TabsTrigger value="equipe" className="gap-1.5"><Award className="h-3.5 w-3.5" /> Equipe</TabsTrigger>
+              <TabsTrigger value="admin" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Painel Admin</TabsTrigger>
             </TabsList>
             <TabsContent value="minha" className="mt-4"><MinhasComissoes /></TabsContent>
             <TabsContent value="equipe" className="mt-4"><RankingEquipe /></TabsContent>
+            <TabsContent value="admin" className="mt-4"><PainelAdminComissoes /></TabsContent>
           </Tabs>
         ) : (
           <MinhasComissoes />
         )}
       </div>
     </>
-  );
-}
-"space-y-4">
-      {/* Seletor de mês */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="w-56">
-          <Select value={mes} onValueChange={setMes}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {mesesRecentes(12).map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => exportCSV(items, clientes)}>
-          <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
-        </Button>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground flex items-center gap-1"><Target className="h-3.5 w-3.5" /> Base vendida</div>
-          <div className="text-xl font-bold mt-1">{money(totais.base)}</div>
-          {meta > 0 && <div className="text-[11px] text-muted-foreground">Meta: {money(meta)}</div>}
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="h-3.5 w-3.5" /> Comissões</div>
-          <div className="text-xl font-bold mt-1">{money(totais.com)}</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground flex items-center gap-1"><Award className="h-3.5 w-3.5" /> Bônus meta</div>
-          <div className="text-xl font-bold mt-1 text-amber-600">{money(totais.bonus)}</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> Total a receber</div>
-          <div className="text-xl font-bold mt-1 text-primary">{money(totais.total)}</div>
-        </CardContent></Card>
-      </div>
-
-      {/* Progresso meta + tier */}
-      {meta > 0 && (
-        <Card><CardContent className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium">Meta mensal — {pct2(pctMeta)}</div>
-            <TierBadge pct={pctMeta} />
-          </div>
-          <Progress value={pctMeta} className="h-2" />
-          {falta > 0 && <div className="text-xs text-muted-foreground">Faltam {money(falta)} para bater a meta.</div>}
-        </CardContent></Card>
-      )}
-
-      {/* Histórico 6m */}
-      {historico.length > 0 && (
-        <Card><CardContent className="p-4">
-          <div className="text-sm font-semibold mb-3">Histórico 6 meses</div>
-          <ResponsiveContainer width="100%" height={130}>
-            <BarChart data={historico}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="mes" fontSize={11} />
-              <YAxis fontSize={11} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => money(v)} />
-              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent></Card>
-      )}
-
-      {/* Tabela de comissões */}
-      <Card><CardContent className="p-0">
-        {items.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground text-center">Nenhuma comissão no mês selecionado.</div>
-        ) : (
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Cliente</TableHead><TableHead className="text-right">Base</TableHead>
-              <TableHead className="text-right">%</TableHead><TableHead className="text-right">Comissão</TableHead>
-              <TableHead>Status</TableHead><TableHead>Pagamento</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {items.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell className="text-sm">{clientes[r.cliente_id] ?? "—"}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">{money(r.base_calculo)}</TableCell>
-                  <TableCell className="text-right text-sm">{pct2(r.percentual)}</TableCell>
-                  <TableCell className="text-right font-medium">{money(r.valor)}</TableCell>
-                  <TableCell><Badge variant={STATUS_COLOR[r.status]}>{STATUS_LABEL[r.status]}</Badge></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{r.data_pagamento ?? "—"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent></Card>
-    </div>
   );
 }
 
