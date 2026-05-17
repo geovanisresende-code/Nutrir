@@ -588,6 +588,84 @@ function PainelAdminComissoes() {
           </Select>
         </div>
         <Button size="sm" variant="outline" onClick={exportFolha}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Exportar Folha CSV
+        </Button>
+      </div>
+
+      {/* Folha consolidada */}
+      <Card><CardContent className="p-0">
+        <div className="p-4 font-semibold text-sm">Folha do mês — {mes.slice(5,7)}/{mes.slice(2,4)}</div>
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>Colaborador</TableHead>
+            <TableHead>Tier</TableHead>
+            <TableHead className="text-right">Salário Base</TableHead>
+            <TableHead className="text-right">Base Vendas</TableHead>
+            <TableHead className="text-right">Comissão</TableHead>
+            <TableHead className="text-right">Bônus Meta</TableHead>
+            <TableHead className="text-right">Bonificações</TableHead>
+            <TableHead className="text-right">Aux. Carro</TableHead>
+            <TableHead className="text-right font-bold">Total Bruto</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {folhaConsolidada.map(c => (
+              <TableRow key={c.id} className={`cursor-pointer ${selectedCol === c.id ? "bg-muted/60" : ""}`}
+                onClick={() => setSelectedCol(c.id)}>
+                <TableCell>
+                  <div className="font-medium text-sm">{c.nome}</div>
+                  <div className="text-xs text-muted-foreground">{c.cargo}</div>
+                </TableCell>
+                <TableCell><TierBadge pct={c.pctMeta} /></TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(Number(c.salario_base || 0))}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(c.base_vendas)}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(c.comissoes)}</TableCell>
+                <TableCell className="text-right font-mono text-sm text-amber-600">{c.bonusMeta > 0 ? money(c.bonusMeta) : "—"}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{c.bonuses > 0 ? money(c.bonuses) : "—"}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(Number(c.auxilio_carro || 0))}</TableCell>
+                <TableCell className="text-right font-bold">{money(c.totalBruto)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent></Card>
+
+      {/* Editor do colaborador selecionado */}
+      {col && (
+        <Card><CardContent className="p-4 space-y-4">
+          <div className="font-semibold text-sm">{col.nome} — editar remuneração</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { l: "Salário Base (R$)", v: salario, fn: setSalario },
+              { l: "Adiantamento Máx (R$)", v: adiantamento, fn: setAdiantamento },
+              { l: "Auxílio Carro (R$)", v: auxilio_carro, fn: setAuxilioCarro },
+              { l: "Bonificação avulsa (R$)", v: bonificacao, fn: setBonificacao },
+            ].map(({ l, v, fn }) => (
+              <div key={l} className="space-y-1">
+                <Label className="text-xs">{l}</Label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                  <Input inputMode="decimal" value={v} onChange={(e) => fn(e.target.value.replace(/[^\d,.]/g,""))} className="pl-7 h-8 text-sm" placeholder="0,00" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Observação (bonificação)</Label>
+            <Input value={obs_folha} onChange={(e) => setObsFolha(e.target.value)} placeholder="Ex.: Premiação por desempenho trimestral" className="h-8 text-sm" />
+          </div>
+          <Button size="sm" onClick={saveColaborador} disabled={saving} className="bg-gradient-primary">
+            {saving ? "Salvando…" : "Salvar"}
+          </Button>
+        </CardContent></Card>
+      )}
+    </div>
+  );
+}
+
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="sm" variant="outline" onClick={exportFolha}>
           <Download className="h-3.5 w-3.5 mr-1" /> Exportar folha CSV
         </Button>
       </div>
