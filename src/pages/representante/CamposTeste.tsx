@@ -737,21 +737,17 @@ export default function CamposTeste() {
                 )}
 
                 {/* 6. Estágio de aplicação */}
+                {/* 6. Estágio de aplicação */}
                 <div className="space-y-1.5">
                   <Label>Estágio de aplicação</Label>
-                  <Select value={estagioAplicacao} onValueChange={setEstagioAplicacao}>
+                  <Select value={estagioAplicacao} onValueChange={(v) => { setEstagioAplicacao(v); setEstagioDetalhe(""); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {ESTAGIOS_APLICACAO.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   {precisaDetalheEstagio && (
-                    <Input
-                      value={estagioDetalhe}
-                      onChange={(e) => setEstagioDetalhe(e.target.value)}
-                      placeholder="Ex.: V4, R1, R3…"
-                      className="mt-1"
-                    />
+                    <Input value={estagioDetalhe} onChange={(e) => setEstagioDetalhe(e.target.value)} placeholder="Ex.: V4, R1, R3…" className="mt-1" />
                   )}
                 </div>
 
@@ -765,11 +761,8 @@ export default function CamposTeste() {
                   </div>
                   {showMapaNovo && (
                     <div className="rounded-md overflow-hidden border h-64">
-                      <MapaTalhao
-                        geometria={novaGeo}
-                        centro={novoCentro}
-                        onSave={(geo, centro) => { setNovaGeo(geo); setNovoCentro(centro); toast.success("Área marcada"); }}
-                      />
+                      <MapaTalhao geometria={novaGeo} centro={novoCentro}
+                        onSave={(geo, centro) => { setNovaGeo(geo); setNovoCentro(centro); toast.success("Área marcada"); }} />
                     </div>
                   )}
                   {novaGeo && <p className="text-xs text-emerald-600 flex items-center gap-1"><Leaf className="h-3 w-3" /> Área desenhada</p>}
@@ -793,7 +786,6 @@ export default function CamposTeste() {
         }
       />
 
-      {/* ── KPIs ── */}
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-xl border bg-card p-4">
@@ -806,19 +798,14 @@ export default function CamposTeste() {
           </div>
         </div>
 
-        {/* ── Lista de testes ── */}
         <div className="grid md:grid-cols-2 gap-4">
-          {items.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-2">Nenhum campo de teste cadastrado.</p>
-          )}
+          {items.length === 0 && <p className="text-sm text-muted-foreground col-span-2">Nenhum campo de teste cadastrado.</p>}
           {items.map((item) => {
             const cli = clientes.find((c) => c.id === item.cliente_id);
             return (
-              <Card
-                key={item.id}
+              <Card key={item.id}
                 className={`cursor-pointer transition-all hover:shadow-md ${selected?.id === item.id ? "ring-2 ring-primary" : ""}`}
-                onClick={() => { setSelected(item); loadRelatorios(item.id); loadNdvi(item.id); }}
-              >
+                onClick={() => { setSelected(item); loadRelatorios(item.id); loadNdvi(item.id); }}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <div>
@@ -844,7 +831,6 @@ export default function CamposTeste() {
           })}
         </div>
 
-        {/* ── Detalhe do teste selecionado ── */}
         {selected && (
           <Card>
             <CardContent className="p-0">
@@ -870,7 +856,6 @@ export default function CamposTeste() {
                   </div>
                 </div>
 
-                {/* ── Tab Acompanhamento ── */}
                 <TabsContent value="acompanhamento" className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{relatorios.length} acompanhamento(s)</span>
@@ -912,7 +897,6 @@ export default function CamposTeste() {
                                 </div>
                               </div>
                             )}
-                            {/* Biometria */}
                             <div className="space-y-2">
                               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Biometria</Label>
                               <div className="grid grid-cols-2 gap-2">
@@ -934,7 +918,6 @@ export default function CamposTeste() {
                                 ))}
                               </div>
                             </div>
-                            {/* Deficiência / IA */}
                             <div className="flex items-center gap-2">
                               <Checkbox id="def" checked={relTemDeficiencia} onCheckedChange={(v) => setRelTemDeficiencia(!!v)} />
                               <label htmlFor="def" className="text-sm">Possui deficiência ou ponto de atenção?</label>
@@ -966,7 +949,7 @@ export default function CamposTeste() {
                               <Textarea value={relObs} onChange={(e) => setRelObs(e.target.value)} rows={2} placeholder="O que foi feito, observado…" />
                             </div>
                             <div className="space-y-1.5">
-                              <Label>Fotos do acompanhamento</Label>
+                              <Label>Fotos</Label>
                               <div className="flex flex-wrap gap-2">
                                 {relFotos.map((f, i) => (
                                   <div key={i} className="relative">
@@ -1002,16 +985,11 @@ export default function CamposTeste() {
                           {r.ndvi_medio != null && <div className="text-xs text-muted-foreground">NDVI: <strong>{r.ndvi_medio}</strong></div>}
                           {r.nova_aplicacao && <div className="text-xs">💊 {r.produto_aplicado} — {r.dose_aplicada}</div>}
                           {r.observacoes && <p className="text-xs text-muted-foreground">{r.observacoes}</p>}
-                          {r.diag_ia && (
-                            <div className="rounded bg-emerald-50 border border-emerald-100 p-2 text-xs mt-1">
-                              <ReactMarkdown>{r.diag_ia}</ReactMarkdown>
-                            </div>
-                          )}
+                          {r.diag_ia && <div className="rounded bg-emerald-50 border border-emerald-100 p-2 text-xs mt-1"><ReactMarkdown>{r.diag_ia}</ReactMarkdown></div>}
                           {Array.isArray(r.fotos) && r.fotos.length > 0 && (
                             <div className="flex gap-2 flex-wrap mt-1">
                               {r.fotos.map((f: any) => (
-                                <button key={f.path} type="button" onClick={() => verFoto(f.path)}
-                                  className="text-xs text-primary underline flex items-center gap-1">
+                                <button key={f.path} type="button" onClick={() => verFoto(f.path)} className="text-xs text-primary underline flex items-center gap-1">
                                   <Camera className="h-3 w-3" /> {f.legenda}
                                 </button>
                               ))}
@@ -1023,22 +1001,17 @@ export default function CamposTeste() {
                   )}
                 </TabsContent>
 
-                {/* ── Tab Mapa / NDVI ── */}
                 <TabsContent value="mapa" className="p-4 space-y-4">
                   <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => gerarNdvi("latest")} disabled={ndviLoading}>
                       <Satellite className="h-3.5 w-3.5 mr-1" /> {ndviLoading ? "Buscando…" : "Atualizar NDVI"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => gerarNdvi("history")} disabled={ndviLoading}>
-                      Histórico NDVI
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => gerarNdvi("history")} disabled={ndviLoading}>Histórico NDVI</Button>
                   </div>
                   <div className="rounded-md overflow-hidden border h-72">
-                    <MapaTalhao
-                      geometria={selected?.geometria}
+                    <MapaTalhao geometria={selected?.geometria}
                       centro={selected?.centro_lat ? [selected.centro_lat, selected.centro_lng] : null}
-                      onSave={salvarGeometria}
-                    />
+                      onSave={salvarGeometria} />
                   </div>
                   {ndviSerie.length > 0 && (
                     <div className="rounded-md border p-3">
@@ -1059,7 +1032,6 @@ export default function CamposTeste() {
                   )}
                 </TabsContent>
 
-                {/* ── Tab Relatório ── */}
                 <TabsContent value="relatorio" className="p-4 space-y-3">
                   {selected?.relatorio_ia ? (
                     <>
@@ -1089,761 +1061,6 @@ export default function CamposTeste() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </>
-  );
-}
-ueChange={(v) => { setEstagioAplicacao(v); setEstagioDetalhe(""); }}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {ESTAGIOS_APLICACAO.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {precisaDetalheEstagio && (
-                    <Input
-                      className="mt-1.5"
-                      value={estagioDetalhe}
-                      onChange={(e) => setEstagioDetalhe(e.target.value)}
-                      placeholder={estagioAplicacao === "Vegetativo" ? "Ex.: V4, V6…" : "Ex.: R1, R3, R5…"}
-                    />
-                  )}
-                </div>
-
-                {/* 7. Lado a lado: Testemunha vs Tratamento */}
-                <div className="border rounded-lg p-3 space-y-3">
-                  <div className="text-sm font-semibold flex items-center gap-2">
-                    <Scale className="h-4 w-4 text-muted-foreground" />
-                    Testemunha × Tratamento (lado a lado)
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Testemunha */}
-                    <div className="space-y-2">
-                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Testemunha</div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Produto</Label>
-                        <Select
-                          value={testemunha.produto_id ?? (testemunha.nome ? "__outro__" : "")}
-                          onValueChange={(v) => {
-                            if (v === "__outro__") setTestemunha((t) => ({ ...t, produto_id: null, nome: "" }));
-                            else {
-                              const p = produtosDB.find((x) => x.id === v);
-                              setTestemunha((t) => ({ ...t, produto_id: v, nome: p?.nome ?? "" }));
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                          <SelectContent className="max-h-52">
-                            {produtosDB.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
-                            <SelectItem value="__outro__">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {testemunha.produto_id === null && (
-                          <Input className="h-8 text-xs" placeholder="Nome do produto" value={testemunha.nome}
-                            onChange={(e) => setTestemunha((t) => ({ ...t, nome: e.target.value }))} />
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Dose/ha</Label>
-                        <Input className="h-8 text-xs" value={testemunha.dose} placeholder="L/ha ou kg/ha"
-                          onChange={(e) => setTestemunha((t) => ({ ...t, dose: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Garantias</Label>
-                        <Input className="h-8 text-xs" value={testemunha.garantias} placeholder="Ex.: 5% N, 3% Zn"
-                          onChange={(e) => setTestemunha((t) => ({ ...t, garantias: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><Camera className="h-3 w-3" /> Foto do rótulo</Label>
-                        <Input type="file" accept="image/*" capture="environment" className="h-8 text-xs"
-                          onChange={(e) => setFotoTestemunha(e.target.files?.[0] ?? null)} />
-                      </div>
-                    </div>
-
-                    {/* Tratamento */}
-                    <div className="space-y-2">
-                      <div className="text-xs font-bold text-primary uppercase tracking-wider">Tratamento</div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Produto</Label>
-                        <Select
-                          value={tratamento.produto_id ?? (tratamento.nome ? "__outro__" : "")}
-                          onValueChange={(v) => {
-                            if (v === "__outro__") setTratamento((t) => ({ ...t, produto_id: null, nome: "" }));
-                            else {
-                              const p = produtosDB.find((x) => x.id === v);
-                              setTratamento((t) => ({ ...t, produto_id: v, nome: p?.nome ?? "" }));
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                          <SelectContent className="max-h-52">
-                            {produtosDB.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
-                            <SelectItem value="__outro__">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {tratamento.produto_id === null && (
-                          <Input className="h-8 text-xs" placeholder="Nome do produto" value={tratamento.nome}
-                            onChange={(e) => setTratamento((t) => ({ ...t, nome: e.target.value }))} />
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Dose/ha</Label>
-                        <Input className="h-8 text-xs" value={tratamento.dose} placeholder="L/ha ou kg/ha"
-                          onChange={(e) => setTratamento((t) => ({ ...t, dose: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Garantias</Label>
-                        <Input className="h-8 text-xs" value={tratamento.garantias} placeholder="Ex.: 5% N, 3% Zn"
-                          onChange={(e) => setTratamento((t) => ({ ...t, garantias: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><Camera className="h-3 w-3" /> Foto do rótulo</Label>
-                        <Input type="file" accept="image/*" capture="environment" className="h-8 text-xs"
-                          onChange={(e) => setFotoTratamento(e.target.files?.[0] ?? null)} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 8. Produtos adicionais */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Produtos adicionais</Label>
-                    <Button type="button" size="sm" variant="outline" onClick={addProduto}>
-                      <Plus className="h-3 w-3 mr-1" /> Adicionar
-                    </Button>
-                  </div>
-                  {produtos.map((p, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-end border rounded-md p-2">
-                      <div className="col-span-4 space-y-1">
-                        <Label className="text-xs">Produto</Label>
-                        <Select
-                          value={p.produto_id ?? (p.nome ? "__outro__" : "")}
-                          onValueChange={(v) => {
-                            if (v === "__outro__") updProduto(i, { produto_id: null, nome: "" });
-                            else {
-                              const prod = produtosDB.find((x) => x.id === v);
-                              updProduto(i, { produto_id: v, nome: prod?.nome ?? "" });
-                            }
-                          }}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                          <SelectContent className="max-h-64">
-                            {produtosDB.map((pp) => <SelectItem key={pp.id} value={pp.id}>{pp.nome}</SelectItem>)}
-                            <SelectItem value="__outro__">Outro (digitar)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {p.produto_id === null && (
-                          <Input className="mt-1" placeholder="Nome do produto" value={p.nome}
-                            onChange={(e) => updProduto(i, { nome: e.target.value })} />
-                        )}
-                      </div>
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">Área</Label>
-                        <div className="relative">
-                          <Input
-                            inputMode="decimal"
-                            className="pr-8"
-                            value={p.area_ha ? String(p.area_ha) : ""}
-                            onChange={(e) => updProduto(i, { area_ha: parseFloat(e.target.value.replace(",", ".")) || 0 })}
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">ha</span>
-                        </div>
-                      </div>
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">Dose/ha</Label>
-                        <Input value={p.dose} onChange={(e) => updProduto(i, { dose: e.target.value })} placeholder="L/ha" />
-                      </div>
-                      <div className="col-span-3 space-y-1">
-                        <Label className="text-xs">Estágio</Label>
-                        <Input value={p.estagio} onChange={(e) => updProduto(i, { estagio: e.target.value })} placeholder="V4, R1…" />
-                      </div>
-                      <div className="col-span-1 flex justify-end">
-                        {produtos.length > 1 && (
-                          <Button type="button" size="icon" variant="ghost" onClick={() => rmProduto(i)}>
-                            <X className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                      <div className="col-span-12 space-y-1">
-                        <Label className="text-xs">Observação</Label>
-                        <Input value={p.observacao} onChange={(e) => updProduto(i, { observacao: e.target.value })} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 9. Observações gerais */}
-                <div className="space-y-1.5">
-                  <Label>Observações gerais</Label>
-                  <Textarea rows={2} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
-                </div>
-
-                {/* 10. Mapa */}
-                <div className="space-y-2 border rounded-md p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Área no mapa</Label>
-                      <div className="text-xs text-muted-foreground">
-                        {novaGeo ? "Talhão definido ✔" : "Opcional — desenhe a área do teste"}
-                      </div>
-                    </div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setShowMapaNovo((v) => !v)}>
-                      <MapIcon className="h-4 w-4 mr-1" /> {showMapaNovo ? "Ocultar" : "Selecionar área"}
-                    </Button>
-                  </div>
-                  {showMapaNovo && (
-                    <MapaTalhao
-                      geometria={novaGeo}
-                      centro={novoCentro}
-                      onSave={(geo, centro) => {
-                        setNovaGeo(geo); setNovoCentro(centro);
-                        toast.success("Área definida — será salva ao criar o teste");
-                      }}
-                      height={300}
-                    />
-                  )}
-                </div>
-
-                <DialogFooter>
-                  <Button type="submit" disabled={saving} className="bg-gradient-primary">
-                    {saving ? "Salvando…" : "Criar teste"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        }
-      />
-
-      {/* ─── conteúdo principal ─── */}
-      <div className="p-6 space-y-4">
-
-        {/* cards de resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total de testes</div><div className="text-2xl font-bold">{total}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Em andamento</div><div className="text-2xl font-bold">{ativos}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Finalizados</div><div className="text-2xl font-bold">{total - ativos}</div></CardContent></Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          {/* lista de testes */}
-          <Card className="lg:col-span-1">
-            <CardContent className="p-0 divide-y max-h-[70vh] overflow-y-auto">
-              {items.length === 0 && (
-                <div className="p-6 text-sm text-muted-foreground">Nenhum teste cadastrado.</div>
-              )}
-              {items.map((i) => (
-                <button
-                  key={i.id}
-                  onClick={() => { setSelected(i); loadRelatorios(i.id); loadNdvi(i.id); }}
-                  className={`w-full text-left p-3 hover:bg-muted/40 transition ${selected?.id === i.id ? "bg-muted/60" : ""}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{i.titulo}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {i.tipo_teste && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded mr-1">{i.tipo_teste}</span>}
-                        {i.cultura ?? "—"} · {Number(i.area_total_ha).toLocaleString("pt-BR")} ha
-                      </div>
-                    </div>
-                    <Badge variant={STATUS_COLORS[i.status]} className="text-[10px] shrink-0">
-                      {i.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* detalhe do teste */}
-          <Card className="lg:col-span-2">
-            <CardContent className="p-4">
-              {!selected ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <FlaskConical className="h-10 w-10 mb-3 opacity-40" />
-                  <div className="text-sm">Selecione um teste à esquerda</div>
-                </div>
-              ) : (
-                <>
-                  {/* cabeçalho do teste */}
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="space-y-0.5">
-                      <h3 className="font-semibold text-lg leading-tight">{selected.titulo}</h3>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
-                        {selected.tipo_teste && <span className="font-medium text-foreground">{selected.tipo_teste}</span>}
-                        {selected.cultura && <span>{selected.cultura}</span>}
-                        <span>{Number(selected.area_total_ha).toLocaleString("pt-BR")} ha</span>
-                        {selected.estagio_aplicacao && (
-                          <span>{selected.estagio_aplicacao}{selected.estagio_detalhe ? ` ${selected.estagio_detalhe}` : ""}</span>
-                        )}
-                        {selected.data_plantio && <span>plantio {selected.data_plantio}</span>}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      {selected.status === "em_andamento" && (
-                        <Button size="sm" onClick={finalizarComIA} disabled={genIA} className="bg-gradient-primary">
-                          <Sparkles className="h-4 w-4 mr-1" /> {genIA ? "Gerando…" : "Finalizar com IA"}
-                        </Button>
-                      )}
-                      <Button size="icon" variant="ghost" onClick={() => removerTeste(selected.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Tabs defaultValue="acomp">
-                    <TabsList className="flex-wrap h-auto">
-                      <TabsTrigger value="acomp">Acompanhamentos ({relatorios.length})</TabsTrigger>
-                      <TabsTrigger value="ladoalado"><Scale className="h-3.5 w-3.5 mr-1" />T×T</TabsTrigger>
-                      <TabsTrigger value="mapa"><MapIcon className="h-3.5 w-3.5 mr-1" />Mapa/NDVI</TabsTrigger>
-                      <TabsTrigger value="produtos">Produtos</TabsTrigger>
-                      <TabsTrigger value="relatorio">Relatório IA</TabsTrigger>
-                    </TabsList>
-
-                    {/* aba: acompanhamentos */}
-                    <TabsContent value="acomp" className="space-y-3 mt-3">
-                      <Dialog open={openRel} onOpenChange={setOpenRel}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4 mr-1" /> Novo acompanhamento
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                          <DialogHeader><DialogTitle>Acompanhamento de campo</DialogTitle></DialogHeader>
-                          <form onSubmit={submitRelatorio} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label>Data</Label>
-                                <Input type="date" value={relData} onChange={(e) => setRelData(e.target.value)} required />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label>Estágio fenológico</Label>
-                                <Input value={relEstagio} onChange={(e) => setRelEstagio(e.target.value)} placeholder="V4, R1…" />
-                              </div>
-                            </div>
-
-                            {/* nova aplicação */}
-                            <div className="border rounded-lg p-3 space-y-2">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={relNovaAplicacao}
-                                  onCheckedChange={(c) => setRelNovaAplicacao(!!c)}
-                                />
-                                <span className="text-sm font-medium">Nova aplicação neste acompanhamento?</span>
-                              </label>
-                              {relNovaAplicacao && (
-                                <div className="grid grid-cols-2 gap-2 pt-1">
-                                  <div className="space-y-1">
-                                    <Label className="text-xs">Produto aplicado</Label>
-                                    <Input className="h-8 text-xs" value={relProdutoAplicado}
-                                      onChange={(e) => setRelProdutoAplicado(e.target.value)}
-                                      placeholder="Nome do produto" />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-xs">Dose/ha</Label>
-                                    <Input className="h-8 text-xs" value={relDoseAplicada}
-                                      onChange={(e) => setRelDoseAplicada(e.target.value)}
-                                      placeholder="L/ha ou kg/ha" />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* biometria */}
-                            <div className="border rounded-lg p-3 space-y-3">
-                              <div className="text-sm font-semibold flex items-center gap-2">
-                                <Leaf className="h-4 w-4 text-muted-foreground" /> Biometria (opcional)
-                              </div>
-                              {/* Linha 1: altura, stand, peso 1000 */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Altura planta</Label>
-                                  <div className="relative">
-                                    <Input className="h-8 text-xs pr-7" inputMode="decimal" value={relAlturaPlanta}
-                                      onChange={(e) => setRelAlturaPlanta(e.target.value)} placeholder="0" />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">cm</span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Stand/m linear</Label>
-                                  <Input className="h-8 text-xs" inputMode="decimal" value={relStandMLinear}
-                                    onChange={(e) => setRelStandMLinear(e.target.value)} placeholder="plantas/m" />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Peso 1000 grãos</Label>
-                                  <div className="relative">
-                                    <Input className="h-8 text-xs pr-5" inputMode="decimal" value={relPeso1000Graos}
-                                      onChange={(e) => setRelPeso1000Graos(e.target.value)} placeholder="0" />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">g</span>
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Linha 2: comp. raiz, diâm. caule, nº trifólios */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Comp. raiz</Label>
-                                  <div className="relative">
-                                    <Input className="h-8 text-xs pr-7" inputMode="decimal" value={relComprimentoRaiz}
-                                      onChange={(e) => setRelComprimentoRaiz(e.target.value)} placeholder="0" />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">cm</span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Diâm. caule</Label>
-                                  <div className="relative">
-                                    <Input className="h-8 text-xs pr-7" inputMode="decimal" value={relDiametroCaule}
-                                      onChange={(e) => setRelDiametroCaule(e.target.value)} placeholder="0" />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">mm</span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Nº trifólios</Label>
-                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumTrifolios}
-                                    onChange={(e) => setRelNumTrifolios(e.target.value)} placeholder="0" />
-                                </div>
-                              </div>
-                              {/* Linha 3: ramos, vagens, grãos/vagem */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Ramos produtivos</Label>
-                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumRamos}
-                                    onChange={(e) => setRelNumRamos(e.target.value)} placeholder="0" />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Nº vagens</Label>
-                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumVagens}
-                                    onChange={(e) => setRelNumVagens(e.target.value)} placeholder="0" />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Grãos/vagem</Label>
-                                  <Input className="h-8 text-xs" inputMode="decimal" value={relNumGraosPorVagem}
-                                    onChange={(e) => setRelNumGraosPorVagem(e.target.value)} placeholder="0" />
-                                </div>
-                              </div>
-                              {/* Fotos de biometria */}
-                              <div className="space-y-1">
-                                <Label className="text-xs flex items-center gap-1"><Camera className="h-3 w-3" /> Fotos de biometria</Label>
-                                <Input type="file" multiple accept="image/*" capture="environment" className="h-8 text-xs"
-                                  onChange={(e) => setRelBiometriaFotos(Array.from(e.target.files ?? []))} />
-                                {relBiometriaFotos.length > 0 && (
-                                  <div className="text-xs text-muted-foreground">{relBiometriaFotos.length} foto(s)</div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Deficiência / ponto de atenção */}
-                            <div className="border rounded-lg p-3 space-y-2 bg-orange-50/40">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={relTemDeficiencia}
-                                  onCheckedChange={(c) => setRelTemDeficiencia(!!c)}
-                                />
-                                <span className="text-sm font-medium text-orange-800">
-                                  Possui deficiência / ponto de atenção visual?
-                                </span>
-                              </label>
-                              {relTemDeficiencia && (
-                                <div className="text-xs text-muted-foreground bg-white border rounded p-2">
-                                  Adicione fotos abaixo e use o <strong>Diagnóstico IA</strong> para identificar a deficiência automaticamente.
-                                </div>
-                              )}
-                            </div>
-
-                            {/* NDVI */}
-                            <div className="space-y-1.5">
-                              <Label>NDVI médio (opcional)</Label>
-                              <Input inputMode="decimal" value={relNdvi}
-                                onChange={(e) => setRelNdvi(e.target.value)} placeholder="0.78" />
-                            </div>
-
-                            {/* observações */}
-                            <div className="space-y-1.5">
-                              <Label>Observações</Label>
-                              <Textarea rows={3} value={relObs} onChange={(e) => setRelObs(e.target.value)} />
-                            </div>
-
-                            {/* fotos campo */}
-                            <div className="space-y-1.5">
-                              <Label className="flex items-center gap-1.5">
-                                <Camera className="h-4 w-4" /> Fotos de campo
-                              </Label>
-                              <Input type="file" multiple accept="image/*" capture="environment"
-                                onChange={(e) => setRelFotos(Array.from(e.target.files ?? []))} />
-                              {relFotos.length > 0 && (
-                                <div className="text-xs text-muted-foreground">{relFotos.length} foto(s) selecionada(s)</div>
-                              )}
-                            </div>
-
-                            {/* diagnóstico IA */}
-                            <div className="border rounded-lg p-3 space-y-2 bg-purple-50/40">
-                              <div className="text-sm font-semibold flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-purple-500" /> Diagnóstico IA — Deficiências foliares
-                              </div>
-                              <Input type="file" multiple accept="image/*" capture="environment"
-                                onChange={(e) => setFotosDiag(Array.from(e.target.files ?? []))}
-                                className="text-xs" />
-                              <Button type="button" size="sm" variant="outline"
-                                disabled={diagLoading || fotosDiag.length === 0}
-                                onClick={rodarDiagnosticoIA}
-                                className="w-full">
-                                {diagLoading ? "Analisando…" : "Diagnosticar com IA"}
-                              </Button>
-                              {diagIA && (
-                                <div className="text-xs bg-white border rounded p-2 prose prose-xs max-w-none">
-                                  <ReactMarkdown>{diagIA}</ReactMarkdown>
-                                </div>
-                              )}
-                            </div>
-
-                            <DialogFooter>
-                              <Button type="submit" disabled={saving} className="bg-gradient-primary">
-                                {saving ? "Salvando…" : "Salvar acompanhamento"}
-                              </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-
-                      {relatorios.length === 0 && (
-                        <div className="text-sm text-muted-foreground py-6 text-center">
-                          Nenhum acompanhamento registrado ainda.
-                        </div>
-                      )}
-
-                      {relatorios.map((r) => (
-                        <div key={r.id} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium">
-                              {r.data}
-                              {r.estagio && <span className="text-xs text-muted-foreground ml-2">· {r.estagio}</span>}
-                              {r.nova_aplicacao && (
-                                <Badge variant="outline" className="ml-2 text-[10px]">
-                                  <ChevronRight className="h-2.5 w-2.5 mr-0.5" />Aplicação
-                                </Badge>
-                              )}
-                            </div>
-                            {r.ndvi_medio != null && (
-                              <Badge variant="outline">NDVI {Number(r.ndvi_medio).toFixed(2)}</Badge>
-                            )}
-                          </div>
-
-                          {r.nova_aplicacao && r.produto_aplicado && (
-                            <div className="text-xs bg-amber-50 border border-amber-100 rounded px-2 py-1">
-                              Aplicado: <strong>{r.produto_aplicado}</strong>
-                              {r.dose_aplicada && ` — ${r.dose_aplicada}`}
-                            </div>
-                          )}
-
-                          {r.biometria && (
-                            <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              {r.biometria.altura_planta_cm != null && (
-                                <span>↕ Altura: {r.biometria.altura_planta_cm} cm</span>
-                              )}
-                              {r.biometria.stand_m_linear != null && (
-                                <span>Stand: {r.biometria.stand_m_linear}/m</span>
-                              )}
-                              {r.biometria.peso_1000_graos != null && (
-                                <span>PMG: {r.biometria.peso_1000_graos} g</span>
-                              )}
-                              {r.biometria.comprimento_raiz_cm != null && (
-                                <span>Raiz: {r.biometria.comprimento_raiz_cm} cm</span>
-                              )}
-                              {r.biometria.diametro_caule_mm != null && (
-                                <span>Caule: {r.biometria.diametro_caule_mm} mm</span>
-                              )}
-                              {r.biometria.num_trifolios != null && (
-                                <span>Trifólios: {r.biometria.num_trifolios}</span>
-                              )}
-                              {r.biometria.num_ramos_produtivos != null && (
-                                <span>Ramos: {r.biometria.num_ramos_produtivos}</span>
-                              )}
-                              {r.biometria.num_vagens != null && (
-                                <span>Vagens: {r.biometria.num_vagens}</span>
-                              )}
-                              {r.biometria.num_graos_por_vagem != null && (
-                                <span>Grãos/vag: {r.biometria.num_graos_por_vagem}</span>
-                              )}
-                            </div>
-                          )}
-
-                          {r.observacoes && (
-                            <div className="text-sm text-muted-foreground">{r.observacoes}</div>
-                          )}
-
-                          {r.diag_ia && (
-                            <div className="text-xs bg-purple-50 border border-purple-100 rounded px-2 py-1.5 prose prose-xs max-w-none">
-                              <div className="font-semibold text-purple-700 mb-1 flex items-center gap-1">
-                                <Sparkles className="h-3 w-3" /> Diagnóstico IA
-                              </div>
-                              <ReactMarkdown>{r.diag_ia}</ReactMarkdown>
-                            </div>
-                          )}
-
-                          {Array.isArray(r.fotos) && r.fotos.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {r.fotos.map((f: any, i: number) => (
-                                <button key={i} onClick={() => verFoto(f.path)}
-                                  className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded hover:bg-muted/70">
-                                  <ImagePlus className="h-3 w-3" /> Foto {i + 1}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* aba: lado a lado */}
-                    <TabsContent value="ladoalado" className="mt-3">
-                      {(selected.testemunha || selected.tratamento) ? (
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* testemunha */}
-                          <div className="border rounded-lg p-3 space-y-2">
-                            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Testemunha</div>
-                            {selected.testemunha?.nome && <div className="text-sm font-medium">{selected.testemunha.nome}</div>}
-                            {selected.testemunha?.dose && <div className="text-xs text-muted-foreground">Dose: {selected.testemunha.dose}</div>}
-                            {selected.testemunha?.garantias && <div className="text-xs text-muted-foreground">Garantias: {selected.testemunha.garantias}</div>}
-                            {selected.foto_rotulo_testemunha && (
-                              <button onClick={() => verFoto(selected.foto_rotulo_testemunha)}
-                                className="text-xs flex items-center gap-1 bg-muted px-2 py-1 rounded hover:bg-muted/70">
-                                <Camera className="h-3 w-3" /> Ver rótulo
-                              </button>
-                            )}
-                          </div>
-
-                          {/* tratamento */}
-                          <div className="border rounded-lg p-3 space-y-2 border-primary/40 bg-primary/5">
-                            <div className="text-xs font-bold text-primary uppercase tracking-wider">Tratamento</div>
-                            {selected.tratamento?.nome && <div className="text-sm font-medium">{selected.tratamento.nome}</div>}
-                            {selected.tratamento?.dose && <div className="text-xs text-muted-foreground">Dose: {selected.tratamento.dose}</div>}
-                            {selected.tratamento?.garantias && <div className="text-xs text-muted-foreground">Garantias: {selected.tratamento.garantias}</div>}
-                            {selected.foto_rotulo_tratamento && (
-                              <button onClick={() => verFoto(selected.foto_rotulo_tratamento)}
-                                className="text-xs flex items-center gap-1 bg-muted px-2 py-1 rounded hover:bg-muted/70">
-                                <Camera className="h-3 w-3" /> Ver rótulo
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground py-6 text-center">
-                          Nenhum dado de testemunha/tratamento cadastrado para este teste.
-                        </div>
-                      )}
-
-                      {/* complexação */}
-                      {selected.nutrientes_substituir?.length > 0 && (
-                        <div className="mt-4 border rounded-lg p-3 bg-amber-50/40">
-                          <div className="text-xs font-semibold text-amber-800 mb-2">Complexação — Nutrientes substituídos</div>
-                          <div className="space-y-1">
-                            {selected.nutrientes_substituir.map((n: string) => (
-                              <div key={n} className="text-xs flex items-center gap-2">
-                                <span className="font-medium">{n}</span>
-                                {selected.adubos_substituir?.[n] && (
-                                  <>
-                                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{selected.adubos_substituir[n]}</span>
-                                  </>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* aba: mapa/ndvi */}
-                    <TabsContent value="mapa" className="mt-3 space-y-3">
-                      <MapaTalhao
-                        geometria={selected.geometria}
-                        centro={
-                          selected.centro_lat && selected.centro_lng
-                            ? [Number(selected.centro_lat), Number(selected.centro_lng)]
-                            : null
-                        }
-                        onSave={salvarGeometria}
-                      />
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <Button size="sm" variant="outline" disabled={ndviLoading || !selected.geometria}
-                          onClick={() => gerarNdvi("latest")}>
-                          <Satellite className="h-4 w-4 mr-1" /> NDVI atual
-                        </Button>
-                        <Button size="sm" disabled={ndviLoading || !selected.geometria}
-                          onClick={() => gerarNdvi("history")} className="bg-gradient-primary">
-                          <Satellite className="h-4 w-4 mr-1" /> {ndviLoading ? "Carregando…" : "Série 12 meses"}
-                        </Button>
-                        {!selected.geometria && (
-                          <span className="text-xs text-muted-foreground">Desenhe e salve o talhão para liberar NDVI.</span>
-                        )}
-                      </div>
-                      {ndviSerie.length > 0 && (
-                        <div className="border rounded-md p-3">
-                          <div className="text-sm font-medium mb-2">Histórico NDVI ({ndviSerie[0]?.fonte})</div>
-                          <div className="space-y-1">
-                            {ndviSerie.map((n) => (
-                              <div key={n.id} className="flex items-center gap-2 text-xs">
-                                <span className="w-20 text-muted-foreground">{n.data}</span>
-                                <div className="flex-1 h-2 bg-muted rounded overflow-hidden">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-amber-500 via-lime-500 to-emerald-600"
-                                    style={{ width: `${Math.max(5, Math.min(100, Number(n.ndvi_mean) * 100))}%` }}
-                                  />
-                                </div>
-                                <span className="w-12 text-right font-mono">{Number(n.ndvi_mean).toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* aba: produtos */}
-                    <TabsContent value="produtos" className="mt-3">
-                      <div className="space-y-2">
-                        {(selected.produtos ?? []).map((p: any, i: number) => (
-                          <div key={i} className="border rounded-md p-3">
-                            <div className="font-medium text-sm">{p.nome}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {p.area_ha} ha · dose {p.dose || "—"} {p.observacao && `· ${p.observacao}`}
-                            </div>
-                          </div>
-                        ))}
-                        {selected.observacoes && (
-                          <div className="text-sm pt-2">
-                            <span className="text-muted-foreground">Obs.: </span>{selected.observacoes}
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    {/* aba: relatório IA */}
-                    <TabsContent value="relatorio" className="mt-3">
-                      {selected.relatorio_final_resumo ? (
-                        <div className="space-y-3">
-                          <div className="flex justify-end">
-                            <Button size="sm" variant="outline" onClick={baixarRelatorioPDF}>
-                              <FileText className="h-4 w-4 mr-1.5" /> Baixar PDF
-                            </Button>
-                          </div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown>{selected.relatorio_final_resumo}</ReactMarkdown>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground py-6 text-center">
-                          <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                          Nenhum relatório gerado. Use "Finalizar com IA" no cabeçalho acima.
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </>
   );
