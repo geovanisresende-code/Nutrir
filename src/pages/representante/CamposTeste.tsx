@@ -125,6 +125,10 @@ export default function CamposTeste() {
   const [tipoTeste, setTipoTeste] = useState("");
   const [nutrientesSubstituir, setNutrientesSubstituir] = useState<string[]>([]);
   const [adubosSubstituir, setAdubosSubstituir] = useState<Record<string, string>>({});
+  const [adubosNPKFormulado, setAdubosNPKFormulado] = useState(false);
+  const [adubosNPKGrade, setAdubosNPKGrade] = useState(""); // "20-05-20"
+  const [boroKgHa, setBoroKgHa] = useState("");
+  const [microGrHa, setMicroGrHa] = useState<Record<string, string>>({}); // micronutriente → gr/ha
   const [estagioAplicacao, setEstagioAplicacao] = useState("");
   const [estagioDetalhe, setEstagioDetalhe] = useState("");
 
@@ -143,9 +147,19 @@ export default function CamposTeste() {
   const [relNovaAplicacao, setRelNovaAplicacao] = useState(false);
   const [relProdutoAplicado, setRelProdutoAplicado] = useState("");
   const [relDoseAplicada, setRelDoseAplicada] = useState("");
+  // Biometria completa
   const [relAlturaPlanta, setRelAlturaPlanta] = useState("");
   const [relStandMLinear, setRelStandMLinear] = useState("");
   const [relPeso1000Graos, setRelPeso1000Graos] = useState("");
+  const [relComprimentoRaiz, setRelComprimentoRaiz] = useState("");
+  const [relDiametroCaule, setRelDiametroCaule] = useState("");
+  const [relNumTrifolios, setRelNumTrifolios] = useState("");
+  const [relNumRamos, setRelNumRamos] = useState("");
+  const [relNumVagens, setRelNumVagens] = useState("");
+  const [relNumGraosPorVagem, setRelNumGraosPorVagem] = useState("");
+  const [relBiometriaFotos, setRelBiometriaFotos] = useState<File[]>([]);
+  // Deficiência / IA
+  const [relTemDeficiencia, setRelTemDeficiencia] = useState(false);
   const [diagIA, setDiagIA] = useState("");
   const [diagLoading, setDiagLoading] = useState(false);
   const [fotosDiag, setFotosDiag] = useState<File[]>([]);
@@ -372,11 +386,18 @@ export default function CamposTeste() {
         fotos.push({ path, legenda: f.name });
       }
 
-      const biometria = (relAlturaPlanta || relStandMLinear || relPeso1000Graos)
+      const p = (v: string) => v ? parseFloat(v.replace(",", ".")) : null;
+      const biometria = (relAlturaPlanta || relStandMLinear || relPeso1000Graos || relComprimentoRaiz || relDiametroCaule || relNumTrifolios)
         ? {
-            altura_planta_cm: relAlturaPlanta ? parseFloat(relAlturaPlanta.replace(",", ".")) : null,
-            stand_m_linear: relStandMLinear ? parseFloat(relStandMLinear.replace(",", ".")) : null,
-            peso_1000_graos: relPeso1000Graos ? parseFloat(relPeso1000Graos.replace(",", ".")) : null,
+            altura_planta_cm:        p(relAlturaPlanta),
+            stand_m_linear:          p(relStandMLinear),
+            peso_1000_graos:         p(relPeso1000Graos),
+            comprimento_raiz_cm:     p(relComprimentoRaiz),
+            diametro_caule_mm:       p(relDiametroCaule),
+            num_trifolios:           p(relNumTrifolios),
+            num_ramos_produtivos:    p(relNumRamos),
+            num_vagens:              p(relNumVagens),
+            num_graos_por_vagem:     p(relNumGraosPorVagem),
           }
         : null;
 
@@ -620,17 +641,14 @@ export default function CamposTeste() {
                         </label>
                       ))}
                     </div>
+
                     {nutrientesSubstituir.length > 0 && (
-                      <div className="space-y-2">
-                        {nutrientesSubstituir.map((n) => (
+                      <div className="space-y-3">
+                        {/* N, P, K — seleção de adubo convencional */}
+                        {(["N", "P", "K"] as const).filter(n => nutrientesSubstituir.includes(n)).map((n) => (
                           <div key={n} className="grid grid-cols-2 gap-2 items-center">
-                            <Label className="text-xs text-muted-foreground">
-                              Adubo convencional ({n})
-                            </Label>
-                            <Select
-                              value={adubosSubstituir[n] ?? ""}
-                              onValueChange={(v) => onAduboChange(n, v)}
-                            >
+                            <Label className="text-xs text-muted-foreground">Adubo convencional ({n})</Label>
+                            <Select value={adubosSubstituir[n] ?? ""} onValueChange={(v) => onAduboChange(n, v)}>
                               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
                               <SelectContent>
                                 {ADUBOS_POR_NUTRIENTE[n].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
@@ -638,6 +656,77 @@ export default function CamposTeste() {
                             </Select>
                           </div>
                         ))}
+
+                        {/* N+P+K juntos → Adubo Formulado? */}
+                        {(["N","P","K"] as const).every(n => nutrientesSubstituir.includes(n)) && (
+                          <div className="rounded-md border bg-white p-3 space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                              <input type="checkbox" checked={adubosNPKFormulado}
+                                onChange={(e) => { setAdubosNPKFormulado(e.target.checked); setAdubosNPKGrade(""); }}
+                                className="rounded" />
+                              Usar adubo formulado (ex.: 20-05-20)?
+                            </label>
+                            {adubosNPKFormulado && (
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Gradação N-P-K (formato ##-##-##)</Label>
+                                <Input
+                                  value={adubosNPKGrade}
+                                  onChange={(e) => {
+                                    // Auto-format ##-##-##
+                                    let v = e.target.value.replace(/[^\d]/g, "").slice(0, 6);
+                                    if (v.length > 4) v = v.slice(0,2) + "-" + v.slice(2,4) + "-" + v.slice(4);
+                                    else if (v.length > 2) v = v.slice(0,2) + "-" + v.slice(2);
+                                    setAdubosNPKGrade(v);
+                                  }}
+                                  placeholder="04-14-08"
+                                  className="font-mono w-32"
+                                  maxLength={8}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Boro — kg/ha */}
+                        {nutrientesSubstituir.includes("Boro") && (
+                          <div className="grid grid-cols-2 gap-2 items-center">
+                            <Label className="text-xs text-muted-foreground">Boro — dose</Label>
+                            <div className="relative">
+                              <Input
+                                inputMode="decimal"
+                                value={boroKgHa}
+                                onChange={(e) => setBoroKgHa(e.target.value.replace(/[^\d,.]/g, ""))}
+                                placeholder="0,500"
+                                className="pr-16 h-8 text-xs"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">kg/ha</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Micronutrientes — gr/ha por elemento */}
+                        {nutrientesSubstituir.includes("Micronutrientes") && (
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Micronutrientes (gr/ha)</Label>
+                            {["Zinco (Zn)", "Manganês (Mn)", "Cobre (Cu)", "Molibdênio (Mo)", "Cobalto (Co)"].map((m) => (
+                              <div key={m} className="grid grid-cols-2 gap-2 items-center">
+                                <span className="text-xs">{m}</span>
+                                <div className="relative">
+                                  <Input
+                                    inputMode="decimal"
+                                    value={microGrHa[m] ?? ""}
+                                    onChange={(e) => setMicroGrHa(prev => ({ ...prev, [m]: e.target.value.replace(/[^\d,.]/g, "") }))}
+                                    placeholder="0"
+                                    className="pr-14 h-8 text-xs"
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">gr/ha</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Preview auto-fill */}
                         <div className="rounded-md border bg-white p-2 text-xs space-y-1">
                           <div><span className="text-muted-foreground">Testemunha (auto):</span> <strong>{testemunha.nome || "—"}</strong></div>
                           <div><span className="text-muted-foreground">Tratamento Nutrir (auto):</span> <strong className="text-primary">{tratamento.nome || "—"}</strong></div>
@@ -1009,10 +1098,11 @@ export default function CamposTeste() {
                             </div>
 
                             {/* biometria */}
-                            <div className="border rounded-lg p-3 space-y-2">
+                            <div className="border rounded-lg p-3 space-y-3">
                               <div className="text-sm font-semibold flex items-center gap-2">
                                 <Leaf className="h-4 w-4 text-muted-foreground" /> Biometria (opcional)
                               </div>
+                              {/* Linha 1: altura, stand, peso 1000 */}
                               <div className="grid grid-cols-3 gap-2">
                                 <div className="space-y-1">
                                   <Label className="text-xs">Altura planta</Label>
@@ -1036,6 +1126,75 @@ export default function CamposTeste() {
                                   </div>
                                 </div>
                               </div>
+                              {/* Linha 2: comp. raiz, diâm. caule, nº trifólios */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Comp. raiz</Label>
+                                  <div className="relative">
+                                    <Input className="h-8 text-xs pr-7" inputMode="decimal" value={relComprimentoRaiz}
+                                      onChange={(e) => setRelComprimentoRaiz(e.target.value)} placeholder="0" />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">cm</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Diâm. caule</Label>
+                                  <div className="relative">
+                                    <Input className="h-8 text-xs pr-7" inputMode="decimal" value={relDiametroCaule}
+                                      onChange={(e) => setRelDiametroCaule(e.target.value)} placeholder="0" />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">mm</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Nº trifólios</Label>
+                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumTrifolios}
+                                    onChange={(e) => setRelNumTrifolios(e.target.value)} placeholder="0" />
+                                </div>
+                              </div>
+                              {/* Linha 3: ramos, vagens, grãos/vagem */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Ramos produtivos</Label>
+                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumRamos}
+                                    onChange={(e) => setRelNumRamos(e.target.value)} placeholder="0" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Nº vagens</Label>
+                                  <Input className="h-8 text-xs" inputMode="numeric" value={relNumVagens}
+                                    onChange={(e) => setRelNumVagens(e.target.value)} placeholder="0" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Grãos/vagem</Label>
+                                  <Input className="h-8 text-xs" inputMode="decimal" value={relNumGraosPorVagem}
+                                    onChange={(e) => setRelNumGraosPorVagem(e.target.value)} placeholder="0" />
+                                </div>
+                              </div>
+                              {/* Fotos de biometria */}
+                              <div className="space-y-1">
+                                <Label className="text-xs flex items-center gap-1"><Camera className="h-3 w-3" /> Fotos de biometria</Label>
+                                <Input type="file" multiple accept="image/*" capture="environment" className="h-8 text-xs"
+                                  onChange={(e) => setRelBiometriaFotos(Array.from(e.target.files ?? []))} />
+                                {relBiometriaFotos.length > 0 && (
+                                  <div className="text-xs text-muted-foreground">{relBiometriaFotos.length} foto(s)</div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Deficiência / ponto de atenção */}
+                            <div className="border rounded-lg p-3 space-y-2 bg-orange-50/40">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={relTemDeficiencia}
+                                  onCheckedChange={(c) => setRelTemDeficiencia(!!c)}
+                                />
+                                <span className="text-sm font-medium text-orange-800">
+                                  Possui deficiência / ponto de atenção visual?
+                                </span>
+                              </label>
+                              {relTemDeficiencia && (
+                                <div className="text-xs text-muted-foreground bg-white border rounded p-2">
+                                  Adicione fotos abaixo e use o <strong>Diagnóstico IA</strong> para identificar a deficiência automaticamente.
+                                </div>
+                              )}
                             </div>
 
                             {/* NDVI */}
@@ -1124,15 +1283,33 @@ export default function CamposTeste() {
                           )}
 
                           {r.biometria && (
-                            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                            <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs text-muted-foreground">
                               {r.biometria.altura_planta_cm != null && (
-                                <span>↕ {r.biometria.altura_planta_cm} cm</span>
+                                <span>↕ Altura: {r.biometria.altura_planta_cm} cm</span>
                               )}
                               {r.biometria.stand_m_linear != null && (
                                 <span>Stand: {r.biometria.stand_m_linear}/m</span>
                               )}
                               {r.biometria.peso_1000_graos != null && (
                                 <span>PMG: {r.biometria.peso_1000_graos} g</span>
+                              )}
+                              {r.biometria.comprimento_raiz_cm != null && (
+                                <span>Raiz: {r.biometria.comprimento_raiz_cm} cm</span>
+                              )}
+                              {r.biometria.diametro_caule_mm != null && (
+                                <span>Caule: {r.biometria.diametro_caule_mm} mm</span>
+                              )}
+                              {r.biometria.num_trifolios != null && (
+                                <span>Trifólios: {r.biometria.num_trifolios}</span>
+                              )}
+                              {r.biometria.num_ramos_produtivos != null && (
+                                <span>Ramos: {r.biometria.num_ramos_produtivos}</span>
+                              )}
+                              {r.biometria.num_vagens != null && (
+                                <span>Vagens: {r.biometria.num_vagens}</span>
+                              )}
+                              {r.biometria.num_graos_por_vagem != null && (
+                                <span>Grãos/vag: {r.biometria.num_graos_por_vagem}</span>
                               )}
                             </div>
                           )}

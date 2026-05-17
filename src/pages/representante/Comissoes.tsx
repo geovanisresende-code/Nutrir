@@ -18,6 +18,36 @@ import { usePosition } from "@/hooks/usePosition";
 const money = (n: number) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct2 = (n: number) => `${Number(n || 0).toFixed(2)}%`;
 
+/* ─── Tier de desempenho ──────────────────────────────────────────────────── */
+type Tier = "diamante" | "ouro" | "prata" | "bronze" | "sem_tier";
+
+function calcTier(pctMeta: number): Tier {
+  if (pctMeta >= 120) return "diamante";
+  if (pctMeta >= 100) return "ouro";
+  if (pctMeta >= 80)  return "prata";
+  if (pctMeta >= 60)  return "bronze";
+  return "sem_tier";
+}
+
+const TIER_CONFIG: Record<Tier, { label: string; emoji: string; cor: string; bg: string; border: string; minPct: number }> = {
+  diamante: { label: "Diamante", emoji: "💎", cor: "text-cyan-700",  bg: "bg-cyan-50",  border: "border-cyan-300", minPct: 120 },
+  ouro:     { label: "Ouro",     emoji: "🥇", cor: "text-yellow-700",bg: "bg-yellow-50",border: "border-yellow-300",minPct: 100 },
+  prata:    { label: "Prata",    emoji: "🥈", cor: "text-slate-600",  bg: "bg-slate-50", border: "border-slate-300", minPct: 80  },
+  bronze:   { label: "Bronze",   emoji: "🥉", cor: "text-orange-700",bg: "bg-orange-50",border: "border-orange-300",minPct: 60  },
+  sem_tier: { label: "—",        emoji: "",    cor: "text-muted-foreground", bg: "bg-muted/40", border: "border-muted", minPct: 0 },
+};
+
+function TierBadge({ pct }: { pct: number }) {
+  const tier = calcTier(pct);
+  const cfg = TIER_CONFIG[tier];
+  if (tier === "sem_tier") return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.cor} ${cfg.border}`}>
+      {cfg.emoji} {cfg.label}
+    </span>
+  );
+}
+
 const STATUS_COLOR: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   prevista: "outline", apurada: "secondary", paga: "default", cancelada: "destructive",
 };
@@ -139,20 +169,39 @@ function MinhasComissoes() {
         </CardContent></Card>
       </div>
 
-      {meta > 0 && (
-        <Card><CardContent className="p-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium flex items-center gap-1.5"><Target className="h-4 w-4" /> Meta mensal</span>
-            <span className="text-muted-foreground">{money(totais.base)} / {money(meta)}</span>
-          </div>
-          <Progress value={pctMeta} className={pctMeta >= 100 ? "[&>div]:bg-green-500" : pctMeta >= 70 ? "[&>div]:bg-amber-500" : ""} />
-          <div className="text-xs text-muted-foreground">
-            {falta > 0
-              ? `Faltam ${money(falta)} para bater a meta. Bônus de ${bonusPct}% ao atingir.`
-              : `🎉 Meta batida! Bônus de ${pct2(bonusPct)} aplicado.`}
-          </div>
-        </CardContent></Card>
-      )}
+      {meta > 0 && (() => {
+        const tier = calcTier(pctMeta);
+        const cfg = TIER_CONFIG[tier];
+        return (
+          <Card className={`border-2 ${cfg.border}`}><CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium flex items-center gap-1.5"><Target className="h-4 w-4" /> Meta mensal</span>
+              <div className="flex items-center gap-2">
+                <TierBadge pct={pctMeta} />
+                <span className="text-muted-foreground">{money(totais.base)} / {money(meta)}</span>
+              </div>
+            </div>
+            <Progress value={pctMeta} className={pctMeta >= 120 ? "[&>div]:bg-cyan-500" : pctMeta >= 100 ? "[&>div]:bg-green-500" : pctMeta >= 80 ? "[&>div]:bg-yellow-500" : pctMeta >= 60 ? "[&>div]:bg-orange-500" : ""} />
+            <div className="text-xs text-muted-foreground">
+              {falta > 0
+                ? `Faltam ${money(falta)} para bater a meta. Bônus de ${bonusPct}% ao atingir.`
+                : `🎉 Meta batida! Bônus de ${pct2(bonusPct)} aplicado.`}
+            </div>
+            {/* Escala de tiers */}
+            <div className="flex gap-1.5 pt-1 flex-wrap">
+              {(["bronze","prata","ouro","diamante"] as Tier[]).map((t) => {
+                const tc = TIER_CONFIG[t];
+                const ativo = tier === t;
+                return (
+                  <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full border ${tc.bg} ${tc.cor} ${tc.border} ${ativo ? "font-bold ring-2 ring-offset-1 ring-current" : "opacity-60"}`}>
+                    {tc.emoji} {tc.label} ≥{tc.minPct}%
+                  </span>
+                );
+              })}
+            </div>
+          </CardContent></Card>
+        );
+      })()}
 
       {/* Histórico */}
       {historico.length > 0 && (
@@ -298,6 +347,7 @@ function RankingEquipe() {
             <TableHeader><TableRow>
               <TableHead>#</TableHead>
               <TableHead>Representante</TableHead>
+              <TableHead>Tier</TableHead>
               <TableHead className="text-right">Vendas</TableHead>
               <TableHead className="text-right">Meta</TableHead>
               <TableHead className="text-right w-32">Progresso</TableHead>
@@ -314,12 +364,13 @@ function RankingEquipe() {
                     </span>
                   </TableCell>
                   <TableCell className="font-medium">{r.nome}</TableCell>
+                  <TableCell><TierBadge pct={r.pct} /></TableCell>
                   <TableCell className="text-right">{money(r.base)}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{r.meta > 0 ? money(r.meta) : "—"}</TableCell>
                   <TableCell className="text-right">
                     {r.meta > 0 ? (
                       <div className="flex items-center gap-1.5 justify-end">
-                        <Progress value={r.pct} className={`w-20 h-1.5 ${r.pct >= 100 ? "[&>div]:bg-green-500" : r.pct >= 70 ? "[&>div]:bg-amber-500" : ""}`} />
+                        <Progress value={r.pct} className={`w-20 h-1.5 ${r.pct >= 120 ? "[&>div]:bg-cyan-500" : r.pct >= 100 ? "[&>div]:bg-green-500" : r.pct >= 80 ? "[&>div]:bg-yellow-500" : r.pct >= 60 ? "[&>div]:bg-orange-500" : ""}`} />
                         <span className="text-xs w-8 text-right">{r.pct.toFixed(0)}%</span>
                       </div>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
@@ -369,6 +420,438 @@ export default function Comissoes() {
             </TabsList>
             <TabsContent value="minha" className="mt-4"><MinhasComissoes /></TabsContent>
             <TabsContent value="equipe" className="mt-4"><RankingEquipe /></TabsContent>
+          </Tabs>
+        ) : (
+          <MinhasComissoes />
+        )}
+      </div>
+    </>
+  );
+}
+"space-y-4">
+      {/* Seletor de mês */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="w-56">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {mesesRecentes(12).map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => exportCSV(items, clientes)}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
+        </Button>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card><CardContent className="p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1"><Target className="h-3.5 w-3.5" /> Base vendida</div>
+          <div className="text-xl font-bold mt-1">{money(totais.base)}</div>
+          {meta > 0 && <div className="text-[11px] text-muted-foreground">Meta: {money(meta)}</div>}
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="h-3.5 w-3.5" /> Comissões</div>
+          <div className="text-xl font-bold mt-1">{money(totais.com)}</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1"><Award className="h-3.5 w-3.5" /> Bônus meta</div>
+          <div className="text-xl font-bold mt-1 text-amber-600">{money(totais.bonus)}</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> Total a receber</div>
+          <div className="text-xl font-bold mt-1 text-primary">{money(totais.total)}</div>
+        </CardContent></Card>
+      </div>
+
+      {/* Progresso meta + tier */}
+      {meta > 0 && (
+        <Card><CardContent className="p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Meta mensal — {pct2(pctMeta)}</div>
+            <TierBadge pct={pctMeta} />
+          </div>
+          <Progress value={pctMeta} className="h-2" />
+          {falta > 0 && <div className="text-xs text-muted-foreground">Faltam {money(falta)} para bater a meta.</div>}
+        </CardContent></Card>
+      )}
+
+      {/* Histórico 6m */}
+      {historico.length > 0 && (
+        <Card><CardContent className="p-4">
+          <div className="text-sm font-semibold mb-3">Histórico 6 meses</div>
+          <ResponsiveContainer width="100%" height={130}>
+            <BarChart data={historico}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="mes" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => money(v)} />
+              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent></Card>
+      )}
+
+      {/* Tabela de comissões */}
+      <Card><CardContent className="p-0">
+        {items.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground text-center">Nenhuma comissão no mês selecionado.</div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Cliente</TableHead><TableHead className="text-right">Base</TableHead>
+              <TableHead className="text-right">%</TableHead><TableHead className="text-right">Comissão</TableHead>
+              <TableHead>Status</TableHead><TableHead>Pagamento</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {items.map(r => (
+                <TableRow key={r.id}>
+                  <TableCell className="text-sm">{clientes[r.cliente_id] ?? "—"}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{money(r.base_calculo)}</TableCell>
+                  <TableCell className="text-right text-sm">{pct2(r.percentual)}</TableCell>
+                  <TableCell className="text-right font-medium">{money(r.valor)}</TableCell>
+                  <TableCell><Badge variant={STATUS_COLOR[r.status]}>{STATUS_LABEL[r.status]}</Badge></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.data_pagamento ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent></Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAINEL ADMIN — salário, adiantamento, carro, bonificação
+   ═══════════════════════════════════════════════════════════════ */
+function PainelAdminComissoes() {
+  const { current } = useOrg();
+  const [cols, setCols] = useState<any[]>([]);
+  const [selectedCol, setSelectedCol] = useState<string>("");
+  const [mes, setMes] = useState<string>(() => new Date().toISOString().slice(0, 7) + "-01");
+  const [comissoes, setComissoes] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Folha de pagamento por colaborador
+  const [salario, setSalario] = useState("");
+  const [adiantamento, setAdiantamento] = useState("");
+  const [auxilio_carro, setAuxilioCarro] = useState("");
+  const [bonificacao, setBonificacao] = useState("");
+  const [obs_folha, setObsFolha] = useState("");
+
+  const load = async () => {
+    if (!current) return;
+    const { data: c } = await (supabase as any)
+      .from("nutrir_colaboradores")
+      .select("id,nome,cargo,meta_mensal,bonus_meta_pct,user_id,salario_base,auxilio_carro,adiantamento_max")
+      .eq("organization_id", current.id);
+    setCols((c as any[]) ?? []);
+
+    const { data: com } = await (supabase as any)
+      .from("nutrir_comissoes")
+      .select("*")
+      .eq("organization_id", current.id)
+      .eq("mes_referencia", mes)
+      .order("created_at", { ascending: false });
+    setComissoes((com as any[]) ?? []);
+
+    const ids = Array.from(new Set(((com as any[]) ?? []).map((i: any) => i.cliente_id).filter(Boolean)));
+    if (ids.length) {
+      const { data: cs } = await supabase.from("nutrir_clientes" as any).select("id,razao_social").in("id", ids as string[]);
+      const map: Record<string, string> = {};
+      (cs ?? []).forEach((c: any) => { map[c.id] = c.razao_social; });
+      setClientes(map);
+    }
+  };
+
+  useEffect(() => { load(); }, [current?.id, mes]);
+
+  const col = cols.find(c => c.id === selectedCol);
+
+  useEffect(() => {
+    if (col) {
+      setSalario(col.salario_base ? String(col.salario_base) : "");
+      setAuxilioCarro(col.auxilio_carro ? String(col.auxilio_carro) : "");
+      setAdiantamento(col.adiantamento_max ? String(col.adiantamento_max) : "");
+      setBonificacao("");
+      setObsFolha("");
+    }
+  }, [col?.id]);
+
+  const saveColaborador = async () => {
+    if (!col || !current) return;
+    setSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("nutrir_colaboradores")
+        .update({
+          salario_base: Number(salario) || null,
+          auxilio_carro: Number(auxilio_carro) || null,
+          adiantamento_max: Number(adiantamento) || null,
+        })
+        .eq("id", col.id);
+      if (error) throw error;
+
+      // Registrar bonificação como comissão avulsa se informada
+      if (Number(bonificacao) > 0) {
+        await (supabase as any).from("nutrir_comissoes").insert({
+          organization_id: current.id,
+          colaborador_id: col.id,
+          mes_referencia: mes,
+          tipo: "bonificacao",
+          base_calculo: 0,
+          percentual: 0,
+          valor: Number(bonificacao),
+          status: "apurada",
+          descricao: obs_folha || "Bonificação manual",
+        });
+      }
+
+      toast.success("Dados salvos!");
+      load();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally { setSaving(false); }
+  };
+
+  // Totais por colaborador no mês
+  const totaisPorCol = useMemo(() => {
+    const map: Record<string, { base: number; com: number }> = {};
+    comissoes.forEach(c => {
+      const k = c.colaborador_id ?? c.user_id ?? "?";
+      if (!map[k]) map[k] = { base: 0, com: 0 };
+      map[k].base += Number(c.base_calculo || 0);
+      map[k].com += Number(c.valor || 0);
+    });
+    return map;
+  }, [comissoes]);
+
+  // Folha consolidada = salário + adiantamento (desconta) + auxílio carro + bônus + comissão
+  const folhaConsolidada = cols.map(c => {
+    const totais = totaisPorCol[c.id] ?? { base: 0, com: 0 };
+    const bonuses = comissoes.filter(x => (x.colaborador_id === c.id || x.user_id === c.user_id) && x.tipo === "bonificacao")
+      .reduce((a, x) => a + Number(x.valor || 0), 0);
+    const pctMeta = c.meta_mensal > 0 ? totais.base / c.meta_mensal * 100 : 0;
+    const bonusMeta = pctMeta >= 100 && c.bonus_meta_pct > 0 ? totais.base * c.bonus_meta_pct / 100 : 0;
+    const tier = calcTier(pctMeta);
+    return {
+      ...c,
+      base_vendas: totais.base,
+      comissoes: totais.com,
+      bonuses,
+      bonusMeta,
+      tier,
+      pctMeta,
+      totalBruto: (Number(c.salario_base || 0)) + totais.com + bonusMeta + bonuses + Number(c.auxilio_carro || 0),
+      adiant: Number(c.adiantamento_max || 0),
+    };
+  });
+
+  const exportFolha = () => {
+    const cols2 = ["Colaborador","Cargo","Salário Base","Base Vendas","Comissões","Bônus Meta","Bonificações","Aux. Carro","Adiantamento","Total Bruto","Tier"];
+    const rows = folhaConsolidada.map(c => [
+      c.nome, c.cargo, c.salario_base ?? 0,
+      c.base_vendas, c.comissoes, c.bonusMeta, c.bonuses, c.auxilio_carro ?? 0, c.adiant,
+      c.totalBruto, c.tier,
+    ].join(","));
+    const csv = cols2.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `folha-${mes.slice(0,7)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const money = (n: number) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: string) => v;
+
+  return (
+    <div className="space-y-4">
+      {/* Controles de mês + exportar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="w-56">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {mesesRecentes(12).map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="sm" variant="outline" onClick={exportFolha}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Exportar folha CSV
+        </Button>
+      </div>
+
+      {/* Folha consolidada */}
+      <Card><CardContent className="p-0">
+        <div className="p-3 border-b text-sm font-semibold flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" /> Folha de pagamento — {mes.slice(0,7)}
+        </div>
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>Colaborador</TableHead><TableHead>Cargo</TableHead>
+            <TableHead className="text-right">Sal. Base</TableHead>
+            <TableHead className="text-right">Comissões</TableHead>
+            <TableHead className="text-right">Bônus</TableHead>
+            <TableHead className="text-right">Aux. Carro</TableHead>
+            <TableHead className="text-right">Total Bruto</TableHead>
+            <TableHead>Tier</TableHead>
+            <TableHead className="text-right">Editar</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {folhaConsolidada.map(c => (
+              <TableRow key={c.id} className={selectedCol === c.id ? "bg-muted/50" : ""}>
+                <TableCell className="font-medium text-sm">{c.nome}</TableCell>
+                <TableCell className="text-xs text-muted-foreground capitalize">{c.cargo}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(c.salario_base)}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(c.comissoes)}</TableCell>
+                <TableCell className="text-right font-mono text-sm text-amber-600">{money(c.bonusMeta + c.bonuses)}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{money(c.auxilio_carro)}</TableCell>
+                <TableCell className="text-right font-bold">{money(c.totalBruto)}</TableCell>
+                <TableCell><TierBadge pct={c.pctMeta} /></TableCell>
+                <TableCell className="text-right">
+                  <Button size="sm" variant="outline" onClick={() => setSelectedCol(c.id === selectedCol ? "" : c.id)}>
+                    {selectedCol === c.id ? "Fechar" : "Editar"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent></Card>
+
+      {/* Painel edição do colaborador selecionado */}
+      {col && (
+        <Card><CardContent className="p-4 space-y-4">
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-primary" /> Configurar remuneração — {col.nome}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Salário base (R$)</label>
+              <input
+                type="number" min={0} step={100}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                value={salario} onChange={e => setSalario(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Limite adiantamento (R$)</label>
+              <input
+                type="number" min={0} step={100}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                value={adiantamento} onChange={e => setAdiantamento(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Auxílio carro (R$)</label>
+              <input
+                type="number" min={0} step={50}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                value={auxilio_carro} onChange={e => setAuxilioCarro(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Bonificação avulsa (R$)</label>
+              <input
+                type="number" min={0} step={50}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                value={bonificacao} onChange={e => setBonificacao(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Observações (folha)</label>
+            <textarea
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"
+              rows={2}
+              value={obs_folha}
+              onChange={e => setObsFolha(e.target.value)}
+              placeholder="Motivo do bônus, ajuste ou observação para o mês…"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={saveColaborador} disabled={saving} className="bg-gradient-primary">
+              {saving ? "Salvando…" : "Salvar configurações"}
+            </Button>
+          </div>
+        </CardContent></Card>
+      )}
+
+      {/* Comissões detalhadas do mês */}
+      <Card><CardContent className="p-0">
+        <div className="p-3 border-b text-sm font-semibold">Comissões detalhadas — {mes.slice(0,7)}</div>
+        {comissoes.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground text-center">Nenhuma comissão no mês.</div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Colaborador</TableHead><TableHead>Cliente</TableHead>
+              <TableHead className="text-right">Base</TableHead><TableHead className="text-right">%</TableHead>
+              <TableHead className="text-right">Comissão</TableHead><TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {comissoes.map(r => {
+                const colNome = cols.find(c => c.id === r.colaborador_id || c.user_id === r.user_id)?.nome ?? "—";
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-sm font-medium">{colNome}</TableCell>
+                    <TableCell className="text-sm">{clientes[r.cliente_id] ?? (r.descricao ?? "—")}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{money(r.base_calculo)}</TableCell>
+                    <TableCell className="text-right text-sm">{Number(r.percentual || 0).toFixed(2)}%</TableCell>
+                    <TableCell className="text-right font-medium">{money(r.valor)}</TableCell>
+                    <TableCell><Badge variant={STATUS_COLOR[r.status]}>{STATUS_LABEL[r.status]}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      {r.status === "apurada" && (
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          await (supabase as any).from("nutrir_comissoes").update({ status: "paga", data_pagamento: new Date().toISOString().slice(0,10) }).eq("id", r.id);
+                          toast.success("Marcada como paga");
+                          load();
+                        }}>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Pagar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent></Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+   ═══════════════════════════════════════════════════════════════ */
+export default function Comissoes() {
+  const { position } = usePosition();
+  const isAdmin = position === "diretor" || position === "proprietario" || position === "gerente";
+
+  return (
+    <>
+      <PageHeader
+        title="Comissões"
+        description={isAdmin ? "Gestão de comissões, folha e bonificações da equipe" : "Suas comissões e metas mensais"}
+      />
+      <div className="p-6">
+        {isAdmin ? (
+          <Tabs defaultValue="minhas">
+            <TabsList>
+              <TabsTrigger value="minhas">Minhas comissões</TabsTrigger>
+              <TabsTrigger value="admin"><Users className="h-3.5 w-3.5 mr-1" />Painel Admin</TabsTrigger>
+            </TabsList>
+            <TabsContent value="minhas" className="mt-4"><MinhasComissoes /></TabsContent>
+            <TabsContent value="admin" className="mt-4"><PainelAdminComissoes /></TabsContent>
           </Tabs>
         ) : (
           <MinhasComissoes />

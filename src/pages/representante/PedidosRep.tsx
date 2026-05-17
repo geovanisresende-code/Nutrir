@@ -135,6 +135,7 @@ export default function PedidosRep() {
   // form
   const [clienteId, setClienteId] = useState("");
   const [tipoVenda, setTipoVenda] = useState<string>("b2b");
+  const [nomeAgenciador, setNomeAgenciador] = useState("");
   const [dataVencimento, setDataVencimento] = useState<Date | undefined>(undefined);
   const [dataEntrega, setDataEntrega] = useState<Date | undefined>(undefined);
   const [orcamentoOrigemId, setOrcamentoOrigemId] = useState<string>("");
@@ -146,7 +147,7 @@ export default function PedidosRep() {
   const [linhaFiltro, setLinhaFiltro] = useState<Record<number, string>>({}); // index → linha
 
   const reset = () => {
-    setClienteId(""); setTipoVenda("b2b"); setDataVencimento(undefined); setDataEntrega(undefined);
+    setClienteId(""); setTipoVenda("b2b"); setNomeAgenciador(""); setDataVencimento(undefined); setDataEntrega(undefined);
     setOrcamentoOrigemId(""); setObservacoes(""); setDescontoPct(0); setItens([]); setLinhaFiltro({});
   };
 
@@ -324,6 +325,7 @@ export default function PedidosRep() {
           created_by: user.id,
           cliente_id: clienteId,
           tipo_venda: tipoVenda,
+          nome_agenciador: tipoVenda === "venda_agenciada" ? (nomeAgenciador || null) : null,
           condicao_pagamento: condicaoPagamento,
           data_vencimento: dataVencimento ? format(dataVencimento, "yyyy-MM-dd") : null,
           data_entrega: dataEntrega ? format(dataEntrega, "yyyy-MM-dd") : null,
@@ -479,10 +481,21 @@ export default function PedidosRep() {
                   </div>
                 )}
                 {tipoVenda === "venda_agenciada" && (
-                  <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3">
-                    <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                    <div className="text-xs text-blue-800">
-                      <strong>Venda Agenciada:</strong> Este pedido é intermediado pelo representante. O faturamento será realizado diretamente entre a empresa e o cliente final.
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3">
+                      <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                      <div className="text-xs text-blue-800">
+                        <strong>Venda Agenciada:</strong> Pedido intermediado. Faturamento direto empresa↔cliente final.
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Nome do agenciador / consultor <span className="text-destructive">*</span></Label>
+                      <Input
+                        value={nomeAgenciador}
+                        onChange={(e) => setNomeAgenciador(e.target.value)}
+                        placeholder="Ex.: João Silva — Consultor Externo"
+                        required={tipoVenda === "venda_agenciada"}
+                      />
                     </div>
                   </div>
                 )}
@@ -507,6 +520,15 @@ export default function PedidosRep() {
                       </strong>
                       {" "}(à vista até último dia do mês seguinte ao pedido)
                     </p>
+                    {/* Resumo das regras de juros */}
+                    <div className="rounded-md bg-blue-50 border border-blue-100 p-2 text-[10px] text-blue-800 space-y-0.5">
+                      <div className="font-semibold text-[11px] flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Regras de juros de mora</div>
+                      <div>• Carência: {JUROS_CARENCIA_DIAS} dias após vencimento sem juros</div>
+                      <div>• Após carência: {(JUROS_MES * 100).toFixed(1)}% ao mês ({(JUROS_DIA * 100).toFixed(4)}% ao dia) sobre o saldo devedor</div>
+                      {condicaoPagamento === "a_vista" && (
+                        <div className="text-emerald-700 font-medium">✓ Pagamento à vista — sem juros em caso de pontualidade</div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">

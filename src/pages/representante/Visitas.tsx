@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Plus, Trash2, AlertOctagon, AlertTriangle, Info, MapPin, X, Truck, FlaskConical } from "lucide-react";
+import { Camera, Plus, Trash2, AlertOctagon, AlertTriangle, Info, MapPin, X, Truck, FlaskConical, Cloud, Sun, CloudRain, Wind } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,13 +36,66 @@ const MOTIVOS: { v: MotivoEnum; l: string }[] = [
 type AlertaNivel = "muito_urgente" | "ponto_atencao" | "relato_rotina";
 
 interface Cliente { id: string; razao_social: string; nome_fantasia: string | null; }
+interface ClimaSnapshot {
+  temperatura: number;
+  descricao: string;
+  vento_kmh: number;
+  precipitacao_mm: number;
+  codigo_wmo: number;
+}
+
 interface Visita {
   id: string; data_visita: string; motivo: MotivoEnum; motivo_outro: string | null;
   cliente_id: string | null; cliente_nome_livre: string | null;
   relato: string; observacao: string | null;
   fotos: string[]; alerta_nivel: AlertaNivel | null;
   latitude: number | null; longitude: number | null;
+  clima: ClimaSnapshot | null;
   created_at: string;
+}
+
+/* ── Open-Meteo helpers ── */
+function wmoDescricao(code: number): string {
+  if (code === 0) return "Céu limpo";
+  if (code <= 3)  return "Parcialmente nublado";
+  if (code <= 9)  return "Neblina";
+  if (code <= 19) return "Chuva leve";
+  if (code <= 29) return "Tempestade passando";
+  if (code <= 39) return "Neblina com gelo";
+  if (code <= 49) return "Nevoeiro";
+  if (code <= 59) return "Garoa";
+  if (code <= 67) return "Chuva";
+  if (code <= 77) return "Neve";
+  if (code <= 82) return "Aguaceiro";
+  if (code <= 84) return "Granizo";
+  if (code <= 94) return "Neve com granizo";
+  return "Tempestade com raios";
+}
+
+function wmoIcone(code: number) {
+  if (code === 0 || code === 1) return <Sun className="h-4 w-4 text-yellow-500" />;
+  if (code <= 3) return <Cloud className="h-4 w-4 text-slate-400" />;
+  if (code <= 67 || (code >= 80 && code <= 82)) return <CloudRain className="h-4 w-4 text-blue-500" />;
+  return <Cloud className="h-4 w-4 text-slate-500" />;
+}
+
+async function fetchClima(lat: number, lng: number): Promise<ClimaSnapshot | null> {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weathercode,windspeed_10m,precipitation&timezone=auto&forecast_days=1`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const c = json.current;
+    return {
+      temperatura: Math.round(c.temperature_2m * 10) / 10,
+      descricao: wmoDescricao(c.weathercode),
+      vento_kmh: Math.round(c.windspeed_10m),
+      precipitacao_mm: c.precipitation ?? 0,
+      codigo_wmo: c.weathercode,
+    };
+  } catch {
+    return null;
+  }
 }
 
 const EXEMPLO_OBS =
@@ -72,6 +125,8 @@ export default function Visitas() {
   const [alertaTitulo, setAlertaTitulo] = useState("");
   const [geo, setGeo] = useState<{lat: number; lng: number} | null>(null);
   const [saving, setSaving] = useState(false);
+  const [clima, setClima] = useState<ClimaSnapshot | null>(null);
+  const [climaLoading, setClimaLoading] = useState(false);
 
   // Entregas (quando motivo = entrega_produto)
   type Entrega = { produto_id: string | null; produto_nome: string; unidade: string; quantidade: string; custo: string };
@@ -98,7 +153,7 @@ export default function Visitas() {
   const reset = () => {
     setClienteId("livre"); setClienteLivre(""); setMotivo("rotina_relacionamento");
     setMotivoOutro(""); setRelato(""); setObservacao(""); setFotos([]);
-    setAlerta(null); setAlertaTitulo(""); setGeo(null);
+    setAlerta(null); setAlertaTitulo(""); setGeo(null); setClima(null);
     setEntregas([]);
   };
 
@@ -120,7 +175,16 @@ export default function Visitas() {
   const captureGeo = () => {
     if (!navigator.geolocation) { toast({ title: "GPS indisponível", variant: "destructive" }); return; }
     navigator.geolocation.getCurrentPosition(
-      p => { setGeo({ lat: p.coords.latitude, lng: p.coords.longitude }); toast({ title: "Localização capturada" }); },
+      async (p) => {
+        const pos = { lat: p.coords.latitude, lng: p.coords.longitude };
+        setGeo(pos);
+        toast({ title: "Localização capturada" });
+        setClimaLoading(true);
+        const c = await fetchClima(pos.lat, pos.lng);
+        setClima(c);
+        setClimaLoading(false);
+        if (c) toast({ title: `Clima: ${c.temperatura}°C — ${c.descricao}` });
+      },
       () => toast({ title: "Não foi possível obter localização", variant: "destructive" }),
       { enableHighAccuracy: true, timeout: 10000 },
     );
@@ -197,6 +261,7 @@ export default function Visitas() {
       relato, observacao: observacao || null,
       fotos, alerta_nivel: alerta, ouvidoria_id: ouvidoriaId,
       latitude: geo?.lat ?? null, longitude: geo?.lng ?? null,
+      clima: clima ?? null,
     });
     if (error) { setSaving(false); toast({ title: "Erro ao salvar visita", description: error.message, variant: "destructive" }); return; }
 
@@ -374,13 +439,27 @@ export default function Visitas() {
                 </div>
 
                 <div>
-                  <Label>Localização</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Button type="button" variant="outline" size="sm" onClick={captureGeo}>
-                      <MapPin className="w-4 h-4 mr-1"/>Capturar GPS
+                  <Label>Localização &amp; Clima</Label>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Button type="button" variant="outline" size="sm" onClick={captureGeo} disabled={climaLoading}>
+                      <MapPin className="w-4 h-4 mr-1"/>
+                      {climaLoading ? "Buscando clima…" : "Capturar GPS + Clima"}
                     </Button>
                     {geo && <span className="text-xs text-muted-foreground">{geo.lat.toFixed(5)}, {geo.lng.toFixed(5)}</span>}
                   </div>
+                  {clima && (
+                    <div className="mt-2 flex items-center gap-3 bg-sky-50 border border-sky-100 rounded-md px-3 py-2 text-sm">
+                      {wmoIcone(clima.codigo_wmo)}
+                      <span className="font-semibold text-sky-900">{clima.temperatura}°C</span>
+                      <span className="text-sky-700">{clima.descricao}</span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                        <Wind className="h-3 w-3" />{clima.vento_kmh} km/h
+                        {clima.precipitacao_mm > 0 && (
+                          <><CloudRain className="h-3 w-3 ml-2" />{clima.precipitacao_mm} mm</>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -447,6 +526,17 @@ export default function Visitas() {
                 </div>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
+                {v.clima && (
+                  <div className="flex items-center gap-2 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded px-2 py-1">
+                    {wmoIcone(v.clima.codigo_wmo)}
+                    <span className="font-semibold">{v.clima.temperatura}°C</span>
+                    <span>{v.clima.descricao}</span>
+                    <span className="flex items-center gap-1 ml-auto text-muted-foreground">
+                      <Wind className="h-3 w-3" />{v.clima.vento_kmh} km/h
+                      {v.clima.precipitacao_mm > 0 && <><CloudRain className="h-3 w-3 ml-1" />{v.clima.precipitacao_mm} mm</>}
+                    </span>
+                  </div>
+                )}
                 <p className="whitespace-pre-wrap">{v.relato}</p>
                 {v.observacao && <p className="text-muted-foreground italic"><strong>Obs.:</strong> {v.observacao}</p>}
                 {v.fotos?.length > 0 && (

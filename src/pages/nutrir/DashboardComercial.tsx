@@ -285,7 +285,8 @@ export default function DashboardComercial() {
               <BarChart3 className="w-4 h-4" /> Funil de pedidos — {PERIODO_LABEL[periodo]}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* KPI chips por status */}
             <div className="flex flex-wrap gap-3">
               {funil.map(f => {
                 const cfg = STATUS_CONFIG[f.status] ?? { label: f.status, color: "", bg: "bg-muted" };
@@ -298,6 +299,61 @@ export default function DashboardComercial() {
                 );
               })}
             </div>
+
+            {/* Gráfico de funil — barras horizontais por quantidade e valor */}
+            {pedFiltrados.length > 0 && (() => {
+              const FUNIL_COLORS: Record<string, string> = {
+                rascunho:   "#94a3b8",
+                confirmado: "#3b82f6",
+                aprovado:   "#22c55e",
+                faturado:   "#10b981",
+                cancelado:  "#ef4444",
+              };
+              const chartData = funil.filter(f => f.count > 0).map(f => ({
+                name: STATUS_CONFIG[f.status]?.label ?? f.status,
+                qtd: f.count,
+                valor: f.total,
+                fill: FUNIL_COLORS[f.status] ?? "#94a3b8",
+              }));
+              const maxQtd = Math.max(...chartData.map(d => d.qtd), 1);
+              return (
+                <div>
+                  <div className="text-xs text-muted-foreground font-medium mb-2">Quantidade de pedidos por etapa</div>
+                  <div className="space-y-2">
+                    {chartData.map((d) => (
+                      <div key={d.name} className="flex items-center gap-2">
+                        <div className="w-24 text-xs text-right text-muted-foreground shrink-0">{d.name}</div>
+                        <div className="flex-1 h-7 bg-muted/30 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ width: `${Math.max(8, (d.qtd / maxQtd) * 100)}%`, background: d.fill }}
+                          >
+                            <span className="text-[11px] font-bold text-white">{d.qtd}</span>
+                          </div>
+                        </div>
+                        <div className="w-28 text-xs font-mono text-muted-foreground shrink-0">{BRL(d.valor)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Taxa de conversão rascunho → faturado */}
+                  {(() => {
+                    const rascunho = funil.find(f => f.status === "rascunho")?.count ?? 0;
+                    const faturado = funil.find(f => f.status === "faturado")?.count ?? 0;
+                    const total = pedFiltrados.length;
+                    const cancelado = funil.find(f => f.status === "cancelado")?.count ?? 0;
+                    const taxa = total > 0 ? ((faturado / (total - cancelado || 1)) * 100) : 0;
+                    return total > 0 ? (
+                      <div className="mt-3 pt-3 border-t flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        <span>Total no período: <strong className="text-foreground">{total}</strong></span>
+                        <span>Faturados: <strong className="text-emerald-700">{faturado}</strong></span>
+                        <span>Cancelados: <strong className="text-red-600">{cancelado}</strong></span>
+                        <span>Taxa faturamento: <strong className="text-primary">{taxa.toFixed(0)}%</strong></span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 

@@ -41,6 +41,7 @@ import MateriasPrimas from "./pages/nutrir/MateriasPrimas";
 import Formulacoes from "./pages/nutrir/Formulacoes";
 import OrcamentoConsultoria from "./pages/nutrir/OrcamentoConsultoria";
 import Orcamentos from "./pages/nutrir/Orcamentos";
+import ProdutoFicha from "./pages/nutrir/ProdutoFicha";
 import Precos from "./pages/nutrir/Precos";
 import Pedidos from "./pages/nutrir/Pedidos";
 import UsuariosNutrir from "./pages/nutrir/UsuariosNutrir";
@@ -92,6 +93,9 @@ import PortalCliente from "./pages/PortalCliente";
 
 import Notificacoes from "./pages/Notificacoes";
 import NotFound from "./pages/NotFound";
+import GeracaoDemanda from "./pages/nutrir/GeracaoDemanda";
+import PainelDiretoria from "./pages/nutrir/PainelDiretoria";
+import Talhoes from "./pages/representante/Talhoes";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +143,7 @@ const App = () => (
               <Route path="/app/nutrir" element={<ProtectedRoute><AppShell><NutrirHome /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutrir/orcamento" element={<ProtectedRoute><AppShell><OrcamentoConsultoria /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutrir/orcamentos" element={<ProtectedRoute><AppShell><Orcamentos /></AppShell></ProtectedRoute>} />
+              <Route path="/app/nutrir/produto/:id" element={<ProtectedRoute><AppShell><ProdutoFicha /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutrir/clientes" element={<ProtectedRoute><AppShell><ClientesNutrir /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutrir/produtos" element={<ProtectedRoute><AppShell><ProdutosNutrir /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutrir/materias-primas" element={<ProtectedRoute><AppShell><MateriasPrimas /></AppShell></ProtectedRoute>} />
@@ -200,6 +205,11 @@ const App = () => (
               <Route path="/app/gestao/culturas" element={<ProtectedRoute><AppShell><BDCulturas /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/motor-calculos" element={<ProtectedRoute><AppShell><MotorCalculos /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/importacoes" element={<ProtectedRoute><AppShell><Importacoes /></AppShell></ProtectedRoute>} />
+
+              {/* Novos módulos */}
+              <Route path="/app/nutrir/geracao-demanda" element={<ProtectedRoute><AppShell><GeracaoDemanda /></AppShell></ProtectedRoute>} />
+              <Route path="/app/nutrir/painel-diretoria" element={<ProtectedRoute><AppShell><PainelDiretoria /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/talhoes" element={<ProtectedRoute><AppShell><Talhoes /></AppShell></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

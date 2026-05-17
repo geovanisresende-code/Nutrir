@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, ChevronDown, Package as PackageIcon, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, ChevronDown, Package as PackageIcon, Search, Eye } from "lucide-react";
 import { FormDialog, Field } from "@/components/nutrir/FormDialog";
 import { useOrgTable } from "@/lib/nutrir/useNutrirData";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,7 @@ const CAT_COLORS: Record<string,string> = {
 const SEM_LINHA = "— Sem linha —";
 
 export default function Produtos() {
+  const navigate = useNavigate();
   const { current } = useOrg();
   const { data, loading, reload } = useOrgTable<Produto>("nutrir_produtos", { orderBy: "nome" });
   const [open, setOpen] = useState(false);
@@ -167,6 +169,9 @@ export default function Produtos() {
                           </td>
                           <td className="px-4 py-2">{r.ativo ? <Badge>Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}</td>
                           <td className="px-4 py-2 text-right">
+                            <Button variant="ghost" size="icon" title="Ver ficha técnica" onClick={() => navigate(`/app/nutrir/produto/${r.id}`)}>
+                              <Eye className="w-4 h-4 text-primary" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => { setEdit(r); setOpen(true); }}>
                               <Pencil className="w-4 h-4" />
                             </Button>

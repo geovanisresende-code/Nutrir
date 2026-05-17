@@ -20,7 +20,7 @@ interface Pedido {
   id: string; numero: string | null; cliente_id: string | null; representante_id: string | null;
   regional_id: string | null; modalidade_id: string | null; data_pedido: string;
   data_entrega: string | null; status: string; subtotal: number; desconto: number; total: number;
-  observacoes: string | null;
+  observacoes: string | null; organization_id: string;
   orcamento_origem_id?: string | null;
 }
 interface Item {
@@ -209,6 +209,44 @@ export default function Pedidos() {
       });
       return;
     }
+
+    // #47 — ao faturar, alimenta BD de estoque do cliente automaticamente
+    if (novo === "faturado") {
+      try {
+        const pedido = pedidos.find(p => p.id === id);
+        if (pedido?.cliente_id) {
+          // Busca itens do pedido
+          const { data: itens } = await (supabase as any)
+            .from("nutrir_pedido_itens")
+            .select("produto_id, embalagem_id, quantidade, preco_unitario")
+            .eq("pedido_id", id);
+
+          for (const it of (itens as any[]) ?? []) {
+            const produto = produtos.find(p => p.id === it.produto_id);
+            const emb = embalagens.find(e => e.id === it.embalagem_id);
+            if (!produto) continue;
+            const nomeProd = emb ? `${produto.nome} (${emb.nome})` : produto.nome;
+            await (supabase as any).rpc("estoque_movimentar", {
+              _org: pedido.organization_id,
+              _cliente: pedido.cliente_id,
+              _produto_nome: nomeProd,
+              _unidade: emb?.unidade ?? "L",
+              _tipo: "entrada",
+              _quantidade: Number(it.quantidade),
+              _custo: Number(it.preco_unitario) || null,
+              _origem: "pedido",
+              _origem_id: id,
+              _obs: `Faturamento automático — pedido ${pedido.numero ?? id.slice(0,8)}`,
+            });
+          }
+          toast({ title: `Estoque do cliente atualizado automaticamente (${(itens as any[])?.length ?? 0} itens)` });
+        }
+      } catch (e: any) {
+        // Não bloquear o fluxo — log discreto
+        console.warn("Estoque auto-feed falhou:", e?.message);
+      }
+    }
+
     toast({ title: `Pedido marcado como ${novo}` });
     reload();
   };

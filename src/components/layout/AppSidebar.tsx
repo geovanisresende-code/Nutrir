@@ -5,7 +5,7 @@ import {
   Building2, Settings, CreditCard, Plug, ChevronRight, ShieldCheck,
   Leaf, Beaker, Package, FileSpreadsheet, Briefcase, DollarSign, BarChart3,
   ClipboardList, Receipt, Boxes, AlertCircle, UserCog, Activity, BookOpen, Calculator,
-  Database, Layers,
+  Database, Layers, Megaphone, TrendingUp, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nutrirLogo from "@/assets/1.png";
@@ -44,6 +44,7 @@ const repSection: NavSection = {
       children: [
         { to: "/app/rep/visitas",          label: "Registrar Visita",   icon: ClipboardList },
         { to: "/app/rep/campos-teste",     label: "Campos de Teste",    icon: TestTube },
+        { to: "/app/rep/talhoes",          label: "Talhões / GPS",      icon: Map },
       ],
     },
     { to: "/app/rep/clientes",         label: "Clientes",            icon: Briefcase },
@@ -110,6 +111,7 @@ const nutrirSection: NavSection = {
     { to: "/app/nutrir/orcamentos",         label: "Orçamentos Salvos",        icon: FileText },
     { to: "/app/nutrir/produtos",           label: "Produtos",                 icon: Package },
     { to: "/app/mapas",                     label: "Mapas e Talhões",          icon: Map },
+    { to: "/app/rep/talhoes",               label: "Talhões / GPS",            icon: MapPin },
     { to: "/app/nutrir/ndvi",               label: "Análise NDVI",             icon: Satellite },
     { to: "/app/nutrir/coleta",             label: "Coletar Amostras",         icon: MapPin },
     { to: "/app/ia/solo",                   label: "IA: Análise de Solo",      icon: Brain },
@@ -125,10 +127,11 @@ const nutrirSection: NavSection = {
 const gerenteSection: NavSection = {
   title: "Área do Gerente",
   items: [
-    { to: "/app/gerente/dashboard",   label: "Dashboard Comercial",  icon: BarChart3 },
-    { to: "/app/gerente/ouvidoria",   label: "Ouvidoria",            icon: AlertCircle, badge: "alertas" },
-    { to: "/app/gerente/equipe",      label: "Equipe Regional",      icon: Users },
-    { to: "/app/gerente/aprovacoes",  label: "Aprovações",           icon: ShieldCheck },
+    { to: "/app/gerente/dashboard",        label: "Dashboard Comercial",  icon: BarChart3 },
+    { to: "/app/nutrir/painel-diretoria", label: "Painel Diretoria",     icon: TrendingUp, badge: "novo" },
+    { to: "/app/gerente/ouvidoria",        label: "Ouvidoria",            icon: AlertCircle, badge: "alertas" },
+    { to: "/app/gerente/equipe",           label: "Equipe Regional",      icon: Users },
+    { to: "/app/gerente/aprovacoes",       label: "Aprovações",           icon: ShieldCheck },
   ],
 };
 
@@ -175,8 +178,9 @@ const gestaoSection: NavSection = {
 const operacaoSection: NavSection = {
   title: "Financeiro & Operações",
   items: [
-    { to: "/app/financeiro",            label: "Financeiro",         icon: DollarSign },
-    { to: "/app/crm",                   label: "CRM Pipeline",       icon: BarChart3 },
+    { to: "/app/financeiro",                  label: "Financeiro",          icon: DollarSign },
+    { to: "/app/crm",                        label: "CRM Pipeline",        icon: BarChart3 },
+    { to: "/app/nutrir/geracao-demanda",     label: "Geração de Demanda",  icon: Megaphone, badge: "novo" },
     {
       label: "Estoque",
       icon: Boxes,

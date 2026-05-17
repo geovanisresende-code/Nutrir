@@ -9,33 +9,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Send, FileText, ScanLine, ShieldAlert, AlertCircle, Download } from "lucide-react";
+import { Plus, Trash2, Send, FileText, ScanLine, ShieldAlert, AlertCircle, Download, Users, MapPin } from "lucide-react";
 import VendedorBadge from "@/components/representante/VendedorBadge";
 import DocumentScanner from "@/components/representante/DocumentScanner";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { usePosition } from "@/hooks/usePosition";
+import * as XLSX from "xlsx";
 
 const CATEGORIAS = [
-  { v: "combustivel",    l: "Combustível" },
-  { v: "alimentacao",    l: "Alimentação" },
-  { v: "hospedagem",     l: "Hospedagem" },
-  { v: "pedagio",        l: "Pedágio" },
-  { v: "manutencao",     l: "Manutenção" },
-  { v: "estacionamento", l: "Estacionamento" },
-  { v: "entretenimento", l: "Entretenimento" },
-  { v: "outros",         l: "Outros" },
+  { v: "combustivel",       l: "Combustível" },
+  { v: "alimentacao",       l: "Alimentação" },
+  { v: "hospedagem",        l: "Hospedagem" },
+  { v: "pedagio",           l: "Pedágio" },
+  { v: "manutencao",        l: "Manutenção do veículo" },
+  { v: "lavagem",           l: "Lavagem do veículo" },
+  { v: "estacionamento",    l: "Estacionamento" },
+  { v: "entretenimento",    l: "Entretenimento" },
+  { v: "outros",            l: "Outros" },
 ] as const;
+
+// Categorias que precisam de aprovação superior
+const CATEGORIAS_APROVACAO = ["entretenimento"];
 
 const SUBCATEGORIAS: Record<string, { v: string; l: string }[]> = {
   alimentacao: [
-    { v: "restaurante",  l: "Restaurante" },
-    { v: "lanchonete",   l: "Lanchonete" },
-    { v: "padaria",      l: "Café / Padaria" },
-    { v: "mercado",      l: "Mercado / Supermercado" },
-    { v: "delivery",     l: "Delivery" },
+    { v: "cafe_manha",   l: "☕ Café da manhã" },
+    { v: "almoco",       l: "🍽️ Almoço" },
+    { v: "lanche_tarde", l: "🥪 Lanche da tarde" },
+    { v: "jantar",       l: "🌙 Jantar" },
     { v: "outros",       l: "Outros" },
   ],
   entretenimento: [
@@ -129,7 +135,10 @@ function Affixed({
 export default function RDV() {
   const { current } = useOrg();
   const { user } = useAuth();
+  const { position } = usePosition();
+  const isAdmin = position === "diretor" || position === "proprietario" || position === "gerente";
   const [items, setItems] = useState<any[]>([]);
+  const [reps, setReps] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [limiteMensal, setLimiteMensal] = useState<number | null>(null);
@@ -155,6 +164,12 @@ export default function RDV() {
   const [cupom, setCupom] = useState<File | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  // CNPJ anti-fraude
+  const [cnpjNf, setCnpjNf] = useState("");
+  const [cnpjInfo, setCnpjInfo] = useState<{ nome: string; situacao: string } | null>(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cnpjAlerta, setCnpjAlerta] = useState<string | null>(null);
+
   const load = async () => {
     if (!current || !user) return;
     const { data: rows } = await supabase
@@ -162,8 +177,15 @@ export default function RDV() {
       .select("*")
       .eq("organization_id", current.id)
       .order("data", { ascending: false })
-      .limit(200);
+      .limit(500);
     setItems((rows as any[]) ?? []);
+
+    // Representantes da organização (para auditoria)
+    const { data: repRows } = await supabase
+      .from("nutrir_representantes" as any)
+      .select("id, nome, regional, user_id")
+      .eq("organization_id", current.id);
+    setReps((repRows as any[]) ?? []);
 
     // Tenta carregar limite mensal do perfil do usuário
     const { data: perfil } = await supabase
@@ -209,6 +231,29 @@ export default function RDV() {
     setCombTipo("gasolina"); setLitros(""); setPrecoLitro("");
     setKmIni(""); setKmFim(""); setPrimeiroAbastecimento(false);
     setHotelNome(""); setCupom(null);
+    setCnpjNf(""); setCnpjInfo(null); setCnpjAlerta(null);
+  };
+
+  const validarCNPJ = async (cnpj: string) => {
+    const digits = cnpj.replace(/\D/g, "");
+    if (digits.length !== 14) return;
+    setCnpjLoading(true);
+    setCnpjInfo(null); setCnpjAlerta(null);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
+      if (!res.ok) throw new Error("CNPJ não encontrado");
+      const json = await res.json();
+      const situacao = json.descricao_situacao_cadastral ?? json.situacao_cadastral ?? "";
+      const nome = json.razao_social ?? json.nome ?? "—";
+      setCnpjInfo({ nome, situacao });
+      if (situacao && situacao.toLowerCase() !== "ativa") {
+        setCnpjAlerta(`⚠️ CNPJ com situação "${situacao}" — verifique a autenticidade da nota.`);
+      }
+    } catch {
+      setCnpjAlerta("CNPJ não encontrado na Receita Federal — possível fraude.");
+    } finally {
+      setCnpjLoading(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -316,7 +361,7 @@ export default function RDV() {
     return result;
   }, [meus]);
 
-  // Export CSV
+  // Export CSV histórico simples
   const exportarCSV = () => {
     const header = "Data,Categoria,Subcategoria,Cidade,UF,Valor,Status,Descrição\n";
     const body = items.map(i =>
@@ -326,6 +371,110 @@ export default function RDV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "rdv-historico.csv"; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Export CSV contábil (BOM UTF-8, separador ";", inclui CNPJ e hotel)
+  const exportarContabil = () => {
+    const cols = ["Data","Categoria","Subcategoria","Cidade","UF","Valor","Status","CNPJ Fornecedor","Hotel","Descrição"];
+    const rows = items.map(i => [
+      i.data ?? "",
+      i.categoria ?? "",
+      i.subcategoria ?? "",
+      i.cidade ?? "",
+      i.uf ?? "",
+      Number(i.valor || 0).toFixed(2).replace(".",","),
+      i.status ?? "",
+      i.cnpj_fornecedor ?? "",
+      i.hotel_nome ?? "",
+      (i.descricao ?? "").replace(/;/g,","),
+    ].join(";"));
+    const csv = "﻿" + [cols.join(";"), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "rdv-contabil.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export Excel contábil (.xlsx)
+  const exportarExcel = () => {
+    const repMap = Object.fromEntries(reps.map((r) => [r.user_id, { nome: r.nome, regional: r.regional }]));
+    const rows = items.map((i) => {
+      const rep = repMap[i.user_id] ?? {};
+      return {
+        "Data": i.data ?? "",
+        "Consultor": rep.nome ?? i.user_id ?? "",
+        "Regional": rep.regional ?? "",
+        "Categoria": i.categoria ?? "",
+        "Subcategoria": i.subcategoria ?? "",
+        "Cidade": i.cidade ?? "",
+        "UF": i.uf ?? "",
+        "Valor (R$)": Number(i.valor || 0),
+        "Status": i.status ?? "",
+        "CNPJ Fornecedor": i.cnpj_fornecedor ?? "",
+        "Hotel": i.hotel_nome ?? "",
+        "Combustível": i.combustivel_tipo ?? "",
+        "Litros": i.litros ?? "",
+        "KM Inicial": i.km_inicial ?? "",
+        "KM Final": i.km_final ?? "",
+        "Descrição": i.descricao ?? "",
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Formata coluna Valor como número
+    const wscols = [
+      { wch: 12 }, { wch: 25 }, { wch: 15 }, { wch: 16 }, { wch: 16 },
+      { wch: 15 }, { wch: 5 }, { wch: 14 }, { wch: 12 }, { wch: 20 },
+      { wch: 20 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 30 },
+    ];
+    ws["!cols"] = wscols;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "RDV");
+
+    // Aba resumo por consultor
+    const porConsultor: Record<string, number> = {};
+    items.forEach((i) => {
+      const nome = repMap[i.user_id]?.nome ?? (i.user_id ?? "Desconhecido");
+      porConsultor[nome] = (porConsultor[nome] ?? 0) + Number(i.valor || 0);
+    });
+    const wsConsultor = XLSX.utils.json_to_sheet(
+      Object.entries(porConsultor).map(([Consultor, Total]) => ({ Consultor, "Total (R$)": Total }))
+    );
+    XLSX.utils.book_append_sheet(wb, wsConsultor, "Por Consultor");
+
+    // Aba resumo por regional
+    const porRegional: Record<string, number> = {};
+    items.forEach((i) => {
+      const reg = repMap[i.user_id]?.regional ?? "Sem Regional";
+      porRegional[reg] = (porRegional[reg] ?? 0) + Number(i.valor || 0);
+    });
+    const wsRegional = XLSX.utils.json_to_sheet(
+      Object.entries(porRegional).map(([Regional, Total]) => ({ Regional, "Total (R$)": Total }))
+    );
+    XLSX.utils.book_append_sheet(wb, wsRegional, "Por Regional");
+
+    XLSX.writeFile(wb, "rdv-contabil.xlsx");
+    toast.success("Excel exportado!");
+  };
+
+  // OCR: leitura de cupom por IA
+  const lerCupomIA = async (file: File) => {
+    setCupom(file);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const { data: res } = await supabase.functions.invoke("ia-leitura-nf", {
+          body: { imagem_base64: base64, tipo: "cupom_rdv" },
+        });
+        if (!res) return;
+        if (res.valor)     setValor(String(res.valor));
+        if (res.categoria) setCategoria(res.categoria);
+        if (res.data)      setData(res.data);
+        if (res.cnpj)      { setCnpjNf(res.cnpj); validarCNPJ(res.cnpj); }
+        toast.success("✓ Cupom lido pela IA — confira e ajuste se necessário.");
+      };
+    } catch { /* preencher manualmente */ }
   };
 
   return (
@@ -393,6 +542,14 @@ export default function RDV() {
                         {SUBCATEGORIAS[categoria].map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+
+                {/* Alerta categorias que precisam de aprovação */}
+                {CATEGORIAS_APROVACAO.includes(categoria) && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span><strong>Atenção:</strong> Despesas de entretenimento requerem aprovação do superior. O lançamento ficará pendente até ser aprovado.</span>
                   </div>
                 )}
 
@@ -476,9 +633,26 @@ export default function RDV() {
 
                 <div className="space-y-1.5"><Label>Descrição</Label><Textarea rows={2} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Observações…" /></div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2 border rounded-lg p-3">
                   <Label className="flex items-center gap-1.5"><ScanLine className="h-4 w-4" /> Cupom / nota fiscal</Label>
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* Ler por IA */}
+                    <Button
+                      type="button" variant="outline"
+                      className="flex-1 min-w-[150px] border-purple-300 text-purple-700 hover:bg-purple-50"
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file"; input.accept = "image/*,application/pdf";
+                        input.onchange = (ev) => {
+                          const f = (ev.target as HTMLInputElement).files?.[0];
+                          if (f) lerCupomIA(f);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <ScanLine className="h-4 w-4 mr-1.5 text-purple-600" />
+                      Ler por IA
+                    </Button>
                     <Button type="button" variant="outline" onClick={() => setScannerOpen(true)} className="flex-1 min-w-[150px]">
                       <ScanLine className="h-4 w-4 mr-1.5" />
                       {cupom ? "Reescanear NF" : "Escanear NF / Cupom"}
@@ -502,6 +676,47 @@ export default function RDV() {
                     onOpenChange={setScannerOpen}
                     onCapture={(f) => setCupom(f)}
                   />
+
+                  {/* CNPJ da nota — anti-fraude */}
+                  <div className="space-y-1 pt-1">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5 text-amber-600" /> CNPJ do estabelecimento (anti-fraude)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={cnpjNf}
+                        onChange={(e) => {
+                          // Formata XX.XXX.XXX/XXXX-XX
+                          let v = e.target.value.replace(/\D/g, "").slice(0, 14);
+                          if (v.length > 12) v = v.slice(0,2)+"."+v.slice(2,5)+"."+v.slice(5,8)+"/"+v.slice(8,12)+"-"+v.slice(12);
+                          else if (v.length > 8) v = v.slice(0,2)+"."+v.slice(2,5)+"."+v.slice(5,8)+"/"+v.slice(8);
+                          else if (v.length > 5) v = v.slice(0,2)+"."+v.slice(2,5)+"."+v.slice(5);
+                          else if (v.length > 2) v = v.slice(0,2)+"."+v.slice(2);
+                          setCnpjNf(v);
+                          setCnpjInfo(null); setCnpjAlerta(null);
+                        }}
+                        placeholder="00.000.000/0000-00"
+                        className="font-mono h-8 text-xs flex-1"
+                        maxLength={18}
+                      />
+                      <Button type="button" size="sm" variant="outline"
+                        disabled={cnpjNf.replace(/\D/g,"").length !== 14 || cnpjLoading}
+                        onClick={() => validarCNPJ(cnpjNf)}>
+                        {cnpjLoading ? "…" : "Validar"}
+                      </Button>
+                    </div>
+                    {cnpjInfo && !cnpjAlerta && (
+                      <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+                        ✓ {cnpjInfo.nome} — Situação: {cnpjInfo.situacao}
+                      </div>
+                    )}
+                    {cnpjAlerta && (
+                      <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+                        {cnpjAlerta}
+                        {cnpjInfo && <div className="mt-0.5 opacity-70">{cnpjInfo.nome}</div>}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={loading} className="bg-gradient-primary">
@@ -529,6 +744,52 @@ export default function RDV() {
             <button onClick={() => setAntifraude(null)} className="ml-auto text-amber-500 hover:text-amber-700 text-xs">✕</button>
           </div>
         )}
+
+        {/* Limites por categoria */}
+        {(() => {
+          const ym = new Date().toISOString().slice(0, 7);
+          const LIMITES_CAT: Record<string, number> = {
+            combustivel: 800, alimentacao: 400, hospedagem: 600,
+            pedagio: 150, manutencao: 300, lavagem: 80,
+            estacionamento: 60, entretenimento: 200, outros: 100,
+          };
+          const gastosDoMes = CATEGORIAS.map(({ v, l }) => {
+            const gasto = meus.filter(i => (i.data ?? "").startsWith(ym) && i.categoria === v)
+              .reduce((a, i) => a + Number(i.valor || 0), 0);
+            const limite = LIMITES_CAT[v] ?? 0;
+            const pct = limite > 0 ? Math.min(100, (gasto / limite) * 100) : 0;
+            return { v, l, gasto, limite, pct };
+          }).filter(c => c.gasto > 0 || c.limite > 0);
+
+          if (gastosDoMes.length === 0) return null;
+          return (
+            <Card><CardContent className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-muted-foreground" /> Gastos por categoria — mês atual
+              </div>
+              <div className="space-y-2">
+                {gastosDoMes.map(({ v, l, gasto, limite, pct }) => (
+                  <div key={v} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{l}</span>
+                      <span className={`font-mono ${pct >= 100 ? "text-red-600 font-bold" : pct >= 80 ? "text-amber-600" : ""}`}>
+                        {fmt(gasto)} {limite > 0 ? `/ ${fmt(limite)}` : ""}
+                      </span>
+                    </div>
+                    {limite > 0 && (
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent></Card>
+          );
+        })()}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Card>
@@ -564,7 +825,13 @@ export default function RDV() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Despesas — últimos 6 meses</h3>
             <Button size="sm" variant="outline" onClick={exportarCSV}>
-              <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
+              <Download className="h-3.5 w-3.5 mr-1" /> CSV
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportarContabil} className="border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              <Download className="h-3.5 w-3.5 mr-1" /> CSV contábil
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportarExcel} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <Download className="h-3.5 w-3.5 mr-1" /> Excel
             </Button>
           </div>
           <ResponsiveContainer width="100%" height={160}>
@@ -578,58 +845,200 @@ export default function RDV() {
           </ResponsiveContainer>
         </Card>
 
-        <Card><CardContent className="p-0">
-          {items.length === 0 ? (
-            <div className="p-6 text-sm text-muted-foreground">Nenhuma despesa lançada ainda.</div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Data</TableHead><TableHead>Categoria</TableHead>
-                <TableHead>Local</TableHead>
-                <TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead>
-                <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {items.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="text-xs">{i.data}</TableCell>
-                    <TableCell className="capitalize">
-                      {i.categoria}
-                      {i.categoria === "combustivel" && i.combustivel_tipo && (
-                        <span className="text-xs text-muted-foreground ml-1">({i.combustivel_tipo})</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">{[i.cidade, i.uf].filter(Boolean).join("/") || "—"}</TableCell>
-                    <TableCell className="max-w-xs truncate text-sm">
-                      {i.categoria === "hospedagem" && i.hotel_nome ? i.hotel_nome : (i.descricao ?? "—")}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{fmt(Number(i.valor))}</TableCell>
-                    <TableCell><Badge variant={STATUS_COLORS[i.status]}>{i.status}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {i.cupom_path && (
-                          <Button size="icon" variant="ghost" onClick={() => verCupom(i.cupom_path)} title="Ver cupom">
-                            <FileText className="h-4 w-4" />
-                          </Button>
+        <Tabs defaultValue="meus">
+          <TabsList>
+            <TabsTrigger value="meus">Meus lançamentos</TabsTrigger>
+            {isAdmin && <TabsTrigger value="auditoria"><Users className="h-3.5 w-3.5 mr-1" />Auditoria geral</TabsTrigger>}
+          </TabsList>
+
+          {/* ── Meus lançamentos ── */}
+          <TabsContent value="meus">
+            <Card><CardContent className="p-0">
+              {meus.length === 0 ? (
+                <div className="p-6 text-sm text-muted-foreground">Nenhuma despesa lançada ainda.</div>
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Data</TableHead><TableHead>Categoria</TableHead>
+                    <TableHead>Local</TableHead>
+                    <TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {meus.map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell className="text-xs">{i.data}</TableCell>
+                        <TableCell className="capitalize">
+                          {i.categoria}
+                          {i.categoria === "combustivel" && i.combustivel_tipo && (
+                            <span className="text-xs text-muted-foreground ml-1">({i.combustivel_tipo})</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">{[i.cidade, i.uf].filter(Boolean).join("/") || "—"}</TableCell>
+                        <TableCell className="max-w-xs truncate text-sm">
+                          {i.categoria === "hospedagem" && i.hotel_nome ? i.hotel_nome : (i.descricao ?? "—")}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{fmt(Number(i.valor))}</TableCell>
+                        <TableCell><Badge variant={STATUS_COLORS[i.status]}>{i.status}</Badge></TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {i.cupom_path && (
+                              <Button size="icon" variant="ghost" onClick={() => verCupom(i.cupom_path)} title="Ver cupom">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {i.user_id === user?.id && i.status === "rascunho" && (
+                              <>
+                                <Button size="icon" variant="ghost" onClick={() => enviar(i.id)} title="Enviar">
+                                  <Send className="h-4 w-4 text-primary" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => remover(i.id)} title="Excluir">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent></Card>
+          </TabsContent>
+
+          {/* ── Auditoria geral (admin) ── */}
+          {isAdmin && (
+            <TabsContent value="auditoria" className="space-y-4">
+              {(() => {
+                const ym = new Date().toISOString().slice(0, 7);
+                const repMap = Object.fromEntries(reps.map((r) => [r.user_id, { nome: r.nome, regional: r.regional }]));
+
+                // Gastos por consultor (mês atual)
+                const porConsultor: Record<string, { nome: string; regional: string; total: number; count: number }> = {};
+                items.filter(i => (i.data ?? "").startsWith(ym)).forEach((i) => {
+                  const uid = i.user_id ?? "desconhecido";
+                  const info = repMap[uid] ?? { nome: uid.slice(0, 8) + "…", regional: "—" };
+                  if (!porConsultor[uid]) porConsultor[uid] = { nome: info.nome, regional: info.regional ?? "—", total: 0, count: 0 };
+                  porConsultor[uid].total += Number(i.valor || 0);
+                  porConsultor[uid].count += 1;
+                });
+
+                // Gastos por regional (mês atual)
+                const porRegional: Record<string, { total: number; count: number }> = {};
+                items.filter(i => (i.data ?? "").startsWith(ym)).forEach((i) => {
+                  const reg = repMap[i.user_id]?.regional ?? "Sem Regional";
+                  if (!porRegional[reg]) porRegional[reg] = { total: 0, count: 0 };
+                  porRegional[reg].total += Number(i.valor || 0);
+                  porRegional[reg].count += 1;
+                });
+
+                const maxConsultor = Math.max(...Object.values(porConsultor).map(c => c.total), 1);
+                const maxRegional = Math.max(...Object.values(porRegional).map(r => r.total), 1);
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Por consultor */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" /> Gastos por consultor — mês atual
+                        </div>
+                        {Object.keys(porConsultor).length === 0 ? (
+                          <div className="text-xs text-muted-foreground">Nenhum lançamento no mês.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {Object.entries(porConsultor)
+                              .sort((a, b) => b[1].total - a[1].total)
+                              .map(([uid, c]) => (
+                                <div key={uid} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-medium truncate max-w-[140px]">{c.nome}</span>
+                                    <span className="font-mono text-muted-foreground">{fmt(c.total)} <span className="opacity-60">({c.count})</span></span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-primary/70" style={{ width: `${(c.total / maxConsultor) * 100}%` }} />
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
                         )}
-                        {i.user_id === user?.id && i.status === "rascunho" && (
-                          <>
-                            <Button size="icon" variant="ghost" onClick={() => enviar(i.id)} title="Enviar">
-                              <Send className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => remover(i.id)} title="Excluir">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
+                      </CardContent>
+                    </Card>
+
+                    {/* Por regional */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" /> Gastos por regional — mês atual
+                        </div>
+                        {Object.keys(porRegional).length === 0 ? (
+                          <div className="text-xs text-muted-foreground">Nenhum lançamento no mês.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {Object.entries(porRegional)
+                              .sort((a, b) => b[1].total - a[1].total)
+                              .map(([reg, r]) => (
+                                <div key={reg} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-medium">{reg}</span>
+                                    <span className="font-mono text-muted-foreground">{fmt(r.total)} <span className="opacity-60">({r.count})</span></span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-emerald-500/70" style={{ width: `${(r.total / maxRegional) * 100}%` }} />
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })()}
+
+              {/* Tabela completa todos os lançamentos */}
+              <Card><CardContent className="p-0">
+                <div className="p-3 border-b text-sm font-semibold">Todos os lançamentos da organização</div>
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Consultor</TableHead>
+                    <TableHead>Regional</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Local</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Cupom</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {items.map((i) => {
+                      const rep = reps.find(r => r.user_id === i.user_id);
+                      return (
+                        <TableRow key={i.id}>
+                          <TableCell className="text-xs">{i.data}</TableCell>
+                          <TableCell className="text-xs font-medium">{rep?.nome ?? "—"}</TableCell>
+                          <TableCell className="text-xs">{rep?.regional ?? "—"}</TableCell>
+                          <TableCell className="capitalize text-xs">{i.categoria}</TableCell>
+                          <TableCell className="text-xs">{[i.cidade, i.uf].filter(Boolean).join("/") || "—"}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{fmt(Number(i.valor))}</TableCell>
+                          <TableCell><Badge variant={STATUS_COLORS[i.status]} className="text-[10px]">{i.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            {i.cupom_path && (
+                              <Button size="icon" variant="ghost" onClick={() => verCupom(i.cupom_path)}>
+                                <FileText className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent></Card>
+            </TabsContent>
           )}
-        </CardContent></Card>
+        </Tabs>
       </div>
     </>
   );

@@ -92,6 +92,10 @@ function CampoPreco({ label, value, onChange }: { label: string; value: number; 
 }
 
 // ─── calculadora N180 ─────────────────────────────────────────────────────────
+const ESTAGIOS_N180 = ["Sulco", "V2", "V4", "V6", "V8", "R1"] as const;
+type EstagioN180 = typeof ESTAGIOS_N180[number];
+const PARCELAS_DEFAULT: Record<EstagioN180, number> = { Sulco: 30, V2: 0, V4: 20, V6: 20, V8: 0, R1: 30 };
+
 function CalcN180() {
   const [doseN, setDoseN] = useState(30);
   const [area, setArea] = useState(1);
@@ -99,27 +103,56 @@ function CalcN180() {
   const [precoN180, setPrecoN180] = useState(4.50);
   const [opcao, setOpcao] = useState<"n180" | "tsh" | "lifegrow" | "leg">("n180");
 
-  const FATOR_OPCAO: Record<string, { nome: string; fator: number; obs: string }> = {
-    n180:     { nome: "N180 Padrão",      fator: 0.40, obs: "Ureia complexada — 60% menos perdas por volatilização" },
-    tsh:      { nome: "N180 TSH",         fator: 0.35, obs: "Complexado para tratamento de sementes — 65% de eficiência adicional" },
-    lifegrow: { nome: "N180 LifeGrow",    fator: 0.38, obs: "Com bioestimulante — estimula absorção e crescimento radicular" },
-    leg:      { nome: "N180 LEG",         fator: 0.42, obs: "Formulação para leguminosas — compatível com inoculante" },
+  // Micronizador
+  const [possuiMicron, setPossuiMicron] = useState(false);
+  const [vazao, setVazao] = useState(30); // L/ha
+
+  // Parcelamento por estágio
+  const [parcelar, setParcelar] = useState(false);
+  const [parcelas, setParcelas] = useState<Record<EstagioN180, number>>({ ...PARCELAS_DEFAULT });
+
+  const totalParcelas = ESTAGIOS_N180.reduce((s, e) => s + (parcelas[e] || 0), 0);
+  const parcOk = totalParcelas === 100;
+
+  const FATOR_OPCAO: Record<string, { nome: string; fator: number; obs: string; micronObs?: string }> = {
+    n180:     { nome: "N180 Padrão",   fator: 0.40, obs: "Ureia complexada — 60% menos perdas por volatilização" },
+    tsh:      { nome: "N180 TSH",      fator: 0.35, obs: "Complexado para tratamento de sementes — 65% de eficiência vs. ureia",
+                micronObs: "TSH: aplique via micronizador no sulco de plantio. Concentrar 100% no sulco é indicado." },
+    lifegrow: { nome: "N180 LifeGrow", fator: 0.38, obs: "Com bioestimulante — estimula absorção e crescimento radicular",
+                micronObs: "LifeGrow: preferir aplicações via foliar (V4–V6) com micronizador para melhor absorção." },
+    leg:      { nome: "N180 LEG",      fator: 0.42, obs: "Formulação para leguminosas — compatível com inoculante",
+                micronObs: "LEG: compatível com inoculante. Aplicar no sulco ou via micronizador em V2." },
   };
 
   const opt = FATOR_OPCAO[opcao];
-  const ureiaNecessaria = doseN / UREIA_N_PCT;            // kg/ha
-  const n180Necessario = ureiaNecessaria * opt.fator;     // kg/ha (redução)
-  const economiaDose = ureiaNecessaria - n180Necessario;  // kg/ha economizados
+  const ureiaNecessaria = doseN / UREIA_N_PCT;
+  const n180Necessario = ureiaNecessaria * opt.fator;
+  const economiaDose = ureiaNecessaria - n180Necessario;
   const custoUreia = ureiaNecessaria * precoUreia * area;
   const custoN180 = n180Necessario * precoN180 * area;
   const economiaFinanceira = custoUreia - custoN180;
 
+  // Micron: kg de N180 por 1.000L de calda (na vazão informada)
+  const kgPor1000L = possuiMicron && vazao > 0 ? (n180Necessario / vazao) * 1000 : null;
+
+  // Parcelamento: kg N180/ha por estágio
+  const parcResultados = ESTAGIOS_N180.map((e) => ({
+    estagio: e,
+    pct: parcelas[e] || 0,
+    kgHa: n180Necessario * ((parcelas[e] || 0) / 100),
+    kgTotal: n180Necessario * ((parcelas[e] || 0) / 100) * area,
+    kgPor1000L: possuiMicron && vazao > 0
+      ? (n180Necessario * ((parcelas[e] || 0) / 100) / vazao) * 1000
+      : null,
+  }));
+
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-        <strong>N180 — Ureia Complexada.</strong> Reduz perdas por volatilização em até 60%, permitindo dosagem menor para o mesmo efeito agronômico. Selecione a linha:
+        <strong>N180 — Ureia Complexada.</strong> Reduz perdas por volatilização em até 60%. Selecione a linha e configure micronizador e parcelamento:
       </div>
 
+      {/* Linha de produto */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Object.entries(FATOR_OPCAO).map(([k, v]) => (
           <button key={k} onClick={() => setOpcao(k as any)}
@@ -131,6 +164,7 @@ function CalcN180() {
       </div>
       <div className="text-xs text-muted-foreground italic">{opt.obs}</div>
 
+      {/* Entradas básicas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <CampoKg label="Dose de N desejada" value={doseN} onChange={setDoseN} sufixo="kg N/ha" />
         <CampoKg label="Área" value={area} onChange={setArea} sufixo="ha" />
@@ -138,6 +172,91 @@ function CalcN180() {
       <div className="grid grid-cols-2 gap-3">
         <CampoPreco label="Preço ureia convencional" value={precoUreia} onChange={setPrecoUreia} />
         <CampoPreco label="Preço N180" value={precoN180} onChange={setPrecoN180} />
+      </div>
+
+      {/* Toggle micronizador */}
+      <div className="border rounded-lg p-3 space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={possuiMicron} onChange={(e) => setPossuiMicron(e.target.checked)} className="rounded" />
+          <span className="text-sm font-medium">Possui micronizador?</span>
+        </label>
+        {possuiMicron && (
+          <div className="space-y-3">
+            <CampoKg label="Vazão do micronizador" value={vazao} onChange={setVazao} sufixo="L/ha" />
+            {opt.micronObs && (
+              <div className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded p-2">{opt.micronObs}</div>
+            )}
+            {kgPor1000L !== null && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">Fórmula para 1.000L de calda</div>
+                <div className="text-2xl font-bold font-mono text-emerald-800 mt-0.5">{fmt2(kgPor1000L)} kg N180 / 1.000L</div>
+                <div className="text-xs text-emerald-700 mt-1">Na vazão de {fmt1(vazao)} L/ha → entrega {fmt2(n180Necessario)} kg N180/ha</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Toggle parcelamento */}
+      <div className="border rounded-lg p-3 space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={parcelar} onChange={(e) => setParcelar(e.target.checked)} className="rounded" />
+          <span className="text-sm font-medium">Parcelar dose por estágio?</span>
+        </label>
+        {parcelar && (
+          <div className="space-y-2">
+            <div className="text-xs text-muted-foreground">Distribua 100% da dose entre os estágios:</div>
+            <div className="grid grid-cols-3 gap-2">
+              {ESTAGIOS_N180.map((e) => (
+                <div key={e} className="space-y-1">
+                  <Label className="text-xs font-semibold">{e}</Label>
+                  <div className="relative">
+                    <Input
+                      type="number" min={0} max={100} step={5}
+                      value={parcelas[e] || ""}
+                      onChange={(ev) => setParcelas((p) => ({ ...p, [e]: Number(ev.target.value) || 0 }))}
+                      className="pr-7 h-8 text-xs"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className={`text-xs font-semibold ${parcOk ? "text-emerald-700" : "text-red-600"}`}>
+              Total: {totalParcelas}% {parcOk ? "✓" : `— faltam ${100 - totalParcelas}%`}
+            </div>
+
+            {/* Tabela de parcelamento */}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-3 py-2">Estágio</th>
+                    <th className="text-right px-3 py-2">%</th>
+                    <th className="text-right px-3 py-2">kg N180/ha</th>
+                    <th className="text-right px-3 py-2">kg N180 total</th>
+                    {possuiMicron && <th className="text-right px-3 py-2">kg/1.000L</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parcResultados.filter((r) => r.pct > 0).map((r) => (
+                    <tr key={r.estagio} className="border-t">
+                      <td className="px-3 py-1.5 font-medium">{r.estagio}</td>
+                      <td className="px-3 py-1.5 text-right font-mono">{r.pct}%</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-emerald-700">{fmt2(r.kgHa)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono">{fmt2(r.kgTotal)}</td>
+                      {possuiMicron && (
+                        <td className="px-3 py-1.5 text-right font-mono text-blue-700">
+                          {r.kgPor1000L != null ? fmt2(r.kgPor1000L) : "—"}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <Separador titulo="Resultado por hectare" />
