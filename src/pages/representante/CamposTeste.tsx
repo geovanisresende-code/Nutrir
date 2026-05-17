@@ -739,7 +739,361 @@ export default function CamposTeste() {
                 {/* 6. Estágio de aplicação */}
                 <div className="space-y-1.5">
                   <Label>Estágio de aplicação</Label>
-                  <Select value={estagioAplicacao} onValueChange={(v) => { setEstagioAplicacao(v); setEstagioDetalhe(""); }}>
+                  <Select value={estagioAplicacao} onValueChange={setEstagioAplicacao}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {ESTAGIOS_APLICACAO.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {precisaDetalheEstagio && (
+                    <Input
+                      value={estagioDetalhe}
+                      onChange={(e) => setEstagioDetalhe(e.target.value)}
+                      placeholder="Ex.: V4, R1, R3…"
+                      className="mt-1"
+                    />
+                  )}
+                </div>
+
+                {/* 7. Mapa GPS */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>Mapa do talhão (GPS)</Label>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setShowMapaNovo(!showMapaNovo)}>
+                      <MapIcon className="h-3.5 w-3.5 mr-1" /> {showMapaNovo ? "Ocultar mapa" : "Abrir mapa"}
+                    </Button>
+                  </div>
+                  {showMapaNovo && (
+                    <div className="rounded-md overflow-hidden border h-64">
+                      <MapaTalhao
+                        geometria={novaGeo}
+                        centro={novoCentro}
+                        onSave={(geo, centro) => { setNovaGeo(geo); setNovoCentro(centro); toast.success("Área marcada"); }}
+                      />
+                    </div>
+                  )}
+                  {novaGeo && <p className="text-xs text-emerald-600 flex items-center gap-1"><Leaf className="h-3 w-3" /> Área desenhada</p>}
+                </div>
+
+                {/* 8. Observações */}
+                <div className="space-y-1.5">
+                  <Label>Detalhamento do teste</Label>
+                  <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} placeholder="Descreva o protocolo, aplicações previstas…" />
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); }}>Cancelar</Button>
+                  <Button type="submit" disabled={saving} className="bg-gradient-primary">
+                    {saving ? "Salvando…" : "Criar teste"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
+
+      {/* ── KPIs ── */}
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-xl border bg-card p-4">
+            <div className="text-xs text-muted-foreground">Total de testes</div>
+            <div className="text-2xl font-bold">{total}</div>
+          </div>
+          <div className="rounded-xl border bg-card p-4">
+            <div className="text-xs text-muted-foreground">Em andamento</div>
+            <div className="text-2xl font-bold text-primary">{ativos}</div>
+          </div>
+        </div>
+
+        {/* ── Lista de testes ── */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground col-span-2">Nenhum campo de teste cadastrado.</p>
+          )}
+          {items.map((item) => {
+            const cli = clientes.find((c) => c.id === item.cliente_id);
+            return (
+              <Card
+                key={item.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${selected?.id === item.id ? "ring-2 ring-primary" : ""}`}
+                onClick={() => { setSelected(item); loadRelatorios(item.id); loadNdvi(item.id); }}
+              >
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-sm leading-tight">{item.titulo}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{cli?.razao_social ?? "—"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={STATUS_COLORS[item.status] ?? "outline"}>{item.status?.replace("_", " ")}</Badge>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive"
+                        onClick={(e) => { e.stopPropagation(); removerTeste(item.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 text-xs text-muted-foreground">
+                    {item.cultura && <span>🌱 {item.cultura}</span>}
+                    {item.area_total_ha > 0 && <span><Scale className="inline h-3 w-3" /> {Number(item.area_total_ha).toLocaleString("pt-BR")} ha</span>}
+                    {item.tipo_teste && <span><FlaskConical className="inline h-3 w-3" /> {item.tipo_teste}</span>}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* ── Detalhe do teste selecionado ── */}
+        {selected && (
+          <Card>
+            <CardContent className="p-0">
+              <Tabs defaultValue="acompanhamento">
+                <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b flex-wrap gap-2">
+                  <span className="font-semibold text-sm">{selected.titulo}</span>
+                  <TabsList>
+                    <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+                    <TabsTrigger value="mapa"><MapIcon className="h-3.5 w-3.5 mr-1" />Mapa / NDVI</TabsTrigger>
+                    <TabsTrigger value="relatorio"><FileText className="h-3.5 w-3.5 mr-1" />Relatório</TabsTrigger>
+                  </TabsList>
+                  <div className="flex gap-2">
+                    {selected.status === "em_andamento" && (
+                      <Button size="sm" onClick={finalizarComIA} disabled={genIA} className="bg-gradient-primary text-xs">
+                        <Sparkles className="h-3.5 w-3.5 mr-1" /> {genIA ? "Gerando…" : "Finalizar com IA"}
+                      </Button>
+                    )}
+                    {selected.status === "finalizado" && (
+                      <Button size="sm" variant="outline" onClick={baixarRelatorioPDF} className="text-xs">
+                        <FileText className="h-3.5 w-3.5 mr-1" /> Baixar PDF
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Tab Acompanhamento ── */}
+                <TabsContent value="acompanhamento" className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{relatorios.length} acompanhamento(s)</span>
+                    {selected.status === "em_andamento" && (
+                      <Dialog open={openRel} onOpenChange={setOpenRel}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" /> Novo acompanhamento</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-xl">
+                          <DialogHeader><DialogTitle>Novo acompanhamento</DialogTitle></DialogHeader>
+                          <form onSubmit={submitRelatorio} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label>Data</Label>
+                                <Input type="date" value={relData} onChange={(e) => setRelData(e.target.value)} required />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label>Estágio fenológico</Label>
+                                <Input value={relEstagio} onChange={(e) => setRelEstagio(e.target.value)} placeholder="V4, R1…" />
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>NDVI médio</Label>
+                              <Input inputMode="decimal" value={relNdvi} onChange={(e) => setRelNdvi(e.target.value)} placeholder="0,00 – 1,00" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Checkbox id="nova-ap" checked={relNovaAplicacao} onCheckedChange={(v) => setRelNovaAplicacao(!!v)} />
+                              <label htmlFor="nova-ap" className="text-sm">Nova aplicação?</label>
+                            </div>
+                            {relNovaAplicacao && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label>Produto aplicado</Label>
+                                  <Input value={relProdutoAplicado} onChange={(e) => setRelProdutoAplicado(e.target.value)} placeholder="Nome do produto" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label>Dose / ha</Label>
+                                  <Input value={relDoseAplicada} onChange={(e) => setRelDoseAplicada(e.target.value)} placeholder="Ex.: 200 mL/ha" />
+                                </div>
+                              </div>
+                            )}
+                            {/* Biometria */}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Biometria</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  { l: "Altura da planta (cm)", s: relAlturaPlanta, fn: setRelAlturaPlanta },
+                                  { l: "Stand (plantas/m)", s: relStandMLinear, fn: setRelStandMLinear },
+                                  { l: "Peso 1000 grãos (g)", s: relPeso1000Graos, fn: setRelPeso1000Graos },
+                                  { l: "Comprimento raiz (cm)", s: relComprimentoRaiz, fn: setRelComprimentoRaiz },
+                                  { l: "Diâm. caule (mm)", s: relDiametroCaule, fn: setRelDiametroCaule },
+                                  { l: "Nº trifólios", s: relNumTrifolios, fn: setRelNumTrifolios },
+                                  { l: "Nº ramos produtivos", s: relNumRamos, fn: setRelNumRamos },
+                                  { l: "Nº vagens", s: relNumVagens, fn: setRelNumVagens },
+                                  { l: "Grãos/vagem", s: relNumGraosPorVagem, fn: setRelNumGraosPorVagem },
+                                ].map(({ l, s, fn }) => (
+                                  <div key={l} className="space-y-1">
+                                    <Label className="text-[11px]">{l}</Label>
+                                    <Input inputMode="decimal" value={s} onChange={(e) => fn(e.target.value)} placeholder="—" className="h-8 text-xs" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            {/* Deficiência / IA */}
+                            <div className="flex items-center gap-2">
+                              <Checkbox id="def" checked={relTemDeficiencia} onCheckedChange={(v) => setRelTemDeficiencia(!!v)} />
+                              <label htmlFor="def" className="text-sm">Possui deficiência ou ponto de atenção?</label>
+                            </div>
+                            {relTemDeficiencia && (
+                              <div className="space-y-2">
+                                <Label className="text-xs">Fotos para diagnóstico IA</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {fotosDiag.map((f, i) => (
+                                    <div key={i} className="relative">
+                                      <img src={URL.createObjectURL(f)} className="w-16 h-16 object-cover rounded border" />
+                                      <button type="button" onClick={() => setFotosDiag(prev => prev.filter((_, k) => k !== i))}
+                                        className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">✕</button>
+                                    </div>
+                                  ))}
+                                  <label className="w-16 h-16 rounded border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted">
+                                    <Camera className="h-5 w-5 text-muted-foreground" />
+                                    <input type="file" accept="image/*" className="hidden" multiple onChange={(e) => setFotosDiag(prev => [...prev, ...Array.from(e.target.files ?? [])])} />
+                                  </label>
+                                </div>
+                                <Button type="button" size="sm" variant="outline" onClick={rodarDiagnosticoIA} disabled={diagLoading}>
+                                  <Sparkles className="h-3.5 w-3.5 mr-1" /> {diagLoading ? "Analisando…" : "Diagnosticar com IA"}
+                                </Button>
+                                {diagIA && <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-xs"><ReactMarkdown>{diagIA}</ReactMarkdown></div>}
+                              </div>
+                            )}
+                            <div className="space-y-1.5">
+                              <Label>Descrição / observações</Label>
+                              <Textarea value={relObs} onChange={(e) => setRelObs(e.target.value)} rows={2} placeholder="O que foi feito, observado…" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>Fotos do acompanhamento</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {relFotos.map((f, i) => (
+                                  <div key={i} className="relative">
+                                    <img src={URL.createObjectURL(f)} className="w-16 h-16 object-cover rounded border" />
+                                    <button type="button" onClick={() => setRelFotos(prev => prev.filter((_, k) => k !== i))}
+                                      className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">✕</button>
+                                  </div>
+                                ))}
+                                <label className="w-16 h-16 rounded border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted">
+                                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                                  <input type="file" accept="image/*" className="hidden" multiple onChange={(e) => setRelFotos(prev => [...prev, ...Array.from(e.target.files ?? [])])} />
+                                </label>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar acompanhamento"}</Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                  {relatorios.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum acompanhamento registrado.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {relatorios.map((r) => (
+                        <div key={r.id} className="rounded-lg border p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{r.data}</span>
+                            {r.estagio && <Badge variant="outline">{r.estagio}</Badge>}
+                          </div>
+                          {r.ndvi_medio != null && <div className="text-xs text-muted-foreground">NDVI: <strong>{r.ndvi_medio}</strong></div>}
+                          {r.nova_aplicacao && <div className="text-xs">💊 {r.produto_aplicado} — {r.dose_aplicada}</div>}
+                          {r.observacoes && <p className="text-xs text-muted-foreground">{r.observacoes}</p>}
+                          {r.diag_ia && (
+                            <div className="rounded bg-emerald-50 border border-emerald-100 p-2 text-xs mt-1">
+                              <ReactMarkdown>{r.diag_ia}</ReactMarkdown>
+                            </div>
+                          )}
+                          {Array.isArray(r.fotos) && r.fotos.length > 0 && (
+                            <div className="flex gap-2 flex-wrap mt-1">
+                              {r.fotos.map((f: any) => (
+                                <button key={f.path} type="button" onClick={() => verFoto(f.path)}
+                                  className="text-xs text-primary underline flex items-center gap-1">
+                                  <Camera className="h-3 w-3" /> {f.legenda}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* ── Tab Mapa / NDVI ── */}
+                <TabsContent value="mapa" className="p-4 space-y-4">
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => gerarNdvi("latest")} disabled={ndviLoading}>
+                      <Satellite className="h-3.5 w-3.5 mr-1" /> {ndviLoading ? "Buscando…" : "Atualizar NDVI"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => gerarNdvi("history")} disabled={ndviLoading}>
+                      Histórico NDVI
+                    </Button>
+                  </div>
+                  <div className="rounded-md overflow-hidden border h-72">
+                    <MapaTalhao
+                      geometria={selected?.geometria}
+                      centro={selected?.centro_lat ? [selected.centro_lat, selected.centro_lng] : null}
+                      onSave={salvarGeometria}
+                    />
+                  </div>
+                  {ndviSerie.length > 0 && (
+                    <div className="rounded-md border p-3">
+                      <div className="text-xs font-semibold mb-2">Histórico NDVI</div>
+                      <div className="space-y-1">
+                        {ndviSerie.map((n) => (
+                          <div key={n.id} className="flex items-center gap-3 text-xs">
+                            <span className="text-muted-foreground w-24">{n.data}</span>
+                            <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                              <div className="h-full rounded-full bg-emerald-500 transition-all"
+                                style={{ width: `${Math.max(0, Math.min(100, (n.ndvi_medio ?? 0) * 100))}%` }} />
+                            </div>
+                            <span className="font-mono w-12 text-right">{(n.ndvi_medio ?? 0).toFixed(3)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* ── Tab Relatório ── */}
+                <TabsContent value="relatorio" className="p-4 space-y-3">
+                  {selected?.relatorio_ia ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold flex items-center gap-1"><Sparkles className="h-4 w-4 text-primary" /> Relatório Final IA</span>
+                        <Button size="sm" variant="outline" onClick={baixarRelatorioPDF}>
+                          <FileText className="h-3.5 w-3.5 mr-1" /> Baixar PDF
+                        </Button>
+                      </div>
+                      <div className="rounded-md bg-muted/40 border p-4 text-sm prose prose-sm max-w-none">
+                        <ReactMarkdown>{selected.relatorio_ia}</ReactMarkdown>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 py-8 text-center">
+                      <Sparkles className="h-8 w-8 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">Relatório ainda não gerado.<br />Clique em <strong>"Finalizar com IA"</strong> para gerar.</p>
+                      {selected.status === "em_andamento" && (
+                        <Button size="sm" onClick={finalizarComIA} disabled={genIA} className="bg-gradient-primary">
+                          <Sparkles className="h-3.5 w-3.5 mr-1" /> {genIA ? "Gerando…" : "Finalizar com IA"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+}
+ueChange={(v) => { setEstagioAplicacao(v); setEstagioDetalhe(""); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {ESTAGIOS_APLICACAO.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
