@@ -8,7 +8,7 @@ import {
   Database, Layers, Megaphone, TrendingUp, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import nutrirLogo from "@/assets/1.png";
+import nutrirLogo from "@/assets/logo-agrociencia.png";
 import { useState, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePosition } from "@/hooks/usePosition";
@@ -334,16 +334,4 @@ const NavItemRow = ({ item, compact = false }: { item: LeafItem; compact?: boole
         compact ? "px-2 py-1" : "px-2 py-1.5",
         isActive
           ? "bg-sidebar-accent text-sidebar-primary font-semibold border-l-[3px] border-primary rounded-l-none pl-[5px]"
-          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
-      )
-    }
-  >
-    <item.icon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-[15px] w-[15px]")} />
-    <span className="flex-1 truncate">{item.label}</span>
-    {item.badge && (
-      <span className="text-[9px] uppercase font-bold tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded-sm">
-        {item.badge}
-      </span>
-    )}
-  </NavLink>
-);
+         
