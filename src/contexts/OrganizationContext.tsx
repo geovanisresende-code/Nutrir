@@ -38,9 +38,10 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
     const list = (data ?? []) as Organization[];
     setOrgs(list);
     const stored = localStorage.getItem(STORAGE_KEY);
-    // Prioridade: 1) org salva no localStorage, 2) org que o usuário é dono, 3) primeira da lista
+    const userId = user.id;
+    // Prioridade: 1) org salva no localStorage, 2) org que o usuario e dono, 3) primeira da lista
     const next = list.find(o => o.id === stored)
-      ?? list.find(o => o.owner_id === user.id)
+      ?? list.find(o => o.owner_id === userId)
       ?? list[0]
       ?? null;
     setCurrent(next);
