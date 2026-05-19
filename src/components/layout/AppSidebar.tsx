@@ -30,72 +30,27 @@ type NavSection = { title: string; items: AnyItem[] };
 const isGroup = (i: AnyItem): i is GroupItem => "children" in i;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOCO 1 — Área do Representante
+// BLOCO 1 — Área do Representante (simplificado — 6 itens)
 // ─────────────────────────────────────────────────────────────────────────────
 const repSection: NavSection = {
   title: "Área do Representante",
   items: [
-    { to: "/app/rep", label: "Dashboard", icon: LayoutDashboard, end: true },
-
-    // ── Operação diária — visitas e clientes ──
+    { to: "/app/rep",            label: "Início",     icon: LayoutDashboard, end: true },
+    { to: "/app/rep/clientes",   label: "Clientes",   icon: Briefcase },
+    { to: "/app/rep/visitas",    label: "Visitas",    icon: ClipboardList },
+    { to: "/app/rep/pedidos",    label: "Pedidos",    icon: ShoppingCart },
+    { to: "/app/rep/financeiro", label: "Financeiro", icon: DollarSign },
     {
-      label: "Relatório de Visitas",
-      icon: ClipboardList,
+      label: "Ferramentas",
+      icon: FlaskConical,
       children: [
-        { to: "/app/rep/visitas",          label: "Registrar Visita",   icon: ClipboardList },
-        { to: "/app/rep/campos-teste",     label: "Campos de Teste",    icon: TestTube },
-        { to: "/app/rep/talhoes",          label: "Talhões / GPS",      icon: Map },
+        { to: "/app/nutrir",           label: "Calculadora Nutrir", icon: Calculator },
+        { to: "/app/rep/campos-teste", label: "Campos de Teste",    icon: TestTube },
+        { to: "/app/rep/talhoes",      label: "Talhões / GPS",      icon: Map },
+        { to: "/app/ia/solo",          label: "IA Agronômica",      icon: Brain },
+        { to: "/app/relatorios",       label: "Relatórios",         icon: FileText },
       ],
     },
-    { to: "/app/rep/clientes",         label: "Clientes",            icon: Briefcase },
-    { to: "/app/rep/estoque-cliente",  label: "Estoque do Cliente",  icon: Boxes },
-
-    // ── Comercial — pedidos, comissões e contas ──
-    { to: "/app/rep/pedidos",          label: "Pedidos",             icon: ShoppingCart },
-    {
-      label: "Comissões & Contas",
-      icon: DollarSign,
-      children: [
-        { to: "/app/rep/comissoes",      label: "Comissões",         icon: DollarSign },
-        { to: "/app/rep/contas-receber", label: "Contas a Receber",  icon: Receipt },
-      ],
-    },
-    { to: "/app/rep/rdv",              label: "RDV",                 icon: FileSpreadsheet },
-
-    // ── Programa Nutrir ──
-    {
-      label: "Programa Nutrir",
-      icon: Sprout,
-      children: [
-        { to: "/app/nutrir",                   label: "Hub Nutrir",                  icon: Sprout, end: true },
-        { to: "/app/nutrir/orcamento",         label: "Orçamento de Consultoria",    icon: FileSpreadsheet },
-        { to: "/app/nutrir/orcamento-nutricao",label: "Orçamento + Nutrição",        icon: Leaf, badge: "novo" },
-        { to: "/app/nutrir/painel-custo",      label: "Painel Custo de Análise",     icon: Calculator },
-        { to: "/app/nutrir/orcamentos",        label: "Orçamentos Salvos",           icon: FileText },
-      ],
-    },
-    { to: "/app/nutrir/produtos",      label: "Produtos",            icon: Package },
-
-    // ── Mapas e Inteligência ──
-    {
-      label: "Mapas e Talhões",
-      icon: Map,
-      children: [
-        { to: "/app/mapas",          label: "Criar Mapas",       icon: Map },
-        { to: "/app/nutrir/ndvi",    label: "Análise NDVI",      icon: Satellite },
-        { to: "/app/nutrir/coleta",  label: "Coletar Amostras",  icon: MapPin },
-      ],
-    },
-    {
-      label: "IA Agronômica",
-      icon: Brain,
-      children: [
-        { to: "/app/ia/solo",      label: "Análise de Solo",    icon: FlaskConical },
-        { to: "/app/ia/sintomas",  label: "Sintomas Foliares",  icon: Leaf },
-      ],
-    },
-
-    { to: "/app/relatorios",           label: "Relatórios",          icon: FileText },
   ],
 };
 

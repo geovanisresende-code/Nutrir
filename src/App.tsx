@@ -36,6 +36,8 @@ import Modalidades from "./pages/nutrir/Modalidades";
 import Embalagens from "./pages/nutrir/Embalagens";
 import Representantes from "./pages/nutrir/Representantes";
 import ClientesNutrir from "./pages/nutrir/ClientesNutrir";
+import ClienteFicha from "./pages/representante/ClienteFicha";
+import FinanceiroRep from "./pages/representante/FinanceiroRep";
 import ProdutosNutrir from "./pages/nutrir/Produtos";
 import MateriasPrimas from "./pages/nutrir/MateriasPrimas";
 import Formulacoes from "./pages/nutrir/Formulacoes";
@@ -177,6 +179,8 @@ const App = () => (
               <Route path="/app/rep/campos-teste" element={<ProtectedRoute><AppShell><CamposTeste /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/rdv" element={<ProtectedRoute><AppShell><RDV /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/clientes" element={<ProtectedRoute><AppShell><ClientesNutrir /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/clientes/:id" element={<ProtectedRoute><AppShell><ClienteFicha /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/financeiro" element={<ProtectedRoute><AppShell><FinanceiroRep /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/pedidos" element={<ProtectedRoute><AppShell><PedidosRep /></AppShell></ProtectedRoute>} />
 
               {/* Programa Nutrir — extras Fase 1 */}
@@ -204,20 +208,3 @@ const App = () => (
               <Route path="/app/gestao/rdv-relatorios" element={<ProtectedRoute><AppShell><RelatoriosRDV /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/culturas" element={<ProtectedRoute><AppShell><BDCulturas /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/motor-calculos" element={<ProtectedRoute><AppShell><MotorCalculos /></AppShell></ProtectedRoute>} />
-              <Route path="/app/gestao/importacoes" element={<ProtectedRoute><AppShell><Importacoes /></AppShell></ProtectedRoute>} />
-
-              {/* Novos módulos */}
-              <Route path="/app/nutrir/geracao-demanda" element={<ProtectedRoute><AppShell><GeracaoDemanda /></AppShell></ProtectedRoute>} />
-              <Route path="/app/nutrir/painel-diretoria" element={<ProtectedRoute><AppShell><PainelDiretoria /></AppShell></ProtectedRoute>} />
-              <Route path="/app/rep/talhoes" element={<ProtectedRoute><AppShell><Talhoes /></AppShell></ProtectedRoute>} />
-
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </OrganizationProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;

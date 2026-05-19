@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, MapPin, Building2 } from "lucide-react";
+import { Pencil, Trash2, Plus, MapPin, Building2, ChevronRight } from "lucide-react";
 import { CrudList } from "@/components/nutrir/CrudList";
 import { FormDialog, Field } from "@/components/nutrir/FormDialog";
 import { useOrgTable } from "@/lib/nutrir/useNutrirData";
@@ -59,6 +60,7 @@ const formatCPF = (v: string) => v.replace(/\D/g, "").slice(0, 11)
 
 export default function ClientesNutrir() {
   const { current } = useOrg();
+  const navigate = useNavigate();
   const { data, loading, reload } = useOrgTable<ClienteN>("nutrir_clientes", { orderBy: "razao_social" });
   const { data: regionais } = useOrgTable<{ id: string; nome: string }>("nutrir_regionais", { orderBy: "nome", select: "id,nome" });
   const { data: reps } = useOrgTable<{ id: string; nome: string }>("nutrir_representantes", { orderBy: "nome", select: "id,nome" });
@@ -186,6 +188,7 @@ export default function ClientesNutrir() {
               <td className="px-4 py-2">{reps.find(x => x.id === r.representante_id)?.nome ?? "—"}</td>
               <td className="px-4 py-2">{r.ativo ? <Badge>Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}</td>
               <td className="px-4 py-2">
+                <Button variant="ghost" size="icon" title="Ver ficha" onClick={() => navigate(`/app/rep/clientes/${r.id}`)}><ChevronRight className="w-4 h-4 text-primary" /></Button>
                 <Button variant="ghost" size="icon" onClick={() => onEdit(r)}><Pencil className="w-4 h-4" /></Button>
                 <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
               </td>

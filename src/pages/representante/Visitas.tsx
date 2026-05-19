@@ -295,19 +295,30 @@ export default function Visitas() {
     if (entregasErr > 0) msg += ` · ${entregasErr} entrega(s) com erro`;
     toast({ title: msg });
 
-    // 4) Atalho para Campos de Teste se acompanhamento
-    if (motivo === "acompanhamento_teste" && clienteId !== "livre") {
-      toast({
-        title: "Atalho disponível",
-        description: "Clique aqui para registrar acompanhamento do campo de teste deste cliente.",
-        action: (
+    // 4) Ações pós-visita — botões contextuais
+    const cId = clienteId !== "livre" ? clienteId : null;
+    toast({
+      title: "✅ Visita salva! O que fazer agora?",
+      description: "Escolha a próxima ação:",
+      action: (
+        <div className="flex flex-col gap-1 mt-1">
           <button
-            className="text-xs underline"
-            onClick={() => navigate(`/app/rep/campos-teste?cliente=${clienteId}`)}
-          >Abrir Campos de Teste</button>
-        ) as any,
-      });
-    }
+            className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded"
+            onClick={() => navigate("/app/nutrir")}
+          >🧮 Fazer Cálculo</button>
+          <button
+            className="text-xs border px-2 py-1 rounded"
+            onClick={() => navigate(cId ? `/app/rep/pedidos?cliente=${cId}` : "/app/rep/pedidos")}
+          >🛒 Gerar Pedido</button>
+          {cId && (
+            <button
+              className="text-xs border px-2 py-1 rounded"
+              onClick={() => navigate(`/app/rep/clientes/${cId}`)}
+            >👤 Ver Ficha do Cliente</button>
+          )}
+        </div>
+      ) as any,
+    });
 
     setOpen(false); reset(); load();
   };
@@ -470,83 +481,4 @@ export default function Visitas() {
                       <AlertOctagon className="w-4 h-4 mr-1"/>Muito Urgente
                     </Button>
                     <Button type="button" variant={alerta === "ponto_atencao" ? "default" : "outline"}
-                      className={alerta === "ponto_atencao" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
-                      onClick={() => setAlerta(alerta === "ponto_atencao" ? null : "ponto_atencao")}>
-                      <AlertTriangle className="w-4 h-4 mr-1"/>Ponto de Atenção
-                    </Button>
-                    <Button type="button" variant={alerta === "relato_rotina" ? "secondary" : "outline"}
-                      onClick={() => setAlerta(alerta === "relato_rotina" ? null : "relato_rotina")}>
-                      <Info className="w-4 h-4 mr-1"/>Relato de Rotina
-                    </Button>
-                  </div>
-                  {alerta && (
-                    <Input className="mt-2" placeholder="Título do alerta (ex.: Concorrência ofereceu desconto agressivo)"
-                      value={alertaTitulo} onChange={e => setAlertaTitulo(e.target.value)} />
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t">
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button onClick={salvar} disabled={saving}>{saving ? "Salvando..." : "Registrar visita"}</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        }
-      />
-
-      {loading ? (
-        <div className="text-muted-foreground">Carregando…</div>
-      ) : visitas.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">
-          Nenhuma visita registrada ainda. Clique em <strong>Nova visita</strong>.
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3">
-          {visitas.map(v => (
-            <Card key={v.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <div>
-                    <CardTitle className="text-base">{clienteLabel(v)}</CardTitle>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(v.data_visita).toLocaleDateString("pt-BR")} · {motivoLabel(v.motivo)}
-                      {v.motivo === "outro" && v.motivo_outro ? ` — ${v.motivo_outro}` : ""}
-                    </div>
-                  </div>
-                  {v.alerta_nivel && (
-                    <Badge variant={
-                      v.alerta_nivel === "muito_urgente" ? "destructive" :
-                      v.alerta_nivel === "ponto_atencao" ? "default" : "secondary"
-                    }>
-                      {v.alerta_nivel === "muito_urgente" ? "Muito Urgente" :
-                       v.alerta_nivel === "ponto_atencao" ? "Atenção" : "Rotina"}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                {v.clima && (
-                  <div className="flex items-center gap-2 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded px-2 py-1">
-                    {wmoIcone(v.clima.codigo_wmo)}
-                    <span className="font-semibold">{v.clima.temperatura}°C</span>
-                    <span>{v.clima.descricao}</span>
-                    <span className="flex items-center gap-1 ml-auto text-muted-foreground">
-                      <Wind className="h-3 w-3" />{v.clima.vento_kmh} km/h
-                      {v.clima.precipitacao_mm > 0 && <><CloudRain className="h-3 w-3 ml-1" />{v.clima.precipitacao_mm} mm</>}
-                    </span>
-                  </div>
-                )}
-                <p className="whitespace-pre-wrap">{v.relato}</p>
-                {v.observacao && <p className="text-muted-foreground italic"><strong>Obs.:</strong> {v.observacao}</p>}
-                {v.fotos?.length > 0 && (
-                  <div className="text-xs text-muted-foreground">{v.fotos.length} foto(s) anexada(s)</div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+                      className={alerta === "ponto_atencao" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : "
