@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -120,6 +121,7 @@ function isAVista(dataPedido: Date, dataVenc: Date | undefined): boolean {
 export default function PedidosRep() {
   const { current } = useOrg();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -171,6 +173,52 @@ export default function PedidosRep() {
   };
 
   useEffect(() => { load(); }, [current?.id]);
+
+  // Pré-seleciona cliente via ?cliente= na URL (vindo da Ficha do Cliente)
+  useEffect(() => {
+    const cId = searchParams.get("cliente");
+    if (cId && clientes.length) {
+      const match = clientes.find(c => c.id === cId);
+      if (match) { setClienteId(cId); setOpen(true); }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientes, searchParams]);
+
+  // Lê draft vindo da calculadora (Foliar ou NPK)
+  const [draftBanner, setDraftBanner] = useState<string | null>(null);
+  useEffect(() => {
+    const raw = sessionStorage.getItem("nutrir.pedido_draft");
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      sessionStorage.removeItem("nutrir.pedido_draft");
+      // Preenche observações e itens do draft
+      if (draft.observacoes) setObservacoes(draft.observacoes);
+      if (draft.itens?.length) {
+        const novosItens: Item[] = draft.itens.map((it: any) => ({
+          produto_id: "",
+          produto_nome: it.produto_nome ?? "",
+          embalagem_id: null,
+          quantidade: Number(it.quantidade) || 0,
+          preco_unitario: Number(it.preco_unitario) || 0,
+          desconto_pct: 0,
+        }));
+        setItens(novosItens);
+      }
+      // Tenta encontrar cliente pelo nome
+      if (draft.cliente_nome && clientes.length) {
+        const nome = (draft.cliente_nome as string).toLowerCase();
+        const match = clientes.find(c =>
+          (c.razao_social ?? "").toLowerCase().includes(nome) ||
+          (c.nome_fantasia ?? "").toLowerCase().includes(nome)
+        );
+        if (match) setClienteId(match.id);
+      }
+      setDraftBanner(`📋 Pedido pré-preenchido: ${draft.titulo ?? draft.origem}`);
+      setOpen(true);
+    } catch { /* ignora */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientes]);
 
   const clienteAtivo = useMemo(() => clientes.find(c => c.id === clienteId), [clientes, clienteId]);
 
@@ -444,6 +492,15 @@ export default function PedidosRep() {
             <DialogContent className="max-w-4xl">
               <DialogHeader><DialogTitle>Novo pedido</DialogTitle></DialogHeader>
               <form onSubmit={submit} className="space-y-3 max-h-[78vh] overflow-y-auto pr-1">
+
+                {/* Banner de draft vindo da calculadora */}
+                {draftBanner && (
+                  <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
+                    <ShoppingCart className="h-4 w-4 shrink-0" />
+                    <span className="flex-1">{draftBanner}</span>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setDraftBanner(null)}>✕</button>
+                  </div>
+                )}
 
                 {/* Cabeçalho */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

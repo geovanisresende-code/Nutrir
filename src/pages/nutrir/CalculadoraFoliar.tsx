@@ -42,12 +42,21 @@ export default function CalculadoraFoliar() {
 
   const irParaPedido = () => {
     if (!resultado) return;
-    sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
-      origem: "calc_foliar", titulo: `Foliar — ${meta.fazenda || meta.produtor || meta.cultura}`,
-      area_ha: meta.areaHa, observacoes: `Receita foliar (${config.nivel} · ${config.complexador})`,
+    const itensDraft = (resultado.listaCompras ?? []).map((lc: any) => ({
+      produto_nome: lc.produto,
+      quantidade: lc.arredondado || lc.quantidadeArea,
+      unidade: lc.unidade,
+      preco_unitario: lc.precoUnit ?? 0,
     }));
-    toast({ title: "Receita salva", description: "Crie o pedido com os produtos calculados." });
-    navigate("/app/nutrir/pedidos");
+    sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
+      origem: "calc_foliar",
+      titulo: `Foliar — ${meta.fazenda || meta.produtor || meta.cultura}`,
+      cliente_nome: meta.produtor || meta.fazenda || null,
+      area_ha: meta.areaHa,
+      observacoes: `Receita foliar (${config.nivel} · ${config.complexador}) · ${meta.areaHa} ha`,
+      itens: itensDraft,
+    }));
+    navigate("/app/rep/pedidos");
   };
 
   // ─── Inputs principais ───

@@ -17,7 +17,7 @@ import {
   calcularNPK, formulaParaDemanda, type NPKInput, type NPKResult, type NPKDemanda, type SalDisponivel,
   type ModoEntradaNPK, type ModoProducao, type ModoAplicacao,
 } from "@/lib/nutrir/npk-foliar-engine";
-import { Calculator, FileDown, AlertTriangle, TrendingDown, Sprout, FlaskConical, Atom, Save, History, MessageCircle } from "lucide-react";
+import { Calculator, FileDown, AlertTriangle, TrendingDown, Sprout, FlaskConical, Atom, Save, History, MessageCircle, ShoppingCart } from "lucide-react";
 import { abrirWhatsApp } from "@/lib/nutrir/whatsapp";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import { ImportarLaudoButton } from "@/components/nutrir/ImportarLaudoButton";
@@ -143,6 +143,27 @@ export default function CalculadoraNPK() {
     await gerarPdfNPK(resultado, meta);
   };
 
+  const irParaPedido = () => {
+    if (!resultado) return;
+    const itensDraft = (resultado.custos ?? [])
+      .filter((c: any) => c.quantidade > 0)
+      .map((c: any) => ({
+        produto_nome: c.item,
+        quantidade: c.quantidade * (meta.areaHa || 1),
+        unidade: c.unidade,
+        preco_unitario: c.precoUnitario ?? 0,
+      }));
+    sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
+      origem: "calc_npk",
+      titulo: `NPK — ${meta.fazenda || meta.produtor || meta.cultura}`,
+      cliente_nome: meta.produtor || meta.fazenda || null,
+      area_ha: meta.areaHa,
+      observacoes: `Fertirrigação NPK · ${meta.cultura} · ${meta.areaHa} ha`,
+      itens: itensDraft,
+    }));
+    navigate("/app/rep/pedidos");
+  };
+
   const salvarHistorico = async () => {
     if (!resultado || !current || !user) {
       toast({ title: "Calcule antes de salvar", variant: "destructive" });
@@ -225,6 +246,11 @@ export default function CalculadoraNPK() {
           {resultado && (
             <Button variant="outline" onClick={salvarHistorico} disabled={salvando}>
               <Save className="w-4 h-4 mr-1"/>{salvando ? "Salvando…" : "Salvar"}
+            </Button>
+          )}
+          {resultado && (
+            <Button onClick={irParaPedido} className="gap-1.5">
+              <ShoppingCart className="w-4 h-4"/>Criar Pedido
             </Button>
           )}
           <Button onClick={calcular} className="bg-gradient-to-r from-primary to-primary/80">
