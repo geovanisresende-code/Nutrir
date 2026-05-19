@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,18 @@ import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { PwaStatus } from "@/components/PwaStatus";
+import { usePosition } from "@/hooks/usePosition";
+
+/** Redireciona o usuário para a home correta de acordo com o cargo */
+function SmartHome() {
+  const { position, loading } = usePosition();
+  if (loading) return <div className="h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
+  if (position === "assistente_tecnico") return <Navigate to="/app/nutrir" replace />;
+  if (position === "gerente") return <Navigate to="/app/gerente/dashboard" replace />;
+  if (position === "cliente") return <Navigate to="/app/relatorios" replace />;
+  // proprietario, diretor, representante → tela do representante
+  return <Navigate to="/app/rep" replace />;
+}
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -126,7 +138,7 @@ const App = () => (
               <Route path="/app/organizacao/nova" element={<ProtectedRoute><NewOrganization /></ProtectedRoute>} />
               <Route path="/app/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
-              <Route path="/app" element={<ProtectedRoute><AppShell><Dashboard /></AppShell></ProtectedRoute>} />
+              <Route path="/app" element={<ProtectedRoute><SmartHome /></ProtectedRoute>} />
               <Route path="/app/mapas" element={<ProtectedRoute><AppShell><Mapas /></AppShell></ProtectedRoute>} />
               <Route path="/app/nutricao" element={<ProtectedRoute><AppShell><Nutricao /></AppShell></ProtectedRoute>} />
               <Route path="/app/heatmap" element={<ProtectedRoute><AppShell><Heatmap /></AppShell></ProtectedRoute>} />
