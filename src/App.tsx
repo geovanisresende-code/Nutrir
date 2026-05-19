@@ -98,6 +98,7 @@ import PainelDiretoria from "./pages/nutrir/PainelDiretoria";
 import Talhoes from "./pages/representante/Talhoes";
 import ClienteFicha from "./pages/representante/ClienteFicha";
 import FinanceiroRep from "./pages/representante/FinanceiroRep";
+import ClientesRep from "./pages/representante/ClientesRep";
 
 const queryClient = new QueryClient();
 
@@ -178,7 +179,7 @@ const App = () => (
               <Route path="/app/rep/comissoes" element={<ProtectedRoute><AppShell><Comissoes /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/campos-teste" element={<ProtectedRoute><AppShell><CamposTeste /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/rdv" element={<ProtectedRoute><AppShell><RDV /></AppShell></ProtectedRoute>} />
-              <Route path="/app/rep/clientes" element={<ProtectedRoute><AppShell><ClientesNutrir /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/clientes" element={<ProtectedRoute><AppShell><ClientesRep /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/clientes/:id" element={<ProtectedRoute><AppShell><ClienteFicha /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/financeiro" element={<ProtectedRoute><AppShell><FinanceiroRep /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/pedidos" element={<ProtectedRoute><AppShell><PedidosRep /></AppShell></ProtectedRoute>} />

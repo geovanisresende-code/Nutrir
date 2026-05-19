@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrg } from "@/contexts/OrganizationContext";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ClipboardList, DollarSign, AlertCircle, TestTube, Trophy, ShoppingCart,
-  Receipt, MapPin, ArrowRight,
+  Receipt, MapPin, ArrowRight, Calculator, Users, TrendingUp,
 } from "lucide-react";
 
 const fmtBRL = (n: number) =>
@@ -28,6 +28,7 @@ interface Kpis {
 export default function DashboardRep() {
   const { user } = useAuth();
   const { current: org } = useOrg();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [proximasVisitas, setProximasVisitas] = useState<any[]>([]);
@@ -177,37 +178,49 @@ export default function DashboardRep() {
     return <div className="p-6 text-muted-foreground">Carregando dashboard...</div>;
   }
 
+  const saudacao = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 max-w-4xl mx-auto">
+
+      {/* Saudação */}
       <div>
-        <h1 className="text-2xl font-bold">Dashboard do Representante</h1>
-        <p className="text-sm text-muted-foreground">
-          Visão consolidada do mês — visitas, comissões e oportunidades.
-        </p>
+        <h1 className="text-xl font-bold">{saudacao()}! 👋</h1>
+        <p className="text-sm text-muted-foreground">Veja o que precisa de atenção hoje.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={ClipboardList} label="Visitas no mês" value={String(kpis.visitasMes)} accent="primary" />
-        <KpiCard icon={DollarSign} label="Comissão prevista" value={fmtBRL(kpis.comissaoPrevista)} accent="success" />
-        <KpiCard
-          icon={Receipt}
-          label="Contas vencendo"
-          value={`${kpis.contasVencendo} · ${fmtBRL(kpis.contasVencendoValor)}`}
-          accent="warning"
-        />
-        <KpiCard icon={TestTube} label="Testes ativos" value={String(kpis.testesAtivos)} accent="primary" />
-        <KpiCard
-          icon={ShoppingCart}
-          label="Pedidos no mês"
-          value={`${kpis.pedidosMes} · ${fmtBRL(kpis.pedidosValorMes)}`}
-          accent="success"
-        />
-        <KpiCard
-          icon={Trophy}
-          label="Ranking"
-          value={kpis.ranking ? `${kpis.ranking.posicao}º / ${kpis.ranking.total}` : "—"}
-          accent="primary"
-        />
+      {/* Ações rápidas */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: "Registrar Visita", icon: ClipboardList, to: "/app/rep/visitas", color: "bg-primary text-primary-foreground" },
+          { label: "Meus Clientes",    icon: Users,          to: "/app/rep/clientes", color: "bg-muted" },
+          { label: "Fazer Cálculo",    icon: Calculator,     to: "/app/nutrir",       color: "bg-muted" },
+          { label: "Novo Pedido",      icon: ShoppingCart,   to: "/app/rep/pedidos",  color: "bg-muted" },
+        ].map((a) => (
+          <button
+            key={a.to}
+            onClick={() => navigate(a.to)}
+            className={`${a.color} rounded-xl p-3 flex flex-col items-center gap-2 text-center hover:opacity-90 transition-opacity`}
+          >
+            <a.icon className="h-5 w-5" />
+            <span className="text-xs font-medium leading-tight">{a.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* KPIs do mês */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <KpiCard icon={ClipboardList} label="Visitas no mês"    value={String(kpis.visitasMes)}            accent="primary" />
+        <KpiCard icon={ShoppingCart}  label="Pedidos no mês"    value={String(kpis.pedidosMes)}            accent="success" />
+        <KpiCard icon={DollarSign}    label="Comissão prevista" value={fmtBRL(kpis.comissaoPrevista)}      accent="success" />
+        <KpiCard icon={Receipt}       label="Contas vencendo"   value={`${kpis.contasVencendo} · ${fmtBRL(kpis.contasVencendoValor)}`} accent="warning" />
+        <KpiCard icon={TestTube}      label="Testes ativos"     value={String(kpis.testesAtivos)}          accent="primary" />
+        <KpiCard icon={Trophy}        label="Ranking"           value={kpis.ranking ? `${kpis.ranking.posicao}º / ${kpis.ranking.total}` : "—"} accent="primary" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
