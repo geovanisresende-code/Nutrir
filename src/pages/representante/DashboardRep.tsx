@@ -199,7 +199,7 @@ export default function DashboardRep() {
         {[
           { label: "Registrar Visita", icon: ClipboardList, to: "/app/rep/visitas", color: "bg-primary text-primary-foreground" },
           { label: "Meus Clientes",    icon: Users,          to: "/app/rep/clientes", color: "bg-muted" },
-          { label: "Fazer Cálculo",    icon: Calculator,     to: "/app/nutrir",       color: "bg-muted" },
+          { label: "Fazer Cálculo",    icon: Calculator,     to: "/app/rep/calculadoras", color: "bg-muted" },
           { label: "Novo Pedido",      icon: ShoppingCart,   to: "/app/rep/pedidos",  color: "bg-muted" },
         ].map((a) => (
           <button
