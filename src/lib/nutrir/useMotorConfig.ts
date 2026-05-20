@@ -27,8 +27,8 @@ export const MOTOR_DEFAULTS: MotorParam[] = [
   { chave: "reducao_ureia_protegida",  categoria: "reducao",    label: "Ureia Protegida — redução (%)",       valor: 55,    unidade: "%",    descricao: "Redução ao substituir ureia protegida" },
   { chave: "reducao_sulfato_parcial",  categoria: "reducao",    label: "Sulfato Amônio — redução parcial (%)",valor: 50,    unidade: "%",    descricao: "Redução do restante após lanço" },
   { chave: "reducao_nitrato_amonio",   categoria: "reducao",    label: "Nitrato Amônio — redução N (%)",      valor: 45,    unidade: "%",    descricao: "Redução do N ao substituir nitrato" },
-  { chave: "sulfato_limite_parcial",   categoria: "reducao",    label: "Sulfato: dose para lanço parcial (kg/ha)", valor: 200, unidade: "kg/ha", descricao: "Abaixo deste limite, substituição total" },
-  { chave: "sulfato_limite_maximo",    categoria: "reducao",    label: "Sulfato: dose máx no lanço (kg/ha)",  valor: 200,   unidade: "kg/ha", descricao: "Máximo de sulfato fixo no lanço" },
+  { chave: "sulfato_limite_parcial",   categoria: "reducao",    label: "Sulfato: limite subst. total (kg/ha)", valor: 300, unidade: "kg/ha", descricao: "≤ este valor: substituição completa (0 à lanço). > este → 150 kg à lanço." },
+  { chave: "sulfato_limite_maximo",    categoria: "reducao",    label: "Sulfato: máx à lanço quando > 400 kg/ha", valor: 200, unidade: "kg/ha", descricao: "Quando dose > 400 kg/ha: este valor vai à lanço (máximo)" },
   // Complexantes
   { chave: "tsh_pct_ureia",            categoria: "complexante",label: "TSH — % sobre ureia",                 valor: 15,    unidade: "%",    descricao: "15 mL TSH por 100g ureia na calda" },
   { chave: "lifegrow_pct_ureia",       categoria: "complexante",label: "Life Grow — % sobre ureia",           valor: 18.75, unidade: "%",    descricao: "18,75 mL Life Grow por 100g ureia" },

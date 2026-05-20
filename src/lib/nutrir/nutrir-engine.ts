@@ -369,13 +369,21 @@ function calcularSubstituicao(adubo: AduboBase, doseKgHa: number, cfg: Record<st
     const ureiaKgHa = nResidual / 0.45;
     return { nOriginalKgHa: nOriginal, nResidualKgHa: nResidual, ureiaKgHa, sulfatoLancoKgHa: 0 };
   }
-  // Sulfato de Amônio — regras escalonadas
-  const limiteParcial = cfg.sulfato_limite_parcial ?? 200;
-  const limiteMaximo  = cfg.sulfato_limite_maximo  ?? 200;
+  // Sulfato de Amônio — regras do DOCX:
+  //   < 200 kg/ha  → substituição completa (0 à lanço, converte TUDO em ureia para N180)
+  //   200–300 kg/ha → substituição completa também (limite de substituição total)
+  //   > 300 kg/ha  → 150 kg à lanço + converte restante (reduz N 50%)
+  //   > 400 kg/ha  → 200 kg à lanço (máx) + converte restante (reduz N 50%)
+  const limiteSubstTotal = cfg.sulfato_limite_parcial ?? 300; // ≤ este → subst. completa
+  const limiteMaximoLanco = cfg.sulfato_limite_maximo  ?? 200; // kg máx à lanço quando > 400
   let sulfatoLanco = 0;
-  if (doseKgHa <= limiteParcial) sulfatoLanco = doseKgHa;
-  else if (doseKgHa <= limiteParcial * 2) sulfatoLanco = 150;
-  else sulfatoLanco = limiteMaximo;
+  if (doseKgHa <= limiteSubstTotal) {
+    sulfatoLanco = 0; // substituição completa — nada fica à lanço
+  } else if (doseKgHa <= 400) {
+    sulfatoLanco = 150; // 150 kg à lanço, restante vira N180
+  } else {
+    sulfatoLanco = limiteMaximoLanco; // 200 kg à lanço (máximo)
+  }
   const restante = Math.max(0, doseKgHa - sulfatoLanco);
   const nRestante = restante * conc;
   const reducaoSulfato = (cfg.reducao_sulfato_parcial ?? 50) / 100;
@@ -942,9 +950,10 @@ function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]
   // 1) kg.N/ha aplicados pelo N32 do cliente
   const nKgHa = (lProdutoHa * garantiaGL) / 1000;
 
-  // 2) Conversão para Ureia complexada (N180 = 18% de N na calda final)
-  //    L/ha de calda NUTRIR = nKgHa / 0,18  → arredondar para BAIXO
-  const caldaLHaRaw = nKgHa / 0.18;
+  // 2) Conversão para calda N180 foliar
+  //    Fórmula DOCX: 5L × 32% = 1,6kg N ÷ 16% = 10L/ha de calda
+  //    Ou seja: caldaL = nKgHa / 0,16  (concentração foliar = 160g N/L)
+  const caldaLHaRaw = nKgHa / 0.16;
   const caldaLHa = roundAplicacaoInteira(caldaLHaRaw);
 
   // 3) Aplicações foliares iguais (1 a 3, configurável) com LEG
@@ -961,12 +970,16 @@ function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]
     const caldaTotalEst = vazaoLHa * input.areaHa;
     const ureiaKgHa = vazaoLHa * ureiaPctVol;
     const complexanteL = caldaTotalEst * legPctVol;
+    // Receita N32 foliar por 1.000L — DOCX: 400kg Ureia + 75L LEG + água
+    // (ureia = 40% do volume = 400kg; LEG = 7,5% = 75L — intensidade "forte")
     const batchL = 1000;
+    const ureiaKgBatch = round(batchL * ureiaPctVol, 0); // 400 kg
+    const aguaInicialL = round(batchL * 0.40, 0);         // 400 L (40%)
     const receita: ReceitaItem[] = [
-      { ordem: 1, ingrediente: "Água", quantidade: round(batchL * ureiaPctVol, 0), unidade: "L", instrucao: "Adicionar 40% do volume em água limpa" },
-      { ordem: 2, ingrediente: "Ureia", quantidade: round(batchL * ureiaPctVol, 0), unidade: "kg", instrucao: "Adicionar a Ureia lentamente e agitar" },
-      { ordem: 3, ingrediente: "LEG", quantidade: legPor1000, unidade: "L", instrucao: `Adicionar LEG (complexação ${intensidade})` },
-      { ordem: 4, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: `Completar com água até ${batchL.toLocaleString("pt-BR")} L` },
+      { ordem: 1, ingrediente: "Água", quantidade: aguaInicialL, unidade: "L", instrucao: "Adicionar 40% do volume em água limpa" },
+      { ordem: 2, ingrediente: "LEG", quantidade: legPor1000, unidade: "L", instrucao: `Adicionar LEG (${legPor1000}L por 1.000L — complexação ${intensidade})` },
+      { ordem: 3, ingrediente: "Ureia", quantidade: ureiaKgBatch, unidade: "kg", instrucao: "Adicionar a Ureia lentamente e agitar bem" },
+      { ordem: 4, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: `Completar com água até ${batchL.toLocaleString("pt-BR")} L e misturar por 1 hora` },
     ];
     return {
       id, nome,
