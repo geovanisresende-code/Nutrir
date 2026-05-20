@@ -14,41 +14,32 @@ import { Badge } from "@/components/ui/badge";
 
 interface MP { id: string; codigo: string | null; nome: string; fornecedor: string | null; preco_atual: number | null; unidade_preco: string; observacoes: string | null; ativo: boolean; }
 
-// Catálogo completo de matérias-primas padrão (~27 itens)
+// Catálogo baseado na planilha C.M.P (Cristiano / Fertagro)
 const CATALOGO_PADRAO = [
-  // ── Fontes de Nitrogênio ──
-  { codigo: "URB", nome: "Ureia Branca",          preco_atual: 2.20, observacoes: "45% N" },
-  { codigo: "URP", nome: "Ureia Protegida",        preco_atual: 4.20, observacoes: "45% N revestida" },
-  { codigo: "SFA", nome: "Sulfato de Amônio",      preco_atual: 1.80, observacoes: "21% N · 24% S" },
-  { codigo: "NTA", nome: "Nitrato de Amônio",      preco_atual: 3.20, observacoes: "33% N" },
-  { codigo: "KNO", nome: "Nitrato de Potássio",    preco_atual: 3.80, observacoes: "13% N · 44% K2O" },
-  { codigo: "NCA", nome: "Nitrato de Cálcio",      preco_atual: 3.50, observacoes: "15,5% N · 26% Ca" },
-  // ── Fontes de Fósforo ──
-  { codigo: "MAP", nome: "MAP Purificado",         preco_atual: 4.50, observacoes: "12% N · 60% P2O5" },
-  { codigo: "DAP", nome: "Fosfato Diamônico",      preco_atual: 4.00, observacoes: "18% N · 46% P2O5" },
-  { codigo: "MKP", nome: "Fosfato Monopotássico",  preco_atual: 8.00, observacoes: "52% P2O5 · 34% K2O" },
-  // ── Fontes de Potássio ──
-  { codigo: "KCL", nome: "KCl Branco",             preco_atual: 2.80, observacoes: "60% K2O" },
-  { codigo: "SOP", nome: "Sulfato de Potássio",    preco_atual: 5.50, observacoes: "50% K2O · 18% S" },
-  { codigo: "SKP", nome: "Silicato de Potássio",   preco_atual: 6.50, observacoes: "30% Si · 35% K2O" },
-  // ── Cálcio ──
-  { codigo: "CCA", nome: "Cloreto de Cálcio",      preco_atual: 2.20, observacoes: "27% Ca" },
-  // ── Boro ──
-  { codigo: "ACB", nome: "Ácido Bórico",           preco_atual: 18.0, observacoes: "17% B" },
-  { codigo: "BRX", nome: "Bórax",                  preco_atual: 8.00, observacoes: "11% B" },
-  // ── Micronutrientes ──
-  { codigo: "SMN", nome: "Sulfato de Manganês",    preco_atual: 8.50, observacoes: "31% Mn" },
-  { codigo: "SMG", nome: "Sulfato de Magnésio",    preco_atual: 3.50, observacoes: "10% Mg" },
-  { codigo: "SZN", nome: "Sulfato de Zinco",       preco_atual: 9.00, observacoes: "22% Zn" },
-  { codigo: "SCU", nome: "Sulfato de Cobre",       preco_atual: 12.0, observacoes: "25% Cu" },
-  { codigo: "SFE", nome: "Sulfato Ferroso",        preco_atual: 4.00, observacoes: "20% Fe" },
-  { codigo: "SFC", nome: "Sulfato Férrico",        preco_atual: 6.00, observacoes: "19% Fe" },
-  { codigo: "QFE", nome: "Quelato de Ferro EDTA",  preco_atual: 28.0, observacoes: "6% Fe quelado" },
-  { codigo: "SCO", nome: "Sulfato de Cobalto",     preco_atual: 85.0, observacoes: "21% Co" },
-  { codigo: "MOL", nome: "Molibdato de Amônio",    preco_atual: 45.0, observacoes: "54% Mo" },
-  { codigo: "MON", nome: "Molibdato de Sódio",     preco_atual: 90.0, observacoes: "39% Mo" },
-  { codigo: "SNI", nome: "Sulfato de Níquel",      preco_atual: 65.0, observacoes: "22% Ni" },
-  { codigo: "SSE", nome: "Selenito de Sódio",      preco_atual: 200., observacoes: "45% Se" },
+  // ── MACROS ──
+  { codigo: "URB", nome: "Ureia",              preco_atual: 3.40,  observacoes: "45% N" },
+  { codigo: "MAP", nome: "MAP Purificado",     preco_atual: 8.20,  observacoes: "60% P2O5 · 12% N" },
+  { codigo: "KCB", nome: "KCl Branco",         preco_atual: 3.40,  observacoes: "60% K2O" },
+  { codigo: "KCV", nome: "KCl Vermelho",        preco_atual: 2.80,  observacoes: "60% K2O" },
+  { codigo: "SFA", nome: "Sulfato de Amônio",  preco_atual: 2.08,  observacoes: "21% N · 24% S" },
+  { codigo: "NTA", nome: "Nitrato de Amônio",  preco_atual: 2.30,  observacoes: "33% N" },
+  { codigo: "SSI", nome: "Super Simples",      preco_atual: 1.50,  observacoes: "18% P2O5 · 10% S" },
+  { codigo: "MAG", nome: "MAP Granulado",      preco_atual: 3.00,  observacoes: "48% P2O5 · 10% N" },
+  { codigo: "FRR", nome: "Fosfato Reativo",    preco_atual: 1.80,  observacoes: "28% P2O5" },
+  { codigo: "FRM", nome: "Formulado NPK",      preco_atual: 2.50,  observacoes: "NPK formulado" },
+  // ── MICROS ──
+  { codigo: "SMN", nome: "Sulfato de Manganês", preco_atual: 5.15,  observacoes: "31% Mn" },
+  { codigo: "SMG", nome: "Sulfato de Magnésio", preco_atual: 5.20,  observacoes: "16% Mg" },
+  { codigo: "SZN", nome: "Sulfato de Zinco",    preco_atual: 9.00,  observacoes: "35% Zn" },
+  { codigo: "SCU", nome: "Sulfato de Cobre",    preco_atual: 32.0,  observacoes: "35% Cu" },
+  { codigo: "ACB", nome: "Ácido Bórico",        preco_atual: 6.50,  observacoes: "17% B" },
+  { codigo: "MON", nome: "Molibdato de Sódio",  preco_atual: 142.,  observacoes: "39% Mo" },
+  { codigo: "SCO", nome: "Sulfato de Cobalto",  preco_atual: 62.0,  observacoes: "20% Co" },
+  { codigo: "SNI", nome: "Sulfato de Níquel",   preco_atual: 48.0,  observacoes: "22% Ni" },
+  { codigo: "SSE", nome: "Selenito de Sódio",   preco_atual: 130.,  observacoes: "44% Se" },
+  { codigo: "NCA", nome: "Nitrato de Cálcio",   preco_atual: 5.50,  observacoes: "16% Ca · 15,5% N" },
+  { codigo: "SKP", nome: "Silicato de Potássio",preco_atual: 65.0,  observacoes: "42% Si" },
+  { codigo: "SFC", nome: "Sulfato Férrico",     preco_atual: 45.0,  observacoes: "23% Fe" },
 ];
 
 export default function MateriasPrimas() {
@@ -98,7 +89,7 @@ export default function MateriasPrimas() {
   const toolbar = data.length === 0
     ? (
       <Button variant="outline" onClick={() => seedItens(CATALOGO_PADRAO, `✅ ${CATALOGO_PADRAO.length} matérias-primas inseridas!`)}>
-        ✨ Popular catálogo completo ({CATALOGO_PADRAO.length} itens)
+        ✨ Popular catálogo ({CATALOGO_PADRAO.length} itens)
       </Button>
     )
     : !catalogoCompleto

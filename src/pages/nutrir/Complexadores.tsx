@@ -35,16 +35,31 @@ export default function Complexadores() {
 
   useEffect(() => { load(); }, []);
 
+  // Catálogo completo Fertagro conforme planilha C.M.P
+  const COMPLEXADORES_PADRAO = [
+    { nome: "TSH",        descricao: "Complexante TSH — 15% sobre ureia em N180",        preco_litro: 18.0, ativo: true },
+    { nome: "LEG",        descricao: "Complexante LEG — 6,25% sobre ureia / foliares",   preco_litro: 45.0, ativo: true },
+    { nome: "Bor",        descricao: "Boro complexado líquido — 0,65 L por kg de ácido bórico", preco_litro: 32.0, ativo: true },
+    { nome: "ÍON",        descricao: "Complexante ÍON — foliares",                        preco_litro: 75.0, ativo: true },
+    { nome: "AMINO+",     descricao: "Aminoácidos — estímulo vegetal",                    preco_litro: 32.0, ativo: true },
+    { nome: "ESTIMULL",   descricao: "Bioestimulante ESTIMULL",                           preco_litro: 90.0, ativo: true },
+    { nome: "Life Grow",  descricao: "Complexante Life Grow — 18,75% sobre ureia em N180", preco_litro: 22.0, ativo: true },
+    { nome: "Carbo Alga", descricao: "Extrato de algas — condicionador de solo",          preco_litro: 50.0, ativo: true },
+  ];
+
+  const nomesExistentes = new Set(list.map(c => c.nome.toLowerCase()));
+  const complexadoresFaltando = COMPLEXADORES_PADRAO.filter(c => !nomesExistentes.has(c.nome.toLowerCase()));
+
   const seedPadrao = async () => {
-    const defaults = [
-      { nome: "TSH", descricao: "Complexante TSH — 15% sobre ureia em N180", preco_litro: 16.5, ativo: true },
-      { nome: "Life Grow", descricao: "Complexante Life Grow — 18,75% sobre ureia em N180", preco_litro: 25.0, ativo: true },
-      { nome: "LEG", descricao: "Complexante LEG — 6,25% sobre ureia / foliares", preco_litro: 22.0, ativo: true },
-      { nome: "Bor", descricao: "Boro complexado líquido — 0,65 L por kg de ácido bórico", preco_litro: 32.0, ativo: true },
-    ];
-    const { error } = await supabase.from("nutrir_complexadores").insert(defaults);
+    const { error } = await supabase.from("nutrir_complexadores").insert(COMPLEXADORES_PADRAO);
     if (error) toast.error("Erro ao popular: " + error.message);
-    else { toast.success("Complexantes padrão inseridos!"); load(); }
+    else { toast.success(`✅ ${COMPLEXADORES_PADRAO.length} complexadores inseridos!`); load(); }
+  };
+
+  const seedFaltando = async () => {
+    const { error } = await supabase.from("nutrir_complexadores").insert(complexadoresFaltando);
+    if (error) toast.error("Erro: " + error.message);
+    else { toast.success(`✅ ${complexadoresFaltando.length} complexadores adicionados!`); load(); }
   };
 
   const salvar = async () => {
@@ -91,7 +106,12 @@ export default function Complexadores() {
         <div className="flex gap-2">
           {list.length === 0 && (
             <Button variant="outline" onClick={seedPadrao}>
-              ✨ Popular padrão (TSH / LEG / Life Grow / Bor)
+              ✨ Popular catálogo Fertagro ({COMPLEXADORES_PADRAO.length} itens)
+            </Button>
+          )}
+          {list.length > 0 && complexadoresFaltando.length > 0 && (
+            <Button variant="outline" onClick={seedFaltando}>
+              ➕ Completar catálogo ({complexadoresFaltando.length} faltando)
             </Button>
           )}
           <Button onClick={() => { setEdit({ id: "", nome: "", descricao: "", preco_litro: 0, ativo: true }); setOpen(true); }}>
