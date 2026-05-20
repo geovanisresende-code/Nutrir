@@ -42,7 +42,7 @@ export default function Complexadores() {
       { nome: "LEG", descricao: "Complexante LEG — 6,25% sobre ureia / foliares", preco_litro: 22.0, ativo: true },
       { nome: "Bor", descricao: "Boro complexado líquido — 0,65 L por kg de ácido bórico", preco_litro: 32.0, ativo: true },
     ];
-    const { error } = await supabase.from("nutrir_complexadores").upsert(defaults, { onConflict: "nome" });
+    const { error } = await supabase.from("nutrir_complexadores").insert(defaults);
     if (error) toast.error("Erro ao popular: " + error.message);
     else { toast.success("Complexantes padrão inseridos!"); load(); }
   };

@@ -56,7 +56,7 @@ export default function MateriasPrimas() {
     ].map(r => ({ ...r, organization_id: current.id, fornecedor: null }));
     const { error } = await (supabase as any)
       .from("nutrir_materias_primas")
-      .upsert(defaults, { onConflict: "organization_id,codigo" });
+      .insert(defaults);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "✅ Matérias-primas padrão inseridas!" }); reload(); }
   };
