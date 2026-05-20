@@ -31,7 +31,7 @@
 // ============================================================
 // TIPOS
 // ============================================================
-export type FormulationMode = "n180" | "n180_b" | "n32_foliar" | "n180_micros";
+export type FormulationMode = "n180" | "n180_b" | "n32_foliar" | "n180_micros" | "n32_b" | "npk_solo";
 
 export type AduboBase =
   | "ureia_branca"
@@ -129,6 +129,14 @@ export interface CalcInput {
   // ─── N180 + Micros (NitroPlus) ───
   /** Micros foliares para distribuir nas aplicações foliares (V1/V2, V4/V5, V8). */
   microsFoliar?: MicrosFoliarInput;
+
+  // ─── NPK Solo ───
+  /** Ureia convencional (kg/ha) — modo npk_solo */
+  npkUreiaKgHa?: number;
+  /** MAP convencional (kg/ha) — modo npk_solo */
+  npkMapKgHa?: number;
+  /** KCl convencional (kg/ha) — modo npk_solo */
+  npkKclKgHa?: number;
 }
 
 /** Input dos micros foliares no modo N180+Micros. */
@@ -252,11 +260,11 @@ const BORO_CONC_ACIDO = 0.17;
 const BOR_L_POR_KG_ACIDO = 0.65;
 
 // Boro no sulco (regra fixa do agrônomo)
-const BORO_SULCO_G_HA = 75;          // máx. 75 g/ha de Boro no sulco
+const BORO_SULCO_G_HA = 80;          // 80 g/ha de Boro no sulco (DOCX: 7.5L Bor + 12kg ác. bórico / 1.000L)
 const BORO_SULCO_VAZAO_LHA = 40;     // 40 L/ha de calda no sulco
-// Receita do sulco (por 1.000 L): 400 L água + 7 L Bor + 11 kg ác. bórico + 400 kg ureia + 75 L Life Grow (ou 60 L TSH)
-const BORO_SULCO_AB_KG_POR_1000L = 11;
-const BORO_SULCO_BOR_L_POR_1000L = 7;
+// Receita do sulco (por 1.000 L): 400 L água + 7,5 L Bor + 12 kg ác. bórico + 400 kg ureia + 75 L Life Grow (ou 60 L TSH)
+const BORO_SULCO_AB_KG_POR_1000L = 12;
+const BORO_SULCO_BOR_L_POR_1000L = 7.5;
 
 // Distribuição padrão (% da calda foliar) entre as 3 foliares
 const DIST_FOLIAR = { v1_v2: 1 / 3, v4_v5: 1 / 3, v8: 1 / 3 };
@@ -452,10 +460,10 @@ export function calcularNutrir(input: CalcInput): CalcResult {
   const boroConcAcido = (cfg.acido_borico_b_pct ?? 17) / 100;
   const borLPorKgAcido = cfg.bor_l_por_kg_acido ?? 0.65;
 
-  // ============ Caso N32 foliar ============
-  if (input.modo === "n32_foliar") {
-    return calcularN32(input, precos, estagios);
-  }
+  // ============ Roteamento por modo ============
+  if (input.modo === "n32_foliar") return calcularN32(input, precos, estagios);
+  if (input.modo === "n32_b")     return calcularN32B(input, precos, estagios);
+  if (input.modo === "npk_solo")  return calcularNPKSolo(input, precos);
 
   if (!input.adubo) throw new Error("Selecione o adubo a ser substituído.");
 
@@ -934,6 +942,169 @@ function aplicarMicrosNasAplicacoes(args: {
 
 // ============================================================
 
+// N32+B FOLIAR — N32 + Boro (DOCX item 2.4)
+// ============================================================
+function calcularN32B(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]): CalcResult {
+  // DOCX: 5L N32 × 32% = 1,6kg N +15% = 1,84kg N /45% = 4kg Ureia
+  //       Ureia × 18,75% = LEG | Ureia × 2,5 = calda ureia
+  //       Boro: gBoroHa/1000/17% = kgAcido; kgAcido × 65% = lBor; kgAcido × 2,8 = calda boro
+  //       Total calda/ha = calda ureia + calda boro
+  const cfg = input.motorConfig ?? {};
+  const lProdutoHa = input.doseKgHa;
+  const n32NPct = cfg.n32_n_pct ?? 32;
+  const garantiaGL = input.n32GarantiaGL ?? Math.round(n32NPct * 10);
+  const nKgHa = (lProdutoHa * garantiaGL) / 1000;
+  const nAdjKgHa = nKgHa * 1.15;
+  const ureiaKgHa = nAdjKgHa / 0.45;
+  const caldaUreiaLHa = ureiaKgHa * 2.5;
+  const legLHa = ureiaKgHa * 0.1875;
+  const boroGHa = input.boroGHa ?? 0;
+  const acidoBoricKgHa = boroGHa > 0 ? (boroGHa / 1000) / 0.17 : 0;
+  const borLHa = acidoBoricKgHa * 0.65;
+  const caldaBoroLHa = acidoBoricKgHa * 2.8;
+  const caldaLHa = caldaUreiaLHa + caldaBoroLHa;
+  const caldaTotalL = caldaLHa * input.areaHa;
+  const numAplic = Math.max(1, Math.min(3, input.n32NumAplicacoes ?? 3));
+  const porLHa = caldaLHa / numAplic;
+  const ests: EstagioId[] = (["v1_v2", "v4_v5", "v8"] as EstagioId[]).slice(0, numAplic);
+  const aplicacoes: AplicacaoEstagio[] = ests.map((id, idx) => {
+    const caldaTotalEst = porLHa * input.areaHa;
+    const haPerBatch = porLHa > 0 ? 1000 / porLHa : 0;
+    const ureiaPerBatch = round((ureiaKgHa / numAplic) * haPerBatch, 0);
+    const legPerBatch = round((legLHa / numAplic) * haPerBatch, 1);
+    const abPerBatch = round5((acidoBoricKgHa / numAplic) * haPerBatch);
+    const borPerBatch = round5((borLHa / numAplic) * haPerBatch);
+    const receita: ReceitaItem[] = [
+      { ordem: 1, ingrediente: "Água", quantidade: 400, unidade: "L", instrucao: "Adicionar 40% do volume em água limpa" },
+      ...(abPerBatch > 0 ? [
+        { ordem: 2, ingrediente: "Bor", quantidade: borPerBatch, unidade: "L", instrucao: "Adicionar complexador de Boro" } as ReceitaItem,
+        { ordem: 3, ingrediente: "Ácido Bórico", quantidade: abPerBatch, unidade: "kg", instrucao: "Adicionar e agitar até dissolução" } as ReceitaItem,
+      ] : []),
+      { ordem: 4, ingrediente: "LEG", quantidade: legPerBatch, unidade: "L", instrucao: "Adicionar LEG e agitar" },
+      { ordem: 5, ingrediente: "Ureia", quantidade: ureiaPerBatch, unidade: "kg", instrucao: "Adicionar a Ureia lentamente e agitar" },
+      { ordem: 6, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: "Completar até 1.000 L" },
+    ];
+    return {
+      id, nome: `${idx + 1}ª aplicação (vegetativo/reprodutivo)`,
+      vazaoLHa: round(porLHa, 1), caldaTotalL: round(caldaTotalEst, 0),
+      complexante: "leg" as Complexante,
+      ureiaKg: round((ureiaKgHa / numAplic) * input.areaHa, 0),
+      ureiaKgHa: round(ureiaKgHa / numAplic, 1),
+      complexanteL: round((legLHa / numAplic) * input.areaHa, 1),
+      acidoBoricoKg: round((acidoBoricKgHa / numAplic) * input.areaHa, 1),
+      borL: round((borLHa / numAplic) * input.areaHa, 1),
+      receita,
+    };
+  });
+  const custos: CustoItem[] = [];
+  const ureiaTotal = round5(ureiaKgHa * input.areaHa);
+  if (ureiaTotal > 0) custos.push({ item: "Ureia", quantidade: ureiaTotal, unidade: "kg", precoUnitario: precos.ureia_kg, total: round(ureiaTotal * precos.ureia_kg, 2) });
+  const legTotal = round5(legLHa * input.areaHa);
+  if (legTotal > 0) custos.push({ item: "LEG", quantidade: legTotal, unidade: "L", precoUnitario: precos.leg_l, total: round(legTotal * precos.leg_l, 2) });
+  const abTotal = round5(acidoBoricKgHa * input.areaHa);
+  if (abTotal > 0) custos.push({ item: "Ácido Bórico", quantidade: abTotal, unidade: "kg", precoUnitario: precos.acido_borico_kg, total: round(abTotal * precos.acido_borico_kg, 2) });
+  const borTotal = round5(borLHa * input.areaHa);
+  if (borTotal > 0) custos.push({ item: "Bor", quantidade: borTotal, unidade: "L", precoUnitario: precos.bor_l, total: round(borTotal * precos.bor_l, 2) });
+  const custoTotal = round(custos.reduce((s, c) => s + c.total, 0), 2);
+  const custoPorHa = input.areaHa > 0 ? round(custoTotal / input.areaHa, 2) : 0;
+  const refCustoHa = round(lProdutoHa * precos.n32_cliente_l, 2);
+  const economiaHa = round(refCustoHa - custoPorHa, 2);
+  return {
+    modo: "n32_b" as FormulationMode, nOriginalKgHa: round(nKgHa, 2), nResidualKgHa: round(nAdjKgHa, 2),
+    ureiaKgHa: round(ureiaKgHa, 1), sulfatoLancoKgHa: 0,
+    caldaTotalLHa: round(caldaLHa, 1), caldaTotalL: round(caldaTotalL, 0),
+    possuiMicron: false, vazaoMicronLHa: 0, vazaoEfetivaSulcoLHa: 0,
+    aplicacoes, custos, custoTotal, custoPorHa,
+    comparativo: {
+      referenciaNome: "N32+B (produto cliente)",
+      referenciaCustoHa: refCustoHa,
+      referenciaDescricao: `${lProdutoHa} L/ha N32 × R$ ${precos.n32_cliente_l.toFixed(2)}/L`,
+      nutrirCustoHa: custoPorHa, nutrirDescricao: `NUTRIR Foliar N32+B — ${round(caldaLHa, 0)} L/ha · ${numAplic} aplic.`,
+      economiaPorHa: economiaHa,
+      economiaPercentual: refCustoHa > 0 ? round((economiaHa / refCustoHa) * 100, 1) : 0,
+      economiaTotal: round(economiaHa * input.areaHa, 2),
+    },
+    resumo: `N32+B: ${lProdutoHa} L/ha + ${boroGHa} g/ha B → calda ${round(caldaLHa, 0)} L/ha · ${numAplic} aplic.`,
+  };
+}
+
+// ============================================================
+// NPK SOLO — Adubação Líquida NPK (DOCX item 2.7)
+// ============================================================
+function calcularNPKSolo(input: CalcInput, precos: Precos): CalcResult {
+  // N: -60% → Ureia NUTRIR | P: -50% → MAP Purificado | K: -40% → KCl Branco
+  // Concentração máx: 50% sais / 1.000 L
+  // TSH: 12,5% sobre Ureia + 10% sobre KCl + 10% sobre MAP
+  const cfg = input.motorConfig ?? {};
+  const ureiaConv = input.npkUreiaKgHa ?? 0;
+  const mapConv   = input.npkMapKgHa   ?? 0;
+  const kclConv   = input.npkKclKgHa   ?? 0;
+  const reducaoN = (cfg.reducao_ureia_branca ?? 60) / 100;
+  const nKgHa = ureiaConv * 0.45;
+  const nResid = nKgHa * (1 - reducaoN);
+  const nutrirUreia = nResid / 0.45;
+  const pKgHa = mapConv * 0.60;
+  const nutrirMap = (pKgHa * 0.50) / 0.60; // -50%
+  const kKgHa = kclConv * 0.60;
+  const nutrirKcl = (kKgHa * 0.60) / 0.60; // -40% → restam 60%
+  const totalSais = nutrirUreia + nutrirMap + nutrirKcl;
+  const caldaLHa = Math.max(
+    totalSais * 2,
+    nutrirUreia > 0 ? (nutrirUreia / 300) * 1000 : 0,
+    nutrirKcl   > 0 ? (nutrirKcl   / 200) * 1000 : 0,
+    nutrirMap   > 0 ? (nutrirMap   / 200) * 1000 : 0,
+  );
+  const totalTshLHa = nutrirUreia * 0.125 + nutrirKcl * 0.10 + nutrirMap * 0.10;
+  const haPerBatch = caldaLHa > 0 ? 1000 / caldaLHa : 1;
+  const ureiaPerBatch = round5(nutrirUreia * haPerBatch);
+  const kclPerBatch   = round5(nutrirKcl   * haPerBatch);
+  const mapPerBatch   = round5(nutrirMap   * haPerBatch);
+  const tshPerBatch   = round5(totalTshLHa * haPerBatch);
+  const receita: ReceitaItem[] = [
+    { ordem: 1, ingrediente: "Água", quantidade: 500, unidade: "L", instrucao: "Adicionar 500 L de água limpa (50% do volume)" },
+    { ordem: 2, ingrediente: "TSH", quantidade: tshPerBatch, unidade: "L", instrucao: "Adicionar TSH para complexação dos sais" },
+    ...(kclPerBatch   > 0 ? [{ ordem: 3, ingrediente: "KCl Branco",    quantidade: kclPerBatch,   unidade: "kg", instrucao: "Adicionar KCl e agitar até dissolução" }   as ReceitaItem] : []),
+    ...(mapPerBatch   > 0 ? [{ ordem: 4, ingrediente: "MAP Purificado", quantidade: mapPerBatch,   unidade: "kg", instrucao: "Adicionar MAP e agitar"                  } as ReceitaItem] : []),
+    ...(ureiaPerBatch > 0 ? [{ ordem: 5, ingrediente: "Ureia Branca",   quantidade: ureiaPerBatch, unidade: "kg", instrucao: "Adicionar Ureia POR ÚLTIMO, lentamente"  } as ReceitaItem] : []),
+    { ordem: 6, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: "Completar com água até 1.000 L e misturar" },
+  ];
+  const aplicacoes: AplicacaoEstagio[] = [{
+    id: "sulco" as EstagioId, nome: "Aplicação via drench / nonino / fertirrigação",
+    vazaoLHa: round(caldaLHa, 0), caldaTotalL: round(caldaLHa * input.areaHa, 0),
+    complexante: "tsh" as Complexante,
+    ureiaKg: round5(nutrirUreia * input.areaHa), ureiaKgHa: round(nutrirUreia, 1),
+    complexanteL: round5(totalTshLHa * input.areaHa),
+    receita,
+  }];
+  const custos: CustoItem[] = [];
+  if (nutrirUreia > 0) { const q = round5(nutrirUreia * input.areaHa); custos.push({ item: "Ureia Branca NUTRIR", quantidade: q, unidade: "kg", precoUnitario: precos.ureia_kg, total: round(q * precos.ureia_kg, 2) }); }
+  if (nutrirKcl   > 0) { const q = round5(nutrirKcl   * input.areaHa); custos.push({ item: "KCl Branco NUTRIR",    quantidade: q, unidade: "kg", precoUnitario: 2.80, total: round(q * 2.80, 2) }); }
+  if (nutrirMap   > 0) { const q = round5(nutrirMap   * input.areaHa); custos.push({ item: "MAP Purificado NUTRIR", quantidade: q, unidade: "kg", precoUnitario: 4.50, total: round(q * 4.50, 2) }); }
+  if (totalTshLHa > 0) { const q = round5(totalTshLHa * input.areaHa); custos.push({ item: "TSH", quantidade: q, unidade: "L", precoUnitario: precos.tsh_l, total: round(q * precos.tsh_l, 2) }); }
+  const custoTotal = round(custos.reduce((s, c) => s + c.total, 0), 2);
+  const custoPorHa = input.areaHa > 0 ? round(custoTotal / input.areaHa, 2) : 0;
+  const refCustoHa = round(ureiaConv * precos.ureia_kg + mapConv * 4.50 + kclConv * 2.80, 2);
+  const economiaHa = round(refCustoHa - custoPorHa, 2);
+  return {
+    modo: "npk_solo" as FormulationMode, nOriginalKgHa: round(nKgHa, 1), nResidualKgHa: round(nResid, 1),
+    ureiaKgHa: round(nutrirUreia, 1), sulfatoLancoKgHa: 0,
+    caldaTotalLHa: round(caldaLHa, 0), caldaTotalL: round(caldaLHa * input.areaHa, 0),
+    possuiMicron: false, vazaoMicronLHa: 0, vazaoEfetivaSulcoLHa: 0,
+    aplicacoes, custos, custoTotal, custoPorHa,
+    comparativo: {
+      referenciaNome: "Adubação NPK Convencional",
+      referenciaCustoHa: refCustoHa,
+      referenciaDescricao: `Ureia ${ureiaConv} kg + MAP ${mapConv} kg + KCl ${kclConv} kg /ha`,
+      nutrirCustoHa: custoPorHa, nutrirDescricao: `NPK NUTRIR Líquido — ${round(caldaLHa, 0)} L/ha`,
+      economiaPorHa: economiaHa,
+      economiaPercentual: refCustoHa > 0 ? round((economiaHa / refCustoHa) * 100, 1) : 0,
+      economiaTotal: round(economiaHa * input.areaHa, 2),
+    },
+    resumo: `NPK Solo NUTRIR: ${round(nutrirUreia, 0)} kg Ureia + ${round(nutrirMap, 0)} kg MAP + ${round(nutrirKcl, 0)} kg KCl → ${round(caldaLHa, 0)} L/ha`,
+  };
+}
+
+// ============================================================
 // N32 FOLIAR — calculadora de comparativo
 // ============================================================
 function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]): CalcResult {
@@ -1055,10 +1226,12 @@ export const COMPLEXANTES: { value: Complexante; label: string; pct: number }[] 
 ];
 
 export const MODOS: { value: FormulationMode; label: string; descricao: string }[] = [
-  { value: "n180", label: "Ureia Complexada N180", descricao: "Substituição de adubação nitrogenada de base" },
-  { value: "n180_b", label: "Ureia Complexada N180 + Boro", descricao: "Substituição N + complemento de Boro" },
-  { value: "n180_micros", label: "N180 + Micros (NitroPlus)", descricao: "Ureia complexada + pacote de micronutrientes foliares" },
-  { value: "n32_foliar", label: "Adubação Foliar Nitrogenada (N32)", descricao: "Comparativo de foliares N32" },
+  { value: "n180",       label: "Ureia Complexada N180",          descricao: "Substituição de adubação nitrogenada de base" },
+  { value: "n180_b",     label: "Ureia Complexada N180 + Boro",   descricao: "Substituição N + complemento de Boro" },
+  { value: "n180_micros",label: "N180 + Micros (NitroPlus)",      descricao: "Ureia complexada + pacote de micronutrientes foliares" },
+  { value: "n32_foliar", label: "Adubação Foliar N (N32)",        descricao: "Comparativo de foliares N32 · LEG foliar" },
+  { value: "n32_b",      label: "Adubação Foliar N32 + Boro",     descricao: "N32 foliar + complemento de Boro · LEG + Ácido Bórico" },
+  { value: "npk_solo",   label: "Adubação NPK Solo (Líquido)",    descricao: "N + P + K complexados via drench / nonino / fertirrigação · TSH" },
 ];
 
 /** N entregue (kg/ha) por uma dose de adubo. */
