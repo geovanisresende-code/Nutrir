@@ -31,10 +31,10 @@ const FULLSCREEN_ROUTES = [
 
 /** Bottom nav itens — exibido somente em mobile para usuários rep */
 const BOTTOM_NAV = [
-  { to: "/app/rep",          label: "Início",    icon: LayoutDashboard, end: true },
-  { to: "/app/rep/clientes", label: "Clientes",  icon: Briefcase },
-  { to: "/app/rep/rdv",      label: "RDV",       icon: Receipt },
-  { to: "/app/rep/pedidos",  label: "Pedidos",   icon: ShoppingCart },
+  { to: "/app/rep",          label: "Início",        icon: LayoutDashboard, end: true },
+  { to: "/app/rep/rdv",      label: "RDV",           icon: Receipt },
+  { to: "/app/rep/clientes", label: "Meus Clientes", icon: Briefcase },
+  { to: "/app/rep/pedidos",  label: "Pedidos",       icon: ShoppingCart },
 ];
 
 function MobileBottomNav({ onOpenMenu }: { onOpenMenu: () => void }) {
