@@ -95,6 +95,7 @@ import Colaboradores from "./pages/gestao/Colaboradores";
 import RelatoriosRDV from "./pages/gestao/RelatoriosRDV";
 import BDCulturas from "./pages/gestao/BDCulturas";
 import MotorCalculos from "./pages/gestao/MotorCalculos";
+import MotorCalculosAdmin from "./pages/gestao/MotorCalculosAdmin";
 import Importacoes from "./pages/gestao/Importacoes";
 import Financeiro from "./pages/financeiro/Financeiro";
 import CrmPipeline from "./pages/crm/CrmPipeline";
@@ -227,6 +228,7 @@ const App = () => (
               <Route path="/app/gestao/rdv-relatorios" element={<ProtectedRoute><AppShell><RelatoriosRDV /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/culturas" element={<ProtectedRoute><AppShell><BDCulturas /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/motor-calculos" element={<ProtectedRoute><AppShell><MotorCalculos /></AppShell></ProtectedRoute>} />
+              <Route path="/app/gestao/motor-calculos-admin" element={<ProtectedRoute><AppShell><MotorCalculosAdmin /></AppShell></ProtectedRoute>} />
               <Route path="/app/gestao/importacoes" element={<ProtectedRoute><AppShell><Importacoes /></AppShell></ProtectedRoute>} />
 
               {/* Novos módulos */}
