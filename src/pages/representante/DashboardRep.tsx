@@ -151,113 +151,139 @@ export default function DashboardRep() {
     if (!org || !user) return;
     (async () => {
       setLoading(true);
+      try {
 
-      const { data: rep } = await supabase
-        .from("nutrir_representantes")
-        .select("id")
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const repId = rep?.id ?? null;
-
-      const { count: visitasMes } = await supabase
-        .from("nutrir_visitas")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .gte("data_visita", inicioMes);
-
-      const { data: comissoes } = await supabase
-        .from("nutrir_comissoes")
-        .select("valor,status")
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .gte("mes_referencia", inicioMes);
-      const comissaoPrevista = (comissoes ?? []).reduce(
-        (s, c: any) => s + Number(c.valor || 0), 0,
-      );
-
-      const { data: contas } = await supabase
-        .from("nutrir_contas_receber")
-        .select("id,valor,data_vencimento,status,nutrir_clientes(razao_social)")
-        .eq("organization_id", org.id)
-        .in("status", ["aberto", "vencendo"])
-        .lte("data_vencimento", em15dias)
-        .order("data_vencimento");
-      const contasVencendoValor = (contas ?? []).reduce(
-        (s, c: any) => s + Number(c.valor || 0), 0,
-      );
-
-      const { count: testesAtivos } = await supabase
-        .from("nutrir_campos_teste")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .eq("status", "ativo");
-
-      const { data: pedidos } = await supabase
-        .from("nutrir_pedidos")
-        .select("id,valor_total")
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .gte("created_at", inicioMes);
-      const pedidosValorMes = (pedidos ?? []).reduce(
-        (s, p: any) => s + Number(p.valor_total || 0), 0,
-      );
-
-      let ranking: { posicao: number; total: number } | null = null;
-      if (repId) {
-        const { data: todos } = await supabase
-          .from("nutrir_pedidos")
-          .select("user_id,valor_total")
+        // Representante
+        const { data: rep } = await supabase
+          .from("nutrir_representantes")
+          .select("id")
           .eq("organization_id", org.id)
-          .gte("created_at", inicioMes);
-        if (todos && todos.length > 0) {
-          const map = new Map<string, number>();
-          todos.forEach((r: any) => {
-            if (!r.user_id) return;
-            map.set(r.user_id, (map.get(r.user_id) || 0) + Number(r.valor_total || 0));
-          });
-          const ord = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-          const pos = ord.findIndex(([id]) => id === user.id);
-          if (pos >= 0) ranking = { posicao: pos + 1, total: ord.length };
-        }
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const repId = rep?.id ?? null;
+
+        // Visitas — tabela core, existe
+        const { count: visitasMes } = await supabase
+          .from("nutrir_visitas")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", org.id)
+          .eq("user_id", user.id)
+          .gte("data_visita", inicioMes);
+
+        // Comissões — tabela pode não existir ainda
+        let comissaoPrevista = 0;
+        try {
+          const { data: comissoes } = await supabase
+            .from("nutrir_comissoes")
+            .select("valor")
+            .eq("organization_id", org.id)
+            .eq("user_id", user.id)
+            .gte("mes_referencia", inicioMes);
+          comissaoPrevista = (comissoes ?? []).reduce((s, c: any) => s + Number(c.valor || 0), 0);
+        } catch { /* tabela não existe ainda */ }
+
+        // Contas a receber — tabela pode não existir ainda
+        let contas: any[] = [];
+        let contasVencendoValor = 0;
+        try {
+          const { data: c } = await supabase
+            .from("nutrir_contas_receber")
+            .select("id,valor,data_vencimento,status,nutrir_clientes(razao_social)")
+            .eq("organization_id", org.id)
+            .in("status", ["aberto", "vencendo"])
+            .lte("data_vencimento", em15dias)
+            .order("data_vencimento");
+          contas = c ?? [];
+          contasVencendoValor = contas.reduce((s, c: any) => s + Number(c.valor || 0), 0);
+        } catch { /* tabela não existe ainda */ }
+
+        // Campos de teste — tabela pode não existir ainda
+        let testesAtivos = 0;
+        try {
+          const { count } = await supabase
+            .from("nutrir_campos_teste")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", org.id)
+            .eq("user_id", user.id)
+            .eq("status", "ativo");
+          testesAtivos = count ?? 0;
+        } catch { /* tabela não existe ainda */ }
+
+        // Pedidos — tabela pode não existir ainda
+        let pedidosMes = 0;
+        let pedidosValorMes = 0;
+        let ranking: { posicao: number; total: number } | null = null;
+        try {
+          const { data: pedidos } = await supabase
+            .from("nutrir_pedidos")
+            .select("id,valor_total")
+            .eq("organization_id", org.id)
+            .eq("user_id", user.id)
+            .gte("created_at", inicioMes);
+          pedidosMes = (pedidos ?? []).length;
+          pedidosValorMes = (pedidos ?? []).reduce((s, p: any) => s + Number(p.valor_total || 0), 0);
+
+          if (repId) {
+            const { data: todos } = await supabase
+              .from("nutrir_pedidos")
+              .select("user_id,valor_total")
+              .eq("organization_id", org.id)
+              .gte("created_at", inicioMes);
+            if (todos && todos.length > 0) {
+              const map = new Map<string, number>();
+              todos.forEach((r: any) => {
+                if (!r.user_id) return;
+                map.set(r.user_id, (map.get(r.user_id) || 0) + Number(r.valor_total || 0));
+              });
+              const ord = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+              const pos = ord.findIndex(([id]) => id === user.id);
+              if (pos >= 0) ranking = { posicao: pos + 1, total: ord.length };
+            }
+          }
+        } catch { /* tabela não existe ainda */ }
+
+        // Clientes e visitas — tabelas core
+        const { data: clientes } = await supabase
+          .from("nutrir_clientes")
+          .select("id,razao_social,cidade,uf")
+          .eq("organization_id", org.id)
+          .eq("ativo", true)
+          .limit(50);
+        const { data: vAll } = await supabase
+          .from("nutrir_visitas")
+          .select("cliente_id,data_visita")
+          .eq("organization_id", org.id)
+          .eq("user_id", user.id)
+          .order("data_visita", { ascending: false });
+        const ultima = new Map<string, string>();
+        (vAll ?? []).forEach((v: any) => {
+          if (v.cliente_id && !ultima.has(v.cliente_id)) ultima.set(v.cliente_id, v.data_visita);
+        });
+        const sugeridas = (clientes ?? [])
+          .map((c: any) => ({ ...c, ultima: ultima.get(c.id) ?? null }))
+          .sort((a, b) => (a.ultima ?? "0").localeCompare(b.ultima ?? "0"))
+          .slice(0, 5);
+
+        setKpis({
+          visitasMes: visitasMes ?? 0,
+          comissaoPrevista,
+          contasVencendo: contas.length,
+          contasVencendoValor,
+          testesAtivos,
+          pedidosMes,
+          pedidosValorMes,
+          ranking,
+        });
+        setProximasVisitas(sugeridas);
+        setContasUrgentes(contas);
+
+      } catch (err) {
+        console.error("[DashboardRep]", err);
+        // Mesmo com erro geral, mostra dashboard com zeros
+        setKpis({ visitasMes: 0, comissaoPrevista: 0, contasVencendo: 0, contasVencendoValor: 0, testesAtivos: 0, pedidosMes: 0, pedidosValorMes: 0, ranking: null });
+      } finally {
+        setLoading(false);
       }
-
-      const { data: clientes } = await supabase
-        .from("nutrir_clientes")
-        .select("id,razao_social,cidade,uf")
-        .eq("organization_id", org.id)
-        .eq("ativo", true)
-        .limit(50);
-      const { data: vAll } = await supabase
-        .from("nutrir_visitas")
-        .select("cliente_id,data_visita")
-        .eq("organization_id", org.id)
-        .eq("user_id", user.id)
-        .order("data_visita", { ascending: false });
-      const ultima = new Map<string, string>();
-      (vAll ?? []).forEach((v: any) => {
-        if (v.cliente_id && !ultima.has(v.cliente_id)) ultima.set(v.cliente_id, v.data_visita);
-      });
-      const sugeridas = (clientes ?? [])
-        .map((c: any) => ({ ...c, ultima: ultima.get(c.id) ?? null }))
-        .sort((a, b) => (a.ultima ?? "0").localeCompare(b.ultima ?? "0"))
-        .slice(0, 5);
-
-      setKpis({
-        visitasMes: visitasMes ?? 0,
-        comissaoPrevista,
-        contasVencendo: contas?.length ?? 0,
-        contasVencendoValor,
-        testesAtivos: testesAtivos ?? 0,
-        pedidosMes: pedidos?.length ?? 0,
-        pedidosValorMes,
-        ranking,
-      });
-      setProximasVisitas(sugeridas);
-      setContasUrgentes(contas ?? []);
-      setLoading(false);
     })();
   }, [org, user, inicioMes, em15dias]);
 
