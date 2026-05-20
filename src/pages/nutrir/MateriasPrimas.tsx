@@ -53,6 +53,13 @@ export default function MateriasPrimas() {
       { codigo: "MAP", nome: "MAP Purificado",       preco_atual: 4.50, unidade_preco: "kg", observacoes: "12% N · 60% P2O5", ativo: true },
       { codigo: "KCL", nome: "KCl Branco",           preco_atual: 2.80, unidade_preco: "kg", observacoes: "60% K2O", ativo: true },
       { codigo: "ACB", nome: "Ácido Bórico",         preco_atual: 18.0, unidade_preco: "kg", observacoes: "17% B", ativo: true },
+      { codigo: "SMN", nome: "Sulfato de Manganês",  preco_atual: 8.50, unidade_preco: "kg", observacoes: "31% Mn", ativo: true },
+      { codigo: "SZN", nome: "Sulfato de Zinco",     preco_atual: 9.00, unidade_preco: "kg", observacoes: "22% Zn", ativo: true },
+      { codigo: "SCU", nome: "Sulfato de Cobre",     preco_atual: 12.0, unidade_preco: "kg", observacoes: "25% Cu", ativo: true },
+      { codigo: "SCO", nome: "Sulfato de Cobalto",   preco_atual: 85.0, unidade_preco: "kg", observacoes: "21% Co", ativo: true },
+      { codigo: "MOL", nome: "Molibdato de Amônio",  preco_atual: 45.0, unidade_preco: "kg", observacoes: "54% Mo", ativo: true },
+      { codigo: "SMG", nome: "Sulfato de Magnésio",  preco_atual: 3.50, unidade_preco: "kg", observacoes: "10% Mg", ativo: true },
+      { codigo: "SFE", nome: "Sulfato Ferroso",      preco_atual: 4.00, unidade_preco: "kg", observacoes: "20% Fe", ativo: true },
     ].map(r => ({ ...r, organization_id: current.id, fornecedor: null }));
     const { error } = await (supabase as any)
       .from("nutrir_materias_primas")
