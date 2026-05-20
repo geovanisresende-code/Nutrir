@@ -35,11 +35,12 @@ const isGroup = (i: AnyItem): i is GroupItem => "children" in i;
 const repSection: NavSection = {
   title: "Área do Representante",
   items: [
-    { to: "/app/rep",            label: "Início",     icon: LayoutDashboard, end: true },
-    { to: "/app/rep/clientes",   label: "Clientes",   icon: Briefcase },
-    { to: "/app/rep/visitas",    label: "Visitas",    icon: ClipboardList },
-    { to: "/app/rep/pedidos",    label: "Pedidos",    icon: ShoppingCart },
-    { to: "/app/rep/financeiro", label: "Financeiro", icon: DollarSign },
+    { to: "/app/rep",            label: "Início",        icon: LayoutDashboard, end: true },
+    { to: "/app/rep/clientes",   label: "Clientes",      icon: Briefcase },
+    { to: "/app/rep/visitas",    label: "Visitas",       icon: ClipboardList },
+    { to: "/app/rep/pedidos",    label: "Pedidos",       icon: ShoppingCart },
+    { to: "/app/rep/rdv",        label: "RDV – Despesas",icon: Receipt, badge: "rdv" },
+    { to: "/app/rep/financeiro", label: "Financeiro",    icon: DollarSign },
     {
       label: "Ferramentas",
       icon: FlaskConical,

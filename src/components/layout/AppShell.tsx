@@ -2,12 +2,15 @@ import { ReactNode, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { Topbar } from "./Topbar";
 import { useOrg } from "@/contexts/OrganizationContext";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, NavLink, useLocation } from "react-router-dom";
 import { LimitsBanner } from "@/components/LimitsBanner";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { BackButton } from "./BackButton";
 import { RouteGuard } from "@/components/RouteGuard";
+import { LayoutDashboard, Briefcase, Receipt, ShoppingCart, Menu } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { usePosition } from "@/hooks/usePosition";
 
 /**
  * AppShell — Layout principal estilo Sensix:
@@ -25,6 +28,57 @@ const FULLSCREEN_ROUTES = [
   "/app/satelite",
   "/app/heatmap",
 ];
+
+/** Bottom nav itens — exibido somente em mobile para usuários rep */
+const BOTTOM_NAV = [
+  { to: "/app/rep",          label: "Início",    icon: LayoutDashboard, end: true },
+  { to: "/app/rep/clientes", label: "Clientes",  icon: Briefcase },
+  { to: "/app/rep/rdv",      label: "RDV",       icon: Receipt },
+  { to: "/app/rep/pedidos",  label: "Pedidos",   icon: ShoppingCart },
+];
+
+function MobileBottomNav({ onOpenMenu }: { onOpenMenu: () => void }) {
+  const { pathname } = useLocation();
+  const { position } = usePosition();
+
+  // Só mostra bottom nav para representantes
+  if (!position || position === "cliente") return null;
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar border-t border-sidebar-border flex items-stretch h-16 safe-area-pb">
+      {BOTTOM_NAV.map(({ to, label, icon: Icon, end }) => {
+        const active = end ? pathname === to : pathname.startsWith(to);
+        return (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
+              active
+                ? "text-primary"
+                : "text-sidebar-foreground/50 hover:text-sidebar-foreground"
+            )}
+          >
+            <Icon className={cn("h-5 w-5", active && "text-primary")} />
+            <span>{label}</span>
+            {label === "RDV" && (
+              <span className="absolute top-2 right-[calc(25%-8px)] h-1.5 w-1.5 rounded-full bg-primary" />
+            )}
+          </NavLink>
+        );
+      })}
+      {/* Botão Menu abre o drawer completo */}
+      <button
+        onClick={onOpenMenu}
+        className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+      >
+        <Menu className="h-5 w-5" />
+        <span>Menu</span>
+      </button>
+    </nav>
+  );
+}
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
   const { current, loading, orgs } = useOrg();
@@ -57,10 +111,17 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         <Topbar onOpenSidebar={() => setSheetOpen(true)} />
         {!fullscreen && <OnboardingBanner />}
         {!fullscreen && <LimitsBanner />}
-        <div className={fullscreen ? "flex-1 min-w-0 min-h-0 relative" : "flex-1 min-w-0"}>
+        {/* Espaço extra no mobile para não cobrir conteúdo com o bottom nav */}
+        <div className={cn(
+          fullscreen ? "flex-1 min-w-0 min-h-0 relative" : "flex-1 min-w-0",
+          "pb-16 md:pb-0"
+        )}>
           <RouteGuard>{children}</RouteGuard>
         </div>
       </main>
+
+      {/* Bottom navigation — mobile only */}
+      <MobileBottomNav onOpenMenu={() => setSheetOpen(true)} />
     </div>
   );
 };

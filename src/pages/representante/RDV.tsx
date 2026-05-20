@@ -730,7 +730,7 @@ export default function RDV() {
         }
       />
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 md:p-6 space-y-4">
         <VendedorBadge />
 
         {/* Alerta antifraude IA */}
@@ -822,13 +822,13 @@ export default function RDV() {
 
         {/* Gráfico mensal */}
         <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-sm">Despesas — últimos 6 meses</h3>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <h3 className="font-semibold text-sm flex-1 min-w-[160px]">Despesas — últimos 6 meses</h3>
             <Button size="sm" variant="outline" onClick={exportarCSV}>
               <Download className="h-3.5 w-3.5 mr-1" /> CSV
             </Button>
             <Button size="sm" variant="outline" onClick={exportarContabil} className="border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-              <Download className="h-3.5 w-3.5 mr-1" /> CSV contábil
+              <Download className="h-3.5 w-3.5 mr-1" /> Contábil
             </Button>
             <Button size="sm" variant="outline" onClick={exportarExcel} className="border-blue-300 text-blue-700 hover:bg-blue-50">
               <Download className="h-3.5 w-3.5 mr-1" /> Excel
@@ -857,52 +857,97 @@ export default function RDV() {
               {meus.length === 0 ? (
                 <div className="p-6 text-sm text-muted-foreground">Nenhuma despesa lançada ainda.</div>
               ) : (
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>Data</TableHead><TableHead>Categoria</TableHead>
-                    <TableHead>Local</TableHead>
-                    <TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
+                <>
+                  {/* Versão mobile: cards empilhados */}
+                  <div className="md:hidden divide-y divide-border">
                     {meus.map((i) => (
-                      <TableRow key={i.id}>
-                        <TableCell className="text-xs">{i.data}</TableCell>
-                        <TableCell className="capitalize">
-                          {i.categoria}
-                          {i.categoria === "combustivel" && i.combustivel_tipo && (
-                            <span className="text-xs text-muted-foreground ml-1">({i.combustivel_tipo})</span>
+                      <div key={i.id} className="p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant={STATUS_COLORS[i.status]} className="shrink-0 text-[10px]">{i.status}</Badge>
+                            <span className="text-xs text-muted-foreground shrink-0">{i.data}</span>
+                            <span className="capitalize text-sm font-medium truncate">{i.categoria}</span>
+                          </div>
+                          <span className="font-bold text-sm shrink-0">{fmt(Number(i.valor))}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {i.categoria === "hospedagem" && i.hotel_nome ? i.hotel_nome : (i.descricao ?? "")}
+                          {[i.cidade, i.uf].filter(Boolean).length > 0 && (
+                            <span className="ml-1 opacity-70">· {[i.cidade, i.uf].filter(Boolean).join("/")}</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-xs">{[i.cidade, i.uf].filter(Boolean).join("/") || "—"}</TableCell>
-                        <TableCell className="max-w-xs truncate text-sm">
-                          {i.categoria === "hospedagem" && i.hotel_nome ? i.hotel_nome : (i.descricao ?? "—")}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{fmt(Number(i.valor))}</TableCell>
-                        <TableCell><Badge variant={STATUS_COLORS[i.status]}>{i.status}</Badge></TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        </div>
+                        {(i.cupom_path || (i.user_id === user?.id && i.status === "rascunho")) && (
+                          <div className="flex items-center gap-1 pt-0.5">
                             {i.cupom_path && (
-                              <Button size="icon" variant="ghost" onClick={() => verCupom(i.cupom_path)} title="Ver cupom">
-                                <FileText className="h-4 w-4" />
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => verCupom(i.cupom_path)}>
+                                <FileText className="h-3.5 w-3.5 mr-1" /> Cupom
                               </Button>
                             )}
                             {i.user_id === user?.id && i.status === "rascunho" && (
                               <>
-                                <Button size="icon" variant="ghost" onClick={() => enviar(i.id)} title="Enviar">
-                                  <Send className="h-4 w-4 text-primary" />
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => enviar(i.id)}>
+                                  <Send className="h-3.5 w-3.5 mr-1" /> Enviar
                                 </Button>
-                                <Button size="icon" variant="ghost" onClick={() => remover(i.id)} title="Excluir">
-                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive" onClick={() => remover(i.id)}>
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
                                 </Button>
                               </>
                             )}
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        )}
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  {/* Versão desktop: tabela */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Data</TableHead><TableHead>Categoria</TableHead>
+                        <TableHead>Local</TableHead>
+                        <TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {meus.map((i) => (
+                          <TableRow key={i.id}>
+                            <TableCell className="text-xs">{i.data}</TableCell>
+                            <TableCell className="capitalize">
+                              {i.categoria}
+                              {i.categoria === "combustivel" && i.combustivel_tipo && (
+                                <span className="text-xs text-muted-foreground ml-1">({i.combustivel_tipo})</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs">{[i.cidade, i.uf].filter(Boolean).join("/") || "—"}</TableCell>
+                            <TableCell className="max-w-xs truncate text-sm">
+                              {i.categoria === "hospedagem" && i.hotel_nome ? i.hotel_nome : (i.descricao ?? "—")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{fmt(Number(i.valor))}</TableCell>
+                            <TableCell><Badge variant={STATUS_COLORS[i.status]}>{i.status}</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {i.cupom_path && (
+                                  <Button size="icon" variant="ghost" onClick={() => verCupom(i.cupom_path)} title="Ver cupom">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {i.user_id === user?.id && i.status === "rascunho" && (
+                                  <>
+                                    <Button size="icon" variant="ghost" onClick={() => enviar(i.id)} title="Enviar">
+                                      <Send className="h-4 w-4 text-primary" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={() => remover(i.id)} title="Excluir">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent></Card>
           </TabsContent>
