@@ -374,10 +374,10 @@ function calcularSubstituicao(adubo: AduboBase, doseKgHa: number, cfg: Record<st
   //   200–300 kg/ha → substituição completa também (limite de substituição total)
   //   > 300 kg/ha  → 150 kg à lanço + converte restante (reduz N 50%)
   //   > 400 kg/ha  → 200 kg à lanço (máx) + converte restante (reduz N 50%)
-  const limiteSubstTotal = cfg.sulfato_limite_parcial ?? 300; // ≤ este → subst. completa
+  const limiteSubstTotal = cfg.sulfato_limite_parcial ?? 300; // < este → subst. completa; >= este → parcial
   const limiteMaximoLanco = cfg.sulfato_limite_maximo  ?? 200; // kg máx à lanço quando > 400
   let sulfatoLanco = 0;
-  if (doseKgHa <= limiteSubstTotal) {
+  if (doseKgHa < limiteSubstTotal) {
     sulfatoLanco = 0; // substituição completa — nada fica à lanço
   } else if (doseKgHa <= 400) {
     sulfatoLanco = 150; // 150 kg à lanço, restante vira N180
