@@ -939,12 +939,14 @@ function aplicarMicrosNasAplicacoes(args: {
 function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]): CalcResult {
   // Entradas:
   //   doseKgHa = L/ha do produto N32 do cliente
-  //   n32GarantiaGL = garantia do N32 (g de N por L). Default 380.
+  //   n32GarantiaGL = garantia do N32 (g de N por L). DOCX: 5L × 32% = 1,6kg N → 320 g/L
   //   n32Intensidade = "fraca" | "padrao" | "forte" (default "forte").
   const cfg = input.motorConfig ?? {};
   const ureiaPctVol = (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
   const lProdutoHa = input.doseKgHa;
-  const garantiaGL = input.n32GarantiaGL ?? 380;
+  // n32_n_pct do motor config (padrão 32%) → garantia em g/L (densidade ≈ 1 kg/L → 32% = 320 g/L)
+  const n32NPct = cfg.n32_n_pct ?? 32;
+  const garantiaGL = input.n32GarantiaGL ?? Math.round(n32NPct * 10); // 320 g/L conforme DOCX
   const intensidade: IntensidadeLEG = input.n32Intensidade ?? "forte";
 
   // 1) kg.N/ha aplicados pelo N32 do cliente

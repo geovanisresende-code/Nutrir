@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ClipboardList, DollarSign, AlertCircle, TestTube, Trophy, ShoppingCart,
-  Receipt, MapPin, ArrowRight, Calculator, Users, TrendingUp,
+  Receipt, MapPin, ArrowRight, Calculator, Users, TrendingUp, FileText,
 } from "lucide-react";
 
 const fmtBRL = (n: number) =>
