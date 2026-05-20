@@ -43,6 +43,9 @@ export default function MateriasPrimas() {
     await (supabase as any).from("nutrir_materias_primas").delete().eq("id", id); reload();
   };
 
+  const MICROS_CODIGOS = ["SMN","SZN","SCU","SCO","MOL","SMG","SFE"];
+  const temMicros = data.some(r => MICROS_CODIGOS.includes(r.codigo ?? ""));
+
   const seedPadrao = async () => {
     if (!current) return;
     const defaults = [
@@ -68,6 +71,24 @@ export default function MateriasPrimas() {
     else { toast({ title: "✅ Matérias-primas padrão inseridas!" }); reload(); }
   };
 
+  const seedMicros = async () => {
+    if (!current) return;
+    const micros = [
+      { codigo: "SMN", nome: "Sulfato de Manganês",  preco_atual: 8.50, unidade_preco: "kg", observacoes: "31% Mn", ativo: true },
+      { codigo: "SZN", nome: "Sulfato de Zinco",     preco_atual: 9.00, unidade_preco: "kg", observacoes: "22% Zn", ativo: true },
+      { codigo: "SCU", nome: "Sulfato de Cobre",     preco_atual: 12.0, unidade_preco: "kg", observacoes: "25% Cu", ativo: true },
+      { codigo: "SCO", nome: "Sulfato de Cobalto",   preco_atual: 85.0, unidade_preco: "kg", observacoes: "21% Co", ativo: true },
+      { codigo: "MOL", nome: "Molibdato de Amônio",  preco_atual: 45.0, unidade_preco: "kg", observacoes: "54% Mo", ativo: true },
+      { codigo: "SMG", nome: "Sulfato de Magnésio",  preco_atual: 3.50, unidade_preco: "kg", observacoes: "10% Mg", ativo: true },
+      { codigo: "SFE", nome: "Sulfato Ferroso",      preco_atual: 4.00, unidade_preco: "kg", observacoes: "20% Fe", ativo: true },
+    ].map(r => ({ ...r, organization_id: current.id, fornecedor: null }));
+    const { error } = await (supabase as any)
+      .from("nutrir_materias_primas")
+      .insert(micros);
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else { toast({ title: "✅ Micronutrientes inseridos! (Mn, Zn, Cu, Co, Mo, Mg, Fe)" }); reload(); }
+  };
+
   return (
     <>
       <CrudList
@@ -75,9 +96,13 @@ export default function MateriasPrimas() {
         data={data} loading={loading} searchKeys={["nome","codigo","fornecedor"]}
         headers={["Código","Nome","Fornecedor","Preço","Ativo","Ações"]}
         onNew={() => { setEdit({ ativo: true, unidade_preco: "kg" }); setOpen(true); }}
-        toolbar={data.length === 0 ? (
-          <Button variant="outline" onClick={seedPadrao}>✨ Popular padrão</Button>
-        ) : undefined}
+        toolbar={
+          data.length === 0
+            ? <Button variant="outline" onClick={seedPadrao}>✨ Popular padrão</Button>
+            : !temMicros
+            ? <Button variant="outline" onClick={seedMicros}>🧪 Adicionar micronutrientes (Mn, Zn, Cu, Co, Mo, Mg, Fe)</Button>
+            : undefined
+        }
         renderRow={(r) => (<>
           <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{r.codigo ?? "—"}</td>
           <td className="px-4 py-2 font-medium">{r.nome}</td>
