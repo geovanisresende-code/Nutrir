@@ -122,6 +122,10 @@ export interface CalcInput {
   /** N32 foliar — número de aplicações (1 a 3). Padrão 3. */
   n32NumAplicacoes?: number;
 
+  /** Parâmetros do motor de cálculos (Supabase nutrir_motor_config). Quando fornecido,
+   *  substitui as constantes hardcoded (reduções, complexantes, preços padrão). */
+  motorConfig?: Record<string, number>;
+
   // ─── N180 + Micros (NitroPlus) ───
   /** Micros foliares para distribuir nas aplicações foliares (V1/V2, V4/V5, V8). */
   microsFoliar?: MicrosFoliarInput;
@@ -236,7 +240,8 @@ const N_CONC: Record<AduboBase, number> = {
   nitrato_amonio: 0.33,
 };
 
-const COMPLEX_PCT: Record<Complexante, number> = {
+/** Fallback constants (used when motorConfig not provided) */
+const COMPLEX_PCT_DEFAULT: Record<Complexante, number> = {
   tsh: 0.06,
   life_grow: 0.075,
   leg: 0.025,
@@ -256,6 +261,32 @@ const BORO_SULCO_BOR_L_POR_1000L = 7;
 // Distribuição padrão (% da calda foliar) entre as 3 foliares
 const DIST_FOLIAR = { v1_v2: 1 / 3, v4_v5: 1 / 3, v8: 1 / 3 };
 const MIN_FOLIAR = 50; // L/ha — pode ser quebrado se calda foliar total < 100
+
+// ============================================================
+// MOTOR CONFIG HELPERS
+// ============================================================
+
+/** Constrói o mapa COMPLEX_PCT a partir do motorConfig (fallback → constantes hardcoded). */
+function getComplexPct(cfg: Record<string, number>): Record<Complexante, number> {
+  const ureiaPct = (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
+  return {
+    tsh:       ((cfg.tsh_pct_ureia      ?? 15)    / 100) * ureiaPct,
+    life_grow: ((cfg.lifegrow_pct_ureia ?? 18.75)  / 100) * ureiaPct,
+    leg:       ((cfg.leg_pct_ureia      ?? 6.25)   / 100) * ureiaPct,
+  };
+}
+
+/** Extrai preços do motorConfig e mescla com PRECOS_DEFAULT e input.precos. */
+function buildPrecos(cfg: Record<string, number>, override?: Partial<Precos>): Precos {
+  const fromCfg: Partial<Precos> = {};
+  if (cfg.preco_ureia_kg)       fromCfg.ureia_kg        = cfg.preco_ureia_kg;
+  if (cfg.preco_tsh_l)          fromCfg.tsh_l            = cfg.preco_tsh_l;
+  if (cfg.preco_lifegrow_l)     fromCfg.life_grow_l      = cfg.preco_lifegrow_l;
+  if (cfg.preco_leg_l)          fromCfg.leg_l             = cfg.preco_leg_l;
+  if (cfg.preco_acido_borico_kg) fromCfg.acido_borico_kg = cfg.preco_acido_borico_kg;
+  if (cfg.preco_bor_l)          fromCfg.bor_l             = cfg.preco_bor_l;
+  return { ...PRECOS_DEFAULT, ...fromCfg, ...(override || {}) };
+}
 
 // ============================================================
 // HELPERS
@@ -318,30 +349,37 @@ interface SubstResult {
   sulfatoLancoKgHa: number;
 }
 
-function calcularSubstituicao(adubo: AduboBase, doseKgHa: number): SubstResult {
+function calcularSubstituicao(adubo: AduboBase, doseKgHa: number, cfg: Record<string, number> = {}): SubstResult {
   const conc = N_CONC[adubo];
   const nOriginal = doseKgHa * conc;
 
   if (adubo === "ureia_branca") {
-    const ureiaKgHa = doseKgHa * (1 - 0.6);
+    const reducao = (cfg.reducao_ureia_branca ?? 60) / 100;
+    const ureiaKgHa = doseKgHa * (1 - reducao);
     return { nOriginalKgHa: nOriginal, nResidualKgHa: ureiaKgHa * 0.45, ureiaKgHa, sulfatoLancoKgHa: 0 };
   }
   if (adubo === "ureia_protegida") {
-    const ureiaKgHa = doseKgHa * (1 - 0.55);
+    const reducao = (cfg.reducao_ureia_protegida ?? 55) / 100;
+    const ureiaKgHa = doseKgHa * (1 - reducao);
     return { nOriginalKgHa: nOriginal, nResidualKgHa: ureiaKgHa * 0.45, ureiaKgHa, sulfatoLancoKgHa: 0 };
   }
   if (adubo === "nitrato_amonio") {
-    const nResidual = nOriginal * (1 - 0.45);
+    const reducao = (cfg.reducao_nitrato_amonio ?? 45) / 100;
+    const nResidual = nOriginal * (1 - reducao);
     const ureiaKgHa = nResidual / 0.45;
     return { nOriginalKgHa: nOriginal, nResidualKgHa: nResidual, ureiaKgHa, sulfatoLancoKgHa: 0 };
   }
+  // Sulfato de Amônio — regras escalonadas
+  const limiteParcial = cfg.sulfato_limite_parcial ?? 200;
+  const limiteMaximo  = cfg.sulfato_limite_maximo  ?? 200;
   let sulfatoLanco = 0;
-  if (doseKgHa <= 200) sulfatoLanco = doseKgHa;
-  else if (doseKgHa <= 400) sulfatoLanco = 150;
-  else sulfatoLanco = 200;
+  if (doseKgHa <= limiteParcial) sulfatoLanco = doseKgHa;
+  else if (doseKgHa <= limiteParcial * 2) sulfatoLanco = 150;
+  else sulfatoLanco = limiteMaximo;
   const restante = Math.max(0, doseKgHa - sulfatoLanco);
   const nRestante = restante * conc;
-  const nResidual = nRestante * 0.5;
+  const reducaoSulfato = (cfg.reducao_sulfato_parcial ?? 50) / 100;
+  const nResidual = nRestante * reducaoSulfato;
   const ureiaKgHa = nResidual / 0.45;
   return { nOriginalKgHa: nOriginal, nResidualKgHa: nResidual, ureiaKgHa, sulfatoLancoKgHa: sulfatoLanco };
 }
@@ -398,8 +436,13 @@ function distribuirCaldaPratica(
 // CÁLCULO PRINCIPAL
 // ============================================================
 export function calcularNutrir(input: CalcInput): CalcResult {
-  const precos: Precos = { ...PRECOS_DEFAULT, ...(input.precos || {}) };
+  const cfg = input.motorConfig ?? {};
+  const precos: Precos = buildPrecos(cfg, input.precos);
   const estagios = input.estagios ?? ESTAGIOS_DEFAULT;
+  const complexPct = getComplexPct(cfg);
+  const ureiaPctVol  = (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
+  const boroConcAcido = (cfg.acido_borico_b_pct ?? 17) / 100;
+  const borLPorKgAcido = cfg.bor_l_por_kg_acido ?? 0.65;
 
   // ============ Caso N32 foliar ============
   if (input.modo === "n32_foliar") {
@@ -409,10 +452,10 @@ export function calcularNutrir(input: CalcInput): CalcResult {
   if (!input.adubo) throw new Error("Selecione o adubo a ser substituído.");
 
   // 1) Substituição
-  const subst = calcularSubstituicao(input.adubo, input.doseKgHa);
+  const subst = calcularSubstituicao(input.adubo, input.doseKgHa, cfg);
 
   // 2) Calda total
-  const caldaLHa = subst.ureiaKgHa > 0 ? subst.ureiaKgHa / UREIA_PCT_VOL : 0;
+  const caldaLHa = subst.ureiaKgHa > 0 ? subst.ureiaKgHa / ureiaPctVol : 0;
   const caldaTotalL = caldaLHa * input.areaHa;
 
   // 3) Distribuição
@@ -454,9 +497,9 @@ export function calcularNutrir(input: CalcInput): CalcResult {
       const vazaoLHa = distrib[e.id];
       const caldaTotalEst = vazaoLHa * input.areaHa;
       // Ureia e complexante — arredondar para múltiplo de 5 (kg/L total da etapa)
-      const ureiaKg = round5(vazaoLHa * UREIA_PCT_VOL * input.areaHa);
+      const ureiaKg = round5(vazaoLHa * ureiaPctVol * input.areaHa);
       const ureiaKgHa = input.areaHa > 0 ? ureiaKg / input.areaHa : 0;
-      const complexanteL = round5(caldaTotalEst * COMPLEX_PCT[comp]);
+      const complexanteL = round5(caldaTotalEst * complexPct[comp]);
 
       // Boro nesta aplicação (g/ha) — sulco: até 75; foliar: divisão igual
       const boroEstGHa = e.id === "sulco" ? boroSulcoGHa : boroPorFoliarGHa;
@@ -466,8 +509,8 @@ export function calcularNutrir(input: CalcInput): CalcResult {
       let abTotalKg = 0;
       let borTotalL = 0;
       if (input.modo === "n180_b" && boroEstGHa > 0) {
-        abTotalKg = (boroEstGHa / 1000 / BORO_CONC_ACIDO) * input.areaHa;
-        borTotalL = abTotalKg * BOR_L_POR_KG_ACIDO;
+        abTotalKg = (boroEstGHa / 1000 / boroConcAcido) * input.areaHa;
+        borTotalL = abTotalKg * borLPorKgAcido;
         // Arredondamento para múltiplos de 5 (kg/L)
         acidoBoricoKgEst = round5(abTotalKg);
         borLEst = round5(borTotalL);
@@ -494,8 +537,8 @@ export function calcularNutrir(input: CalcInput): CalcResult {
         }
       }
 
-      receita.push({ ordem: ord++, ingrediente: nomeComplex(comp), quantidade: round(batchL * COMPLEX_PCT[comp], 1), unidade: "L", instrucao: `Adicionar ${nomeComplex(comp)} e agitar` });
-      receita.push({ ordem: ord++, ingrediente: "Ureia", quantidade: round(batchL * UREIA_PCT_VOL, 0), unidade: "kg", instrucao: "Adicionar a Ureia POR ÚLTIMO, lentamente e agitar" });
+      receita.push({ ordem: ord++, ingrediente: nomeComplex(comp), quantidade: round(batchL * complexPct[comp], 1), unidade: "L", instrucao: `Adicionar ${nomeComplex(comp)} e agitar` });
+      receita.push({ ordem: ord++, ingrediente: "Ureia", quantidade: round(batchL * ureiaPctVol, 0), unidade: "kg", instrucao: "Adicionar a Ureia POR ÚLTIMO, lentamente e agitar" });
       receita.push({ ordem: ord++, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: `Completar com água até ${batchL.toLocaleString("pt-BR")} L e misturar por 1 hora` });
 
       return {
@@ -554,6 +597,7 @@ export function calcularNutrir(input: CalcInput): CalcResult {
       micros: input.microsFoliar,
       areaHa: input.areaHa,
       precosUreia: precos.ureia_kg,
+      complexPct,
     });
     resumoExtra = " + micros (NitroPlus)";
   }
@@ -605,8 +649,10 @@ function aplicarMicrosNasAplicacoes(args: {
   micros: MicrosFoliarInput;
   areaHa: number;
   precosUreia: number;
+  complexPct?: Record<Complexante, number>;
 }) {
   const { aplicacoes, custos, micros, areaHa, precosUreia } = args;
+  const complexPct = args.complexPct ?? COMPLEX_PCT_DEFAULT;
   // Limite alvo de sais (Ureia + Ác. Bórico + sais micros) sobre o volume da calda.
   // Padrão: 40% (excepcionalmente 45% — usado como teto absoluto).
   const limiteAlvoPct = (micros.limiteSaisPct ?? 40) / 100;
@@ -726,7 +772,7 @@ function aplicarMicrosNasAplicacoes(args: {
       apl.caldaTotalL = round(caldaNova, 0);
       apl.vazaoLHa = roundAplicacaoInteira(apl.vazaoLHa * fatorVolume);
       // Complexante principal (TSH/LIFE GROW/LEG) escala com o volume
-      const compPct = COMPLEX_PCT[apl.complexante];
+      const compPct = complexPct[apl.complexante];
       apl.complexanteL = round5(caldaNova * compPct);
       // Complexantes extras (NitroPlus) escalam também (ligados à calda)
       (apl.complexantesExtraL ?? []).forEach((c) => { c.lTotal = round(c.lTotal * fatorVolume, 1); });
@@ -887,6 +933,8 @@ function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]
   //   doseKgHa = L/ha do produto N32 do cliente
   //   n32GarantiaGL = garantia do N32 (g de N por L). Default 380.
   //   n32Intensidade = "fraca" | "padrao" | "forte" (default "forte").
+  const cfg = input.motorConfig ?? {};
+  const ureiaPctVol = (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
   const lProdutoHa = input.doseKgHa;
   const garantiaGL = input.n32GarantiaGL ?? 380;
   const intensidade: IntensidadeLEG = input.n32Intensidade ?? "forte";
@@ -911,12 +959,12 @@ function calcularN32(input: CalcInput, precos: Precos, _estagios: EstagioRegra[]
     const nome = `${ord}ª aplicação (vegetativo ou reprodutivo)`;
     const vazaoLHa = por;
     const caldaTotalEst = vazaoLHa * input.areaHa;
-    const ureiaKgHa = vazaoLHa * UREIA_PCT_VOL;
+    const ureiaKgHa = vazaoLHa * ureiaPctVol;
     const complexanteL = caldaTotalEst * legPctVol;
     const batchL = 1000;
     const receita: ReceitaItem[] = [
-      { ordem: 1, ingrediente: "Água", quantidade: round(batchL * 0.4, 0), unidade: "L", instrucao: "Adicionar 40% do volume em água limpa" },
-      { ordem: 2, ingrediente: "Ureia", quantidade: round(batchL * UREIA_PCT_VOL, 0), unidade: "kg", instrucao: "Adicionar a Ureia lentamente e agitar" },
+      { ordem: 1, ingrediente: "Água", quantidade: round(batchL * ureiaPctVol, 0), unidade: "L", instrucao: "Adicionar 40% do volume em água limpa" },
+      { ordem: 2, ingrediente: "Ureia", quantidade: round(batchL * ureiaPctVol, 0), unidade: "kg", instrucao: "Adicionar a Ureia lentamente e agitar" },
       { ordem: 3, ingrediente: "LEG", quantidade: legPor1000, unidade: "L", instrucao: `Adicionar LEG (complexação ${intensidade})` },
       { ordem: 4, ingrediente: "Água (até o volume)", quantidade: 0, unidade: "L", instrucao: `Completar com água até ${batchL.toLocaleString("pt-BR")} L` },
     ];

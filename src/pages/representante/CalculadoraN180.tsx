@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useGlobalTable } from "@/lib/nutrir/useNutrirData";
+import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
 import { FlaskConical, ShoppingCart, Droplets } from "lucide-react";
 
 interface Cultura { id: string; nome: string; }
@@ -13,10 +14,7 @@ interface Cultura { id: string; nome: string; }
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: number, d = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
 
-// Química do N180 e K180
-// N180: 180 g N/L → ureia 45% N → 0,400 kg ureia por L
 // K180: 180 g K₂O/L → KCl 60% K₂O → 0,300 kg KCl por L
-const UREIA_KG_PER_L_N180 = 0.180 / 0.45; // 0,400
 const KCL_KG_PER_L_K180  = 0.180 / 0.60; // 0,300
 
 const CULTURAS_FALLBACK = ["Soja","Milho","Cana-de-açúcar","Café","Algodão","Laranja","Arroz","Eucalipto"];
@@ -47,12 +45,14 @@ function PrecoInput({ value, onChange, label, step = "1" }: { value: number; onC
 export default function CalculadoraN180() {
   const navigate = useNavigate();
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
+  const { params, loading: cfgLoading } = useMotorConfig();
+  const [cfgInit, setCfgInit] = useState(false);
 
   const [meta, setMeta] = useState({ produtor: "", fazenda: "", cultura: "Soja", areaHa: 100 });
   const [n180, setN180] = useState({
     doseHa: 175,            // L/ha
     lifeGrowLper1000: 8.75, // L de Life Grow por 1000 L de N180
-    precoUreia: 4000,       // R$/t
+    precoUreia: 4000,       // R$/t (será sobrescrito pelo motor config)
     precoLifeGrow: 25,      // R$/L
   });
   const [k180, setK180] = useState({
@@ -63,9 +63,27 @@ export default function CalculadoraN180() {
   });
   const [volBatelada, setVolBatelada] = useState(6000);
 
+  // ── Inicializa preços a partir do motor config ──────────────
+  useEffect(() => {
+    if (!cfgLoading && !cfgInit && params.length > 0) {
+      const cfg = paramMap(params);
+      if (cfg.preco_ureia_kg)    setN180(p => ({ ...p, precoUreia:   cfg.preco_ureia_kg * 1000 }));
+      if (cfg.preco_lifegrow_l)  setN180(p => ({ ...p, precoLifeGrow: cfg.preco_lifegrow_l }));
+      if (cfg.preco_kcl_kg)      setK180(p => ({ ...p, precoKcl:      cfg.preco_kcl_kg * 1000 }));
+      if (cfg.preco_tsh_l)       setK180(p => ({ ...p, precoTsh:      cfg.preco_tsh_l }));
+      setCfgInit(true);
+    }
+  }, [cfgLoading, cfgInit, params]);
+
+  // Ureia por litro de N180 — vem do motor config (padrão 400 kg/1000L = 0,400 kg/L)
+  const ureiaKgPerLN180 = useMemo(() => {
+    const cfg = paramMap(params);
+    return (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
+  }, [params]);
+
   // ── Cálculos N180 ───────────────────────────────────────────
   const n180c = useMemo(() => {
-    const ureiaKgHa    = UREIA_KG_PER_L_N180 * n180.doseHa;
+    const ureiaKgHa    = ureiaKgPerLN180 * n180.doseHa;
     const lifeGrowLHa  = (n180.lifeGrowLper1000 / 1000) * n180.doseHa;
     const custoUreia   = ureiaKgHa * n180.precoUreia / 1000;
     const custoLG      = lifeGrowLHa * n180.precoLifeGrow;
@@ -75,7 +93,7 @@ export default function CalculadoraN180() {
     const lifeGrowTotal = lifeGrowLHa * meta.areaHa;
     const custoTotal   = custoPorHa * meta.areaHa;
     return { ureiaKgHa, lifeGrowLHa, custoUreia, custoLG, custoPorHa, volTotal, ureiaTotal, lifeGrowTotal, custoTotal };
-  }, [n180, meta]);
+  }, [n180, meta, ureiaKgPerLN180]);
 
   // ── Cálculos K180 ───────────────────────────────────────────
   const k180c = useMemo(() => {

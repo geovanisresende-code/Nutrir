@@ -18,14 +18,14 @@ const fmtKg = (n: number) => `${fmt2(n)} kg`;
 const fmtL = (n: number) => `${fmt2(n)} L`;
 
 // ─── constantes agronômicas ───────────────────────────────────────────────────
-const UREIA_N_PCT = 0.46;          // 46% N ureia convencional
-const N180_N_PCT = 0.45;           // 45% N N180 complexada
-const N180_REDUCAO = 0.40;         // redução de dose: 40% da ureia convencional (60% menos)
+const UREIA_N_PCT        = 0.46;   // 46% N ureia convencional
+const N180_N_KG_PER_L   = 0.180;  // 180 g N por litro de N180 = 0,180 kg N/L
+const UREIA_KG_PER_L_N180 = 0.400; // receita: 400 g ureia por litro de N180
 const ACIDO_BORICO_B_PCT = 0.174;  // ácido bórico: 17,4% B
-const BORAX_B_PCT = 0.113;         // bórax: 11,3% B
-const BOR_COMPLEX_B_PCT = 0.10;    // boro complexado líquido: ~10% B
-const N32_N_PCT = 0.32;            // UAN N32: 32% N (foliar)
-const NITROPLUS_N_PCT = 0.30;      // NitroPlus: ~30% N
+const BORAX_B_PCT        = 0.113;  // bórax: 11,3% B
+const BOR_COMPLEX_B_PCT  = 0.10;   // boro complexado líquido: ~10% B
+const N32_N_PCT          = 0.32;   // UAN N32: 32% N (foliar)
+const NITROPLUS_N_PCT    = 0.30;   // NitroPlus: ~30% N
 
 // ─── campos de resultado estilizados ─────────────────────────────────────────
 function Resultado({ label, valor, destaque = false, cor = "default" }: {
@@ -96,14 +96,38 @@ const ESTAGIOS_N180 = ["Sulco", "V2", "V4", "V6", "V8", "R1"] as const;
 type EstagioN180 = typeof ESTAGIOS_N180[number];
 const PARCELAS_DEFAULT: Record<EstagioN180, number> = { Sulco: 30, V2: 0, V4: 20, V6: 20, V8: 0, R1: 30 };
 
+// Receita de cada variante de N180:
+// fator = redução agronômica de dose relativa à ureia convencional
+// doseAditivoL = litros do aditivo por litro de N180 produzido
+// defaultPrecoAditivo = preço sugerido para o aditivo (R$/L)
+const OPCOES_N180 = {
+  n180:     { nome: "N180 Padrão",   fator: 0.40, doseAditivoL: 0,       defaultPrecoAditivo: 0,
+              aditivo: null,
+              obs: "Ureia complexada — 60% menos perdas por volatilização.",
+              micronObs: null },
+  tsh:      { nome: "N180 TSH",      fator: 0.35, doseAditivoL: 0.00810, defaultPrecoAditivo: 16.5,
+              aditivo: "TSH",
+              obs: "TSH complexado — aplique via Micron no sulco de plantio.",
+              micronObs: "TSH aplica via Micron no sulco. Concentrar 100% no sulco é indicado." },
+  lifegrow: { nome: "N180 Life Grow",fator: 0.38, doseAditivoL: 0.00875, defaultPrecoAditivo: 25.0,
+              aditivo: "Life Grow",
+              obs: "Com bioestimulante — estimula absorção e crescimento radicular.",
+              micronObs: "Life Grow: preferir aplicações via Micron em V4–V6 para melhor absorção." },
+  leg:      { nome: "N180 LEG",      fator: 0.42, doseAditivoL: 0.00900, defaultPrecoAditivo: 22.0,
+              aditivo: "LEG",
+              obs: "Formulação para leguminosas — compatível com inoculante.",
+              micronObs: "LEG: compatível com inoculante. Aplicar no sulco ou via Micron em V2." },
+} as const;
+type OpcaoN180 = keyof typeof OPCOES_N180;
+
 function CalcN180() {
   const [doseN, setDoseN] = useState(30);
   const [area, setArea] = useState(1);
-  const [precoUreia, setPrecoUreia] = useState(2.20);
-  const [precoN180, setPrecoN180] = useState(4.50);
-  const [opcao, setOpcao] = useState<"n180" | "tsh" | "lifegrow" | "leg">("n180");
+  const [precoUreia, setPrecoUreia] = useState(2.20);   // R$/kg
+  const [opcao, setOpcao] = useState<OpcaoN180>("n180");
+  const [precoAditivo, setPrecoAditivo] = useState(16.5); // R$/L (muda conforme opção)
 
-  // Micronizador
+  // Micron
   const [possuiMicron, setPossuiMicron] = useState(false);
   const [vazao, setVazao] = useState(30); // L/ha
 
@@ -114,83 +138,116 @@ function CalcN180() {
   const totalParcelas = ESTAGIOS_N180.reduce((s, e) => s + (parcelas[e] || 0), 0);
   const parcOk = totalParcelas === 100;
 
-  const FATOR_OPCAO: Record<string, { nome: string; fator: number; obs: string; micronObs?: string }> = {
-    n180:     { nome: "N180 Padrão",   fator: 0.40, obs: "Ureia complexada — 60% menos perdas por volatilização" },
-    tsh:      { nome: "N180 TSH",      fator: 0.35, obs: "Complexado para tratamento de sementes — 65% de eficiência vs. ureia",
-                micronObs: "TSH: aplique via micronizador no sulco de plantio. Concentrar 100% no sulco é indicado." },
-    lifegrow: { nome: "N180 LifeGrow", fator: 0.38, obs: "Com bioestimulante — estimula absorção e crescimento radicular",
-                micronObs: "LifeGrow: preferir aplicações via foliar (V4–V6) com micronizador para melhor absorção." },
-    leg:      { nome: "N180 LEG",      fator: 0.42, obs: "Formulação para leguminosas — compatível com inoculante",
-                micronObs: "LEG: compatível com inoculante. Aplicar no sulco ou via micronizador em V2." },
+  const opt = OPCOES_N180[opcao];
+
+  // ── Cálculos ──────────────────────────────────────────────────
+  // Ureia convencional
+  const ureiaKgHa = doseN / UREIA_N_PCT;              // kg ureia/ha
+  const custoUreiaHa = ureiaKgHa * precoUreia;        // R$/ha
+
+  // N180: quantidade em litros (receita: 400g ureia + aditivo + água = 1L N180 com 180g N)
+  const doseNReduzida = doseN * opt.fator;             // kg N/ha com eficiência aumentada
+  const n180LHa = doseNReduzida / N180_N_KG_PER_L;    // L N180/ha necessários
+
+  // Preço do N180 auto-calculado (R$/L):
+  // custo ureia/L N180 + custo aditivo/L N180
+  const precoN180Calc = (UREIA_KG_PER_L_N180 * precoUreia) + (opt.doseAditivoL * precoAditivo);
+  const custoN180Ha = n180LHa * precoN180Calc;        // R$/ha
+
+  const economiaHa = custoUreiaHa - custoN180Ha;
+
+  // Micron: L de N180 por 1.000L de calda
+  const lPor1000L = possuiMicron && vazao > 0 ? (n180LHa / vazao) * 1000 : null;
+
+  // Parcelamento
+  const parcResultados = ESTAGIOS_N180.map((e) => {
+    const lHa = n180LHa * ((parcelas[e] || 0) / 100);
+    return {
+      estagio: e,
+      pct: parcelas[e] || 0,
+      lHa,
+      lTotal: lHa * area,
+      lPor1000L: possuiMicron && vazao > 0 ? (lHa / vazao) * 1000 : null,
+    };
+  });
+
+  // Atualiza preço do aditivo quando troca de opção
+  const trocarOpcao = (k: OpcaoN180) => {
+    setOpcao(k);
+    setPrecoAditivo(OPCOES_N180[k].defaultPrecoAditivo);
   };
-
-  const opt = FATOR_OPCAO[opcao];
-  const ureiaNecessaria = doseN / UREIA_N_PCT;
-  const n180Necessario = ureiaNecessaria * opt.fator;
-  const economiaDose = ureiaNecessaria - n180Necessario;
-  const custoUreia = ureiaNecessaria * precoUreia * area;
-  const custoN180 = n180Necessario * precoN180 * area;
-  const economiaFinanceira = custoUreia - custoN180;
-
-  // Micron: kg de N180 por 1.000L de calda (na vazão informada)
-  const kgPor1000L = possuiMicron && vazao > 0 ? (n180Necessario / vazao) * 1000 : null;
-
-  // Parcelamento: kg N180/ha por estágio
-  const parcResultados = ESTAGIOS_N180.map((e) => ({
-    estagio: e,
-    pct: parcelas[e] || 0,
-    kgHa: n180Necessario * ((parcelas[e] || 0) / 100),
-    kgTotal: n180Necessario * ((parcelas[e] || 0) / 100) * area,
-    kgPor1000L: possuiMicron && vazao > 0
-      ? (n180Necessario * ((parcelas[e] || 0) / 100) / vazao) * 1000
-      : null,
-  }));
 
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-        <strong>N180 — Ureia Complexada.</strong> Reduz perdas por volatilização em até 60%. Selecione a linha e configure micronizador e parcelamento:
+        <strong>N180 — Ureia Complexada.</strong> Receita: 400 g ureia + aditivo + água = 1 L N180 (180 g N/L). Preço calculado automaticamente.
       </div>
 
       {/* Linha de produto */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {Object.entries(FATOR_OPCAO).map(([k, v]) => (
-          <button key={k} onClick={() => setOpcao(k as any)}
-            className={`rounded-lg border p-2.5 text-left transition ${opcao === k ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
-            <div className="text-xs font-bold">{v.nome}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{Math.round((1 - v.fator) * 100)}% de redução</div>
-          </button>
-        ))}
+        {(Object.keys(OPCOES_N180) as OpcaoN180[]).map((k) => {
+          const v = OPCOES_N180[k];
+          return (
+            <button key={k} onClick={() => trocarOpcao(k)}
+              className={`rounded-lg border p-2.5 text-left transition ${opcao === k ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
+              <div className="text-xs font-bold">{v.nome}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{Math.round((1 - v.fator) * 100)}% menos dose</div>
+            </button>
+          );
+        })}
       </div>
       <div className="text-xs text-muted-foreground italic">{opt.obs}</div>
 
-      {/* Entradas básicas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Entradas */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <CampoKg label="Dose de N desejada" value={doseN} onChange={setDoseN} sufixo="kg N/ha" />
         <CampoKg label="Área" value={area} onChange={setArea} sufixo="ha" />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <CampoPreco label="Preço ureia convencional" value={precoUreia} onChange={setPrecoUreia} />
-        <CampoPreco label="Preço N180" value={precoN180} onChange={setPrecoN180} />
+        <CampoPreco label="Preço ureia (R$/kg)" value={precoUreia} onChange={setPrecoUreia} />
+        {opt.aditivo && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Preço {opt.aditivo} (R$/L)</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+              <Input type="number" min={0} step="0.01"
+                value={precoAditivo || ""}
+                onFocus={e => e.target.select()}
+                onChange={e => setPrecoAditivo(parseFloat(e.target.value) || 0)}
+                className="pl-8 pr-8" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">/L</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Toggle micronizador */}
+      {/* Preço N180 auto-calculado */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">Preço N180 calculado automaticamente</div>
+        <div className="text-2xl font-bold font-mono text-emerald-800 mt-0.5">{fmtBRL(precoN180Calc)}/L</div>
+        <div className="text-xs text-emerald-700 mt-1">
+          {UREIA_KG_PER_L_N180} kg ureia × {fmtBRL(precoUreia)}/kg
+          {opt.aditivo && ` + ${opt.doseAditivoL * 1000} mL ${opt.aditivo} × ${fmtBRL(precoAditivo)}/L`}
+        </div>
+      </div>
+
+      {/* Toggle Micron */}
       <div className="border rounded-lg p-3 space-y-3">
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={possuiMicron} onChange={(e) => setPossuiMicron(e.target.checked)} className="rounded" />
-          <span className="text-sm font-medium">Possui micronizador?</span>
+          <span className="text-sm font-medium">Possui Micron?</span>
         </label>
         {possuiMicron && (
           <div className="space-y-3">
-            <CampoKg label="Vazão do micronizador" value={vazao} onChange={setVazao} sufixo="L/ha" />
+            <CampoKg label="Vazão do Micron" value={vazao} onChange={setVazao} sufixo="L/ha" />
             {opt.micronObs && (
               <div className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded p-2">{opt.micronObs}</div>
             )}
-            {kgPor1000L !== null && (
+            {lPor1000L !== null && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">Fórmula para 1.000L de calda</div>
-                <div className="text-2xl font-bold font-mono text-emerald-800 mt-0.5">{fmt2(kgPor1000L)} kg N180 / 1.000L</div>
-                <div className="text-xs text-emerald-700 mt-1">Na vazão de {fmt1(vazao)} L/ha → entrega {fmt2(n180Necessario)} kg N180/ha</div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">Fórmula para 1.000 L de calda no Micron</div>
+                <div className="text-2xl font-bold font-mono text-emerald-800 mt-0.5">{fmt2(lPor1000L)} L N180 / 1.000 L</div>
+                <div className="text-xs text-emerald-700 mt-1">Vazão {fmt1(vazao)} L/ha → entrega {fmt2(n180LHa)} L N180/ha</div>
               </div>
             )}
           </div>
@@ -211,12 +268,10 @@ function CalcN180() {
                 <div key={e} className="space-y-1">
                   <Label className="text-xs font-semibold">{e}</Label>
                   <div className="relative">
-                    <Input
-                      type="number" min={0} max={100} step={5}
+                    <Input type="number" min={0} max={100} step={5}
                       value={parcelas[e] || ""}
                       onChange={(ev) => setParcelas((p) => ({ ...p, [e]: Number(ev.target.value) || 0 }))}
-                      className="pr-7 h-8 text-xs"
-                    />
+                      className="pr-7 h-8 text-xs" />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
                   </div>
                 </div>
@@ -225,17 +280,15 @@ function CalcN180() {
             <div className={`text-xs font-semibold ${parcOk ? "text-emerald-700" : "text-red-600"}`}>
               Total: {totalParcelas}% {parcOk ? "✓" : `— faltam ${100 - totalParcelas}%`}
             </div>
-
-            {/* Tabela de parcelamento */}
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-xs">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left px-3 py-2">Estágio</th>
                     <th className="text-right px-3 py-2">%</th>
-                    <th className="text-right px-3 py-2">kg N180/ha</th>
-                    <th className="text-right px-3 py-2">kg N180 total</th>
-                    {possuiMicron && <th className="text-right px-3 py-2">kg/1.000L</th>}
+                    <th className="text-right px-3 py-2">L N180/ha</th>
+                    <th className="text-right px-3 py-2">L total</th>
+                    {possuiMicron && <th className="text-right px-3 py-2">L/1.000L Micron</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -243,11 +296,11 @@ function CalcN180() {
                     <tr key={r.estagio} className="border-t">
                       <td className="px-3 py-1.5 font-medium">{r.estagio}</td>
                       <td className="px-3 py-1.5 text-right font-mono">{r.pct}%</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-emerald-700">{fmt2(r.kgHa)}</td>
-                      <td className="px-3 py-1.5 text-right font-mono">{fmt2(r.kgTotal)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-emerald-700">{fmt2(r.lHa)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono">{fmt2(r.lTotal)}</td>
                       {possuiMicron && (
                         <td className="px-3 py-1.5 text-right font-mono text-blue-700">
-                          {r.kgPor1000L != null ? fmt2(r.kgPor1000L) : "—"}
+                          {r.lPor1000L != null ? fmt2(r.lPor1000L) : "—"}
                         </td>
                       )}
                     </tr>
@@ -261,17 +314,17 @@ function CalcN180() {
 
       <Separador titulo="Resultado por hectare" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Resultado label="Ureia convencional" valor={fmtKg(ureiaNecessaria)} />
-        <Resultado label={opt.nome} valor={fmtKg(n180Necessario)} cor="green" destaque />
-        <Resultado label="Redução de dose" valor={fmtKg(economiaDose)} cor="amber" />
-        <Resultado label="% de redução" valor={`${fmt1((1 - opt.fator) * 100)}%`} cor="green" />
+        <Resultado label="Ureia convencional" valor={fmtKg(ureiaKgHa)} />
+        <Resultado label={`${opt.nome} (L/ha)`} valor={`${fmt2(n180LHa)} L`} cor="green" destaque />
+        <Resultado label="Custo Ureia/ha" valor={fmtBRL(custoUreiaHa)} cor="red" />
+        <Resultado label={`Custo ${opt.nome}/ha`} valor={fmtBRL(custoN180Ha)} cor="green" />
       </div>
 
       <Separador titulo={`Custo total (${fmt2(area)} ha)`} />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <Resultado label="Custo ureia convencional" valor={fmtBRL(custoUreia)} cor="red" />
-        <Resultado label={`Custo ${opt.nome}`} valor={fmtBRL(custoN180)} cor="green" />
-        <Resultado label="Economia financeira" valor={fmtBRL(economiaFinanceira)} cor={economiaFinanceira >= 0 ? "green" : "red"} destaque />
+        <Resultado label="Custo ureia total" valor={fmtBRL(custoUreiaHa * area)} cor="red" />
+        <Resultado label={`Custo ${opt.nome} total`} valor={fmtBRL(custoN180Ha * area)} cor="green" />
+        <Resultado label="Economia financeira" valor={fmtBRL(economiaHa * area)} cor={economiaHa >= 0 ? "green" : "red"} destaque />
       </div>
     </div>
   );
@@ -283,7 +336,6 @@ function CalcN180B() {
   const [doseB, setDoseB] = useState(1.5);
   const [area, setArea] = useState(1);
   const [precoUreia, setPrecoUreia] = useState(2.20);
-  const [precoN180, setPrecoN180] = useState(4.50);
   const [fonteB, setFonteB] = useState<"acido_borico" | "borax" | "complexado">("acido_borico");
   const [precoBoro, setPrecoBoro] = useState(6.00);
 
@@ -293,18 +345,21 @@ function CalcN180B() {
     complexado:   { nome: "Boro Complexado (10% B)", pct: BOR_COMPLEX_B_PCT,   sufixo: "L/ha" },
   };
 
+  const opt = OPCOES_N180["n180"]; // N180+B usa o padrão (sem aditivo extra)
   const fb = FONTE_B[fonteB];
-  const ureiaNecessaria = doseN / UREIA_N_PCT;
-  const n180Necessario = ureiaNecessaria * N180_REDUCAO;
+  const ureiaKgHa = doseN / UREIA_N_PCT;
+  const doseNReduzida = doseN * opt.fator;
+  const n180LHa = doseNReduzida / N180_N_KG_PER_L;
+  const precoN180Calc = UREIA_KG_PER_L_N180 * precoUreia; // padrão, sem aditivo
   const boroNecessario = doseB / fb.pct;
-  const custoUreia = (ureiaNecessaria * precoUreia + boroNecessario * precoBoro) * area;
-  const custoN180B = (n180Necessario * precoN180 + boroNecessario * precoBoro) * area;
-  const economia = custoUreia - custoN180B;
+  const custoUreiaHa = ureiaKgHa * precoUreia + boroNecessario * precoBoro;
+  const custoN180BHa = n180LHa * precoN180Calc + boroNecessario * precoBoro;
+  const economia = (custoUreiaHa - custoN180BHa) * area;
 
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-        <strong>N180+B — Nitrogênio Complexado + Boro.</strong> Combina a eficiência da ureia complexada com a aplicação de boro para culturas com alta demanda (soja, milho, algodão).
+        <strong>N180+B — Nitrogênio Complexado + Boro.</strong> Combina a eficiência da ureia complexada (180 g N/L) com boro para culturas com alta demanda.
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -325,14 +380,14 @@ function CalcN180B() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <CampoPreco label="Preço ureia convencional" value={precoUreia} onChange={setPrecoUreia} />
-        <CampoPreco label="Preço N180" value={precoN180} onChange={setPrecoN180} />
+      <div className="grid grid-cols-2 gap-3">
+        <CampoPreco label="Preço ureia (R$/kg)" value={precoUreia} onChange={setPrecoUreia} />
         <div className="space-y-1.5">
           <Label className="text-xs">Preço boro (R$/{fb.sufixo.split("/")[1]})</Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
             <Input type="number" min={0} step="0.01" value={precoBoro || ""}
+              onFocus={e => e.target.select()}
               onChange={(e) => setPrecoBoro(parseFloat(e.target.value) || 0)}
               className="pl-8 pr-14" />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">/{fb.sufixo.split("/")[1]}</span>
@@ -340,10 +395,15 @@ function CalcN180B() {
         </div>
       </div>
 
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">N180 calculado (padrão, sem aditivo)</div>
+        <div className="text-lg font-bold font-mono text-emerald-800 mt-0.5">{fmt2(n180LHa)} L/ha · {fmtBRL(precoN180Calc)}/L</div>
+      </div>
+
       <Separador titulo="Resultado por hectare" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Resultado label="Ureia convencional" valor={fmtKg(ureiaNecessaria)} />
-        <Resultado label="N180 necessário" valor={fmtKg(n180Necessario)} cor="green" destaque />
+        <Resultado label="Ureia convencional" valor={fmtKg(ureiaKgHa)} />
+        <Resultado label="N180 necessário" valor={`${fmt2(n180LHa)} L`} cor="green" destaque />
         <Resultado label={`${fb.nome.split(" ")[0]} necessário`} valor={fonteB === "complexado" ? fmtL(boroNecessario) : fmtKg(boroNecessario)} cor="amber" />
         <Resultado label="Boro fornecido" valor={`${fmt2(doseB)} kg B/ha`} />
       </div>
@@ -446,57 +506,85 @@ function CalcN32() {
   );
 }
 
-// ─── calculadora NitroPlus ────────────────────────────────────────────────────
+// ─── calculadora NitroPlus = N180 + Foliar Completa ──────────────────────────
 function CalcNitroPlus() {
   const [doseN, setDoseN] = useState(20);
   const [area, setArea] = useState(1);
-  const [precoNitroPlus, setPrecoNitroPlus] = useState(5.20);
   const [precoUreia, setPrecoUreia] = useState(2.20);
+  const [precoAditivo, setPrecoAditivo] = useState(25.0); // Life Grow R$/L
+  // Foliar completo
+  const [doseFoliar, setDoseFoliar] = useState(1.5);   // L/ha
+  const [precoFoliar, setPrecoFoliar] = useState(18.0); // R$/L
 
-  const nitroPlusNecessario = doseN / NITROPLUS_N_PCT;
-  const ureiaNecessaria = doseN / UREIA_N_PCT;
-  const custoNitroPlus = nitroPlusNecessario * precoNitroPlus * area;
-  const custoUreia = ureiaNecessaria * precoUreia * area;
-  const diff = custoNitroPlus - custoUreia;
+  const opt = OPCOES_N180["lifegrow"]; // NitroPlus usa Life Grow
+  const doseNReduzida = doseN * opt.fator;
+  const n180LHa = doseNReduzida / N180_N_KG_PER_L;
+  const precoN180Calc = (UREIA_KG_PER_L_N180 * precoUreia) + (opt.doseAditivoL * precoAditivo);
+  const custoN180Ha = n180LHa * precoN180Calc;
+  const custoFoliarHa = doseFoliar * precoFoliar;
+  const custoNitroPlusHa = custoN180Ha + custoFoliarHa;
+
+  const ureiaConvKgHa = doseN / UREIA_N_PCT;
+  const custoUreiaHa = ureiaConvKgHa * precoUreia;
 
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-        <strong>NitroPlus — Nitrogênio Estabilizado (30% N).</strong> Formulação com inibidor de urease + inibidor de nitrificação para máxima eficiência em cobertura.
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <CampoKg label="Dose N desejada" value={doseN} onChange={setDoseN} sufixo="kg N/ha" />
-        <CampoKg label="Área" value={area} onChange={setArea} sufixo="ha" />
+        <strong>NitroPlus = N180 (Life Grow) + Foliar Completa.</strong> Combina o N180 com Life Grow para nutrição nitrogenada + pacote foliar multinutriente numa só aplicação.
       </div>
 
       <div className="grid grid-cols-2 gap-3">
+        <CampoKg label="Dose de N desejada" value={doseN} onChange={setDoseN} sufixo="kg N/ha" />
+        <CampoKg label="Área" value={area} onChange={setArea} sufixo="ha" />
+      </div>
+
+      <Separador titulo="N180 Life Grow" />
+      <div className="grid grid-cols-2 gap-3">
+        <CampoPreco label="Preço ureia (R$/kg)" value={precoUreia} onChange={setPrecoUreia} />
         <div className="space-y-1.5">
-          <Label className="text-xs">Preço NitroPlus (R$/kg)</Label>
+          <Label className="text-xs">Preço Life Grow (R$/L)</Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-            <Input type="number" min={0} step="0.01" value={precoNitroPlus || ""}
-              onChange={(e) => setPrecoNitroPlus(parseFloat(e.target.value) || 0)}
-              className="pl-8 pr-10" />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">/kg</span>
+            <Input type="number" step="0.01" value={precoAditivo || ""}
+              onFocus={e => e.target.select()}
+              onChange={e => setPrecoAditivo(parseFloat(e.target.value) || 0)}
+              className="pl-8 pr-8" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">/L</span>
           </div>
         </div>
-        <CampoPreco label="Preço ureia convencional (comparativo)" value={precoUreia} onChange={setPrecoUreia} />
       </div>
 
-      <Separador titulo="Resultado por hectare" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Resultado label="NitroPlus necessário" valor={fmtKg(nitroPlusNecessario)} cor="green" destaque />
-        <Resultado label="Ureia equivalente" valor={fmtKg(ureiaNecessaria)} />
-        <Resultado label="Custo NitroPlus" valor={fmtBRL(custoNitroPlus * (1 / area))} cor="green" />
-        <Resultado label="Custo ureia/ha" valor={fmtBRL(custoUreia * (1 / area))} cor="amber" />
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 opacity-70">N180 calculado</div>
+        <div className="flex gap-4 mt-0.5">
+          <div><span className="text-lg font-bold font-mono text-emerald-800">{fmt2(n180LHa)} L/ha</span><span className="text-xs text-emerald-700 ml-2">{fmtBRL(precoN180Calc)}/L</span></div>
+        </div>
       </div>
 
-      <Separador titulo={`Custo total (${fmt2(area)} ha)`} />
-      <div className="grid grid-cols-3 gap-3">
-        <Resultado label="Custo NitroPlus total" valor={fmtBRL(custoNitroPlus)} cor="green" />
-        <Resultado label="Custo ureia total" valor={fmtBRL(custoUreia)} />
-        <Resultado label={diff >= 0 ? "Custo adicional" : "Economia"} valor={fmtBRL(Math.abs(diff))} cor={diff >= 0 ? "amber" : "green"} destaque />
+      <Separador titulo="Foliar Completo" />
+      <div className="grid grid-cols-2 gap-3">
+        <CampoKg label="Dose foliar" value={doseFoliar} onChange={setDoseFoliar} sufixo="L/ha" />
+        <div className="space-y-1.5">
+          <Label className="text-xs">Preço foliar completo (R$/L)</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+            <Input type="number" step="0.01" value={precoFoliar || ""}
+              onFocus={e => e.target.select()}
+              onChange={e => setPrecoFoliar(parseFloat(e.target.value) || 0)}
+              className="pl-8 pr-8" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">/L</span>
+          </div>
+        </div>
+      </div>
+
+      <Separador titulo={`Resultado (${fmt2(area)} ha)`} />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Resultado label="Custo N180/ha" valor={fmtBRL(custoN180Ha)} cor="green" />
+        <Resultado label="Custo Foliar/ha" valor={fmtBRL(custoFoliarHa)} cor="amber" />
+        <Resultado label="NitroPlus total/ha" valor={fmtBRL(custoNitroPlusHa)} cor="green" destaque />
+        <Resultado label="Ureia conv. total" valor={fmtBRL(custoUreiaHa * area)} cor="red" />
+        <Resultado label="NitroPlus total" valor={fmtBRL(custoNitroPlusHa * area)} cor="green" />
+        <Resultado label={custoUreiaHa > custoNitroPlusHa ? "Economia" : "Custo adicional"} valor={fmtBRL(Math.abs((custoUreiaHa - custoNitroPlusHa) * area))} cor={custoUreiaHa >= custoNitroPlusHa ? "green" : "amber"} destaque />
       </div>
     </div>
   );
