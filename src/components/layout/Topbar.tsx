@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Map, Building2, Search, ChevronsUpDown, Menu, Command } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Map, Building2, Search, ChevronsUpDown, Command } from "lucide-react";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import nutrirLogo from "@/assets/1.png";
 
 interface TopbarProps { onOpenSidebar?: () => void; }
 
@@ -30,12 +30,12 @@ export const Topbar = ({ onOpenSidebar }: TopbarProps) => {
     <header className="topbar-h sticky top-0 z-30 bg-topbar text-topbar-foreground border-b border-topbar-border">
       <div className="h-full flex items-center gap-2 px-4 md:px-5">
 
-        {/* Mobile menu */}
-        <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-white/70 hover:text-white hover:bg-white/10" onClick={onOpenSidebar}>
-          <Menu className="h-4 w-4" />
-        </Button>
+        {/* Logo centralizado — mobile only */}
+        <div className="md:hidden absolute left-1/2 -translate-x-1/2">
+          <img src={nutrirLogo} alt="Nutrir" className="h-8 w-auto object-contain" />
+        </div>
 
-        {/* Nav primary */}
+        {/* Nav primary — desktop only */}
         <nav className="hidden md:flex items-center gap-0.5">
           {primaryNav.map(({ to, label, icon: Icon }) => {
             const active = pathname.startsWith(to);
