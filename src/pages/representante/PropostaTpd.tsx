@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, FileDown, Calculator } from "lucide-react";
+import { ArrowLeft, FileDown } from "lucide-react";
+import { useGlobalTable } from "@/lib/nutrir/useNutrirData";
+
+interface Cultura { id: string; nome: string; }
+const CULTURAS_FALLBACK = ["Cana-de-açúcar","Soja","Milho","Café","Eucalipto","Algodão","Laranja","Arroz"];
 
 // ─── helpers ─────────────────────────────────────────────────
 const R = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
@@ -63,8 +67,31 @@ const empty: Proposta = {
   volBatelada: 6000,
 };
 
+// Helper: Input de preço com prefixo R$ e fix do zero
+function PrecoInput({ label, value, onChange, step = "1" }: { label: string; value: number; onChange: (v: number) => void; step?: string }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center">
+        <span className="text-xs text-muted-foreground px-2 border border-r-0 rounded-l-md h-10 flex items-center bg-muted shrink-0">R$</span>
+        <Input
+          type="number"
+          step={step}
+          value={value || ""}
+          onFocus={e => e.target.select()}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          className="rounded-l-none"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function PropostaTpd() {
   const navigate = useNavigate();
+  const { data: culturasBD } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
+  const listaCulturas = culturasBD.length > 0 ? culturasBD.map(c => c.nome) : CULTURAS_FALLBACK;
+
   const [p, setP] = useState<Proposta>(empty);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [formulaCustom, setFormulaCustom] = useState(false);
@@ -425,9 +452,7 @@ export default function PropostaTpd() {
               <Select value={p.cultura} onValueChange={v => set("cultura", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Cana-de-açúcar","Soja","Milho","Café","Eucalipto","Algodão","Laranja","Arroz"].map(c =>
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  )}
+                  {listaCulturas.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
@@ -456,9 +481,7 @@ export default function PropostaTpd() {
             <Field label="Dose (kg/ha)">
               <Input type="number" value={p.doseKgHa} onChange={e => set("doseKgHa", Number(e.target.value))} />
             </Field>
-            <Field label="Preço (R$/t)">
-              <Input type="number" value={p.precoTon} onChange={e => set("precoTon", Number(e.target.value))} />
-            </Field>
+            <PrecoInput label="Preço (R$/t)" value={p.precoTon} step="100" onChange={v => set("precoTon", v)} />
           </div>
           <div className="grid grid-cols-2 gap-3 pt-1 border-t">
             <div className="text-xs text-muted-foreground">Custo atual: <span className="font-bold text-foreground">{moeda(custoAtualHa)}/ha</span> · Total: <span className="font-bold text-foreground">{moeda(custoAtualTotal)}</span></div>
@@ -469,10 +492,10 @@ export default function PropostaTpd() {
         <Card><CardContent className="pt-4 space-y-3">
           <p className="text-sm font-semibold text-primary">Programa TPD</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Field label="N180 dose (L/ha)"><Input type="number" value={p.n180LHa} onChange={e => set("n180LHa", Number(e.target.value))} /></Field>
-            <Field label="N180 custo (R$/ha)"><Input type="number" value={p.n180CustoHa} onChange={e => set("n180CustoHa", Number(e.target.value))} /></Field>
-            <Field label="K180 dose (L/ha)"><Input type="number" value={p.k180LHa} onChange={e => set("k180LHa", Number(e.target.value))} /></Field>
-            <Field label="K180 custo (R$/ha)"><Input type="number" value={p.k180CustoHa} onChange={e => set("k180CustoHa", Number(e.target.value))} /></Field>
+            <Field label="N180 dose (L/ha)"><Input type="number" value={p.n180LHa || ""} onFocus={e => e.target.select()} onChange={e => set("n180LHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="N180 custo (R$/ha)" value={p.n180CustoHa} step="0.01" onChange={v => set("n180CustoHa", v)} />
+            <Field label="K180 dose (L/ha)"><Input type="number" value={p.k180LHa || ""} onFocus={e => e.target.select()} onChange={e => set("k180LHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="K180 custo (R$/ha)" value={p.k180CustoHa} step="0.01" onChange={v => set("k180CustoHa", v)} />
           </div>
           <div className="grid grid-cols-2 gap-3 pt-1 border-t text-xs text-muted-foreground">
             <div>Custo TPD: <span className="font-bold text-foreground">{moeda(custoTpdHa)}/ha</span> · Total: <span className="font-bold text-foreground">{moeda(custoTpdTotal)}</span></div>
@@ -484,14 +507,14 @@ export default function PropostaTpd() {
         <Card><CardContent className="pt-4 space-y-3">
           <p className="text-sm font-semibold text-primary">Insumos (lista de compra)</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Field label="Ureia (kg/ha)"><Input type="number" value={p.ureiaKgHa} onChange={e => set("ureiaKgHa", Number(e.target.value))} /></Field>
-            <Field label="Ureia (R$/t)"><Input type="number" value={p.ureiaPrecoTon} onChange={e => set("ureiaPrecoTon", Number(e.target.value))} /></Field>
-            <Field label="Life Grow (L/ha)"><Input type="number" value={p.lifeGrowLHa} onChange={e => set("lifeGrowLHa", Number(e.target.value))} /></Field>
-            <Field label="Life Grow (R$/L)"><Input type="number" value={p.lifeGrowPrecoL} onChange={e => set("lifeGrowPrecoL", Number(e.target.value))} /></Field>
-            <Field label="KCl (kg/ha)"><Input type="number" value={p.kclKgHa} onChange={e => set("kclKgHa", Number(e.target.value))} /></Field>
-            <Field label="KCl (R$/t)"><Input type="number" value={p.kclPrecoTon} onChange={e => set("kclPrecoTon", Number(e.target.value))} /></Field>
-            <Field label="TSH (L/ha)"><Input type="number" value={p.tshLHa} onChange={e => set("tshLHa", Number(e.target.value))} /></Field>
-            <Field label="TSH (R$/L)"><Input type="number" value={p.tshPrecoL} onChange={e => set("tshPrecoL", Number(e.target.value))} /></Field>
+            <Field label="Ureia (kg/ha)"><Input type="number" value={p.ureiaKgHa || ""} onFocus={e => e.target.select()} onChange={e => set("ureiaKgHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="Ureia (R$/t)" value={p.ureiaPrecoTon} step="100" onChange={v => set("ureiaPrecoTon", v)} />
+            <Field label="Life Grow (L/ha)"><Input type="number" step="0.01" value={p.lifeGrowLHa || ""} onFocus={e => e.target.select()} onChange={e => set("lifeGrowLHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="Life Grow (R$/L)" value={p.lifeGrowPrecoL} step="0.50" onChange={v => set("lifeGrowPrecoL", v)} />
+            <Field label="KCl (kg/ha)"><Input type="number" value={p.kclKgHa || ""} onFocus={e => e.target.select()} onChange={e => set("kclKgHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="KCl (R$/t)" value={p.kclPrecoTon} step="100" onChange={v => set("kclPrecoTon", v)} />
+            <Field label="TSH (L/ha)"><Input type="number" step="0.01" value={p.tshLHa || ""} onFocus={e => e.target.select()} onChange={e => set("tshLHa", Number(e.target.value))} /></Field>
+            <PrecoInput label="TSH (R$/L)" value={p.tshPrecoL} step="0.50" onChange={v => set("tshPrecoL", v)} />
           </div>
           <Field label="Volume por batelada (L)">
             <Input type="number" value={p.volBatelada} onChange={e => set("volBatelada", Number(e.target.value))} className="max-w-xs" />

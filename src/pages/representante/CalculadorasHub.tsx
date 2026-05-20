@@ -21,7 +21,7 @@ const calculadoras = [
     bg: "bg-sky-50 border-sky-200",
   },
   {
-    to: "/app/nutrir/calculadora-npk",
+    to: "/app/rep/calculadora-n180",
     icon: FlaskConical,
     label: "N180 / K180 (TPD)",
     desc: "Produção de fertilizante líquido na fazenda · N180 + K180 · bateladas · economia",
