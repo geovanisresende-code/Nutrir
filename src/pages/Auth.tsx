@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Satellite, Brain, FlaskConical, Map } from "lucide-react";
-import nutrirLogo from "@/assets/logo-agrociencia.png";
+import nutrirLogo from "@/assets/1.png";
 
 const Auth = () => {
   const [params] = useSearchParams();

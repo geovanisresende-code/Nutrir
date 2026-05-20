@@ -8,7 +8,7 @@ import {
   Database, Layers, Megaphone, TrendingUp, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import nutrirLogo from "@/assets/logo-agrociencia.png";
+import nutrirLogo from "@/assets/1.png";
 import { useState, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePosition } from "@/hooks/usePosition";

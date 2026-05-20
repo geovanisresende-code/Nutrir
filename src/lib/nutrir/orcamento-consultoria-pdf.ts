@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import nutrirLogo from "@/assets/logo-agrociencia.png";
+import nutrirLogo from "@/assets/1.png";
 import { formatBRL, formatNum, type ItemOrcamento, type TotaisOrcamento } from "./orcamento-consultoria-engine";
 
 export interface OrcamentoPDFInput {

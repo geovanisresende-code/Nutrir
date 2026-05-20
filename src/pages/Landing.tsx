@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Map, Brain, Satellite, FlaskConical, Building2, ShieldCheck, Zap, ArrowRight } from "lucide-react";
-import nutrirLogo from "@/assets/logo-agrociencia.png";
+import nutrirLogo from "@/assets/1.png";
 
 const Landing = () => (
   <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>

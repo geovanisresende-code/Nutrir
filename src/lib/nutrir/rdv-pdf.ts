@@ -7,7 +7,7 @@
  */
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import nutrirLogo from "@/assets/logo-agrociencia.png";
+import nutrirLogo from "@/assets/1.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const GREEN: [number, number, number] = [27, 67, 50];
