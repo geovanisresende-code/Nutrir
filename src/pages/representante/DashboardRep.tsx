@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ClipboardList, DollarSign, AlertCircle, TestTube, Trophy, ShoppingCart,
-  Receipt, MapPin, ArrowRight, Calculator, Users, TrendingUp, FileText,
+  Receipt, MapPin, ArrowRight, Calculator, Users, FileText, Brain,
+  Sprout, Map, TrendingUp, FlaskConical,
 } from "lucide-react";
 
 const fmtBRL = (n: number) =>
@@ -24,6 +25,108 @@ interface Kpis {
   pedidosValorMes: number;
   ranking: { posicao: number; total: number } | null;
 }
+
+/* ── Módulos do representante ──────────────────────────── */
+const MODULOS = [
+  {
+    label: "Meus Clientes",
+    icon: Users,
+    to: "/app/rep/clientes",
+    gradient: "from-blue-500 to-blue-700",
+    shadow: "shadow-blue-300/50",
+    desc: "Carteira e contatos",
+  },
+  {
+    label: "Visitas",
+    icon: ClipboardList,
+    to: "/app/rep/visitas",
+    gradient: "from-emerald-500 to-emerald-700",
+    shadow: "shadow-emerald-300/50",
+    desc: "Registrar e histórico",
+  },
+  {
+    label: "RDV",
+    icon: Receipt,
+    to: "/app/rep/rdv",
+    gradient: "from-orange-500 to-orange-700",
+    shadow: "shadow-orange-300/50",
+    desc: "Despesas e reembolsos",
+    badge: "★",
+  },
+  {
+    label: "Pedidos",
+    icon: ShoppingCart,
+    to: "/app/rep/pedidos",
+    gradient: "from-violet-500 to-violet-700",
+    shadow: "shadow-violet-300/50",
+    desc: "Cotar e acompanhar",
+  },
+  {
+    label: "Calculadora Nutrir",
+    icon: Calculator,
+    to: "/app/nutrir",
+    gradient: "from-green-600 to-teal-700",
+    shadow: "shadow-green-300/50",
+    desc: "N180, N32, NPK",
+    badge: "core",
+  },
+  {
+    label: "Programa Nutrir",
+    icon: Sprout,
+    to: "/app/nutrir/orcamento",
+    gradient: "from-lime-600 to-green-700",
+    shadow: "shadow-lime-300/50",
+    desc: "Orçamentos e receitas",
+  },
+  {
+    label: "Financeiro",
+    icon: DollarSign,
+    to: "/app/rep/financeiro",
+    gradient: "from-yellow-500 to-amber-600",
+    shadow: "shadow-yellow-300/50",
+    desc: "Comissões e contas",
+  },
+  {
+    label: "Campos de Teste",
+    icon: TestTube,
+    to: "/app/rep/campos-teste",
+    gradient: "from-cyan-500 to-cyan-700",
+    shadow: "shadow-cyan-300/50",
+    desc: "Ensaios e acompanhar",
+  },
+  {
+    label: "Talhões / GPS",
+    icon: Map,
+    to: "/app/rep/talhoes",
+    gradient: "from-sky-500 to-blue-600",
+    shadow: "shadow-sky-300/50",
+    desc: "Mapas e propriedades",
+  },
+  {
+    label: "IA Agronômica",
+    icon: Brain,
+    to: "/app/ia/solo",
+    gradient: "from-purple-600 to-indigo-700",
+    shadow: "shadow-purple-300/50",
+    desc: "Análise de solo e IA",
+  },
+  {
+    label: "Produtos",
+    icon: FlaskConical,
+    to: "/app/nutrir/produtos",
+    gradient: "from-rose-500 to-pink-700",
+    shadow: "shadow-rose-300/50",
+    desc: "Catálogo Nutrir",
+  },
+  {
+    label: "Relatórios",
+    icon: FileText,
+    to: "/app/relatorios",
+    gradient: "from-slate-500 to-slate-700",
+    shadow: "shadow-slate-300/50",
+    desc: "Exportar e histórico",
+  },
+];
 
 export default function DashboardRep() {
   const { user } = useAuth();
@@ -49,7 +152,6 @@ export default function DashboardRep() {
     (async () => {
       setLoading(true);
 
-      // representante atual
       const { data: rep } = await supabase
         .from("nutrir_representantes")
         .select("id")
@@ -58,7 +160,6 @@ export default function DashboardRep() {
         .maybeSingle();
       const repId = rep?.id ?? null;
 
-      // visitas no mês
       const { count: visitasMes } = await supabase
         .from("nutrir_visitas")
         .select("id", { count: "exact", head: true })
@@ -66,7 +167,6 @@ export default function DashboardRep() {
         .eq("user_id", user.id)
         .gte("data_visita", inicioMes);
 
-      // comissão prevista no mês
       const { data: comissoes } = await supabase
         .from("nutrir_comissoes")
         .select("valor,status")
@@ -74,69 +174,56 @@ export default function DashboardRep() {
         .eq("user_id", user.id)
         .gte("mes_referencia", inicioMes);
       const comissaoPrevista = (comissoes ?? []).reduce(
-        (s, c: any) => s + Number(c.valor || 0),
-        0,
+        (s, c: any) => s + Number(c.valor || 0), 0,
       );
 
-      // contas vencendo em 15 dias (do representante)
-      let contasQ = supabase
+      const { data: contas } = await supabase
         .from("nutrir_contas_receber")
-        .select("id,valor,data_vencimento,status,cliente_id,nutrir_clientes(razao_social)")
+        .select("id,valor,data_vencimento,status,nutrir_clientes(razao_social)")
         .eq("organization_id", org.id)
-        .in("status", ["em_aberto", "vencendo"])
+        .in("status", ["aberto", "vencendo"])
         .lte("data_vencimento", em15dias)
-        .order("data_vencimento", { ascending: true })
-        .limit(5);
-      if (repId) contasQ = contasQ.eq("representante_id", repId);
-      const { data: contas } = await contasQ;
+        .order("data_vencimento");
       const contasVencendoValor = (contas ?? []).reduce(
-        (s, c: any) => s + Number(c.valor || 0),
-        0,
+        (s, c: any) => s + Number(c.valor || 0), 0,
       );
 
-      // testes ativos
       const { count: testesAtivos } = await supabase
         .from("nutrir_campos_teste")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", org.id)
         .eq("user_id", user.id)
-        .eq("status", "em_andamento");
+        .eq("status", "ativo");
 
-      // pedidos do mês
       const { data: pedidos } = await supabase
         .from("nutrir_pedidos")
-        .select("id,total")
+        .select("id,valor_total")
         .eq("organization_id", org.id)
-        .eq("created_by", user.id)
-        .gte("data_pedido", inicioMes);
+        .eq("user_id", user.id)
+        .gte("created_at", inicioMes);
       const pedidosValorMes = (pedidos ?? []).reduce(
-        (s, p: any) => s + Number(p.total || 0),
-        0,
+        (s, p: any) => s + Number(p.valor_total || 0), 0,
       );
 
-      // ranking
-      let ranking: Kpis["ranking"] = null;
+      let ranking: { posicao: number; total: number } | null = null;
       if (repId) {
-        const { data: rankData } = await supabase
-          .from("nutrir_comissoes")
-          .select("representante_id,valor")
+        const { data: todos } = await supabase
+          .from("nutrir_pedidos")
+          .select("user_id,valor_total")
           .eq("organization_id", org.id)
-          .gte("mes_referencia", inicioMes);
-        if (rankData?.length) {
+          .gte("created_at", inicioMes);
+        if (todos && todos.length > 0) {
           const map = new Map<string, number>();
-          rankData.forEach((r: any) => {
-            map.set(
-              r.representante_id,
-              (map.get(r.representante_id) || 0) + Number(r.valor || 0),
-            );
+          todos.forEach((r: any) => {
+            if (!r.user_id) return;
+            map.set(r.user_id, (map.get(r.user_id) || 0) + Number(r.valor_total || 0));
           });
           const ord = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-          const pos = ord.findIndex(([id]) => id === repId);
+          const pos = ord.findIndex(([id]) => id === user.id);
           if (pos >= 0) ranking = { posicao: pos + 1, total: ord.length };
         }
       }
 
-      // próximas visitas (clientes sem visita há mais tempo)
       const { data: clientes } = await supabase
         .from("nutrir_clientes")
         .select("id,razao_social,cidade,uf")
@@ -175,7 +262,11 @@ export default function DashboardRep() {
   }, [org, user, inicioMes, em15dias]);
 
   if (loading || !kpis) {
-    return <div className="p-6 text-muted-foreground">Carregando dashboard...</div>;
+    return (
+      <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+        Carregando…
+      </div>
+    );
   }
 
   const saudacao = () => {
@@ -186,134 +277,146 @@ export default function DashboardRep() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
 
       {/* Saudação */}
       <div>
-        <h1 className="text-xl font-bold">{saudacao()}! 👋</h1>
-        <p className="text-sm text-muted-foreground">Veja o que precisa de atenção hoje.</p>
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+          {saudacao()}! 👋
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+        </p>
       </div>
 
-      {/* Ações rápidas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[
-          { label: "Registrar Visita", icon: ClipboardList, to: "/app/rep/visitas", color: "bg-primary text-primary-foreground" },
-          { label: "Meus Clientes",    icon: Users,          to: "/app/rep/clientes", color: "bg-muted" },
-          { label: "Fazer Cálculo",    icon: Calculator,     to: "/app/rep/calculadoras", color: "bg-muted" },
-          { label: "Novo Pedido",      icon: ShoppingCart,   to: "/app/rep/pedidos",  color: "bg-muted" },
-        ].map((a) => (
-          <button
-            key={a.to}
-            onClick={() => navigate(a.to)}
-            className={`${a.color} rounded-xl p-3 flex flex-col items-center gap-2 text-center hover:opacity-90 transition-opacity`}
-          >
-            <a.icon className="h-5 w-5" />
-            <span className="text-xs font-medium leading-tight">{a.label}</span>
-          </button>
-        ))}
+      {/* KPIs compactos */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <KpiChip icon={ClipboardList} label="Visitas"   value={String(kpis.visitasMes)}   color="text-emerald-600" />
+        <KpiChip icon={ShoppingCart}  label="Pedidos"   value={String(kpis.pedidosMes)}   color="text-violet-600" />
+        <KpiChip icon={DollarSign}    label="Comissão"  value={fmtBRL(kpis.comissaoPrevista)} color="text-amber-600" />
+        <KpiChip icon={AlertCircle}   label="A vencer"  value={String(kpis.contasVencendo)} color="text-red-500" />
+        <KpiChip icon={TestTube}      label="Testes"    value={String(kpis.testesAtivos)}  color="text-cyan-600" />
+        <KpiChip icon={TrendingUp}    label="Ranking"   value={kpis.ranking ? `${kpis.ranking.posicao}º` : "—"} color="text-primary" />
       </div>
 
-      {/* KPIs do mês */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <KpiCard icon={ClipboardList} label="Visitas no mês"    value={String(kpis.visitasMes)}            accent="primary" />
-        <KpiCard icon={ShoppingCart}  label="Pedidos no mês"    value={String(kpis.pedidosMes)}            accent="success" />
-        <KpiCard icon={DollarSign}    label="Comissão prevista" value={fmtBRL(kpis.comissaoPrevista)}      accent="success" />
-        <KpiCard icon={Receipt}       label="Contas vencendo"   value={`${kpis.contasVencendo} · ${fmtBRL(kpis.contasVencendoValor)}`} accent="warning" />
-        <KpiCard icon={TestTube}      label="Testes ativos"     value={String(kpis.testesAtivos)}          accent="primary" />
-        <KpiCard icon={Trophy}        label="Ranking"           value={kpis.ranking ? `${kpis.ranking.posicao}º / ${kpis.ranking.total}` : "—"} accent="primary" />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="h-4 w-4" /> Sugestão de visitas
-            </CardTitle>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/app/rep/roteiro">
-                Ver roteiro <ArrowRight className="ml-1 h-3 w-3" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {proximasVisitas.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado.</p>
-            )}
-            {proximasVisitas.map((c) => (
-              <div key={c.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                <div>
-                  <div className="font-medium text-sm">{c.razao_social}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {c.cidade ? `${c.cidade}/${c.uf ?? ""}` : "—"} ·{" "}
-                    {c.ultima ? `Última visita ${new Date(c.ultima).toLocaleDateString("pt-BR")}` : "Sem visitas"}
-                  </div>
-                </div>
-                <Badge variant="secondary">Sugerido</Badge>
+      {/* ── GRID DE MÓDULOS ───────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Módulos
+        </h2>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {MODULOS.map((m) => (
+            <button
+              key={m.to}
+              onClick={() => navigate(m.to)}
+              className="group relative flex flex-col items-center gap-2 p-3 rounded-2xl bg-card border border-border hover:border-transparent transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 active:scale-95"
+              style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)";
+              }}
+            >
+              {/* Ícone com gradiente */}
+              <div className={`bg-gradient-to-br ${m.gradient} rounded-xl p-3 shadow-lg ${m.shadow}`}>
+                <m.icon className="h-6 w-6 text-white" strokeWidth={1.8} />
               </div>
-            ))}
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" /> Contas a vencer (15 dias)
-            </CardTitle>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/app/rep/contas-receber">
-                Ver todas <ArrowRight className="ml-1 h-3 w-3" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {contasUrgentes.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sem contas vencendo nos próximos 15 dias.</p>
-            )}
-            {contasUrgentes.map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                <div>
-                  <div className="font-medium text-sm">{c.nutrir_clientes?.razao_social ?? "Cliente"}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Vence {new Date(c.data_vencimento).toLocaleDateString("pt-BR")}
-                  </div>
-                </div>
-                <Badge variant={c.status === "vencendo" ? "destructive" : "secondary"}>
-                  {fmtBRL(Number(c.valor))}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              {/* Label */}
+              <span className="text-[11px] font-semibold text-center text-foreground leading-tight">
+                {m.label}
+              </span>
+
+              {/* Badge opcional */}
+              {m.badge && (
+                <span className="absolute top-1.5 right-1.5 text-[8px] font-bold bg-primary text-primary-foreground px-1 py-0.5 rounded-full leading-none">
+                  {m.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Alertas e sugestões */}
+      {(kpis.contasVencendo > 0 || proximasVisitas.length > 0) && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {proximasVisitas.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-emerald-600" /> Visitas sugeridas
+                </CardTitle>
+                <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                  <Link to="/app/rep/visitas">Ver todas <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {proximasVisitas.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between border-b pb-1.5 last:border-0">
+                    <div>
+                      <div className="font-medium text-sm">{c.razao_social}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {c.cidade ? `${c.cidade}/${c.uf ?? ""}` : "—"} ·{" "}
+                        {c.ultima
+                          ? `Última visita ${new Date(c.ultima).toLocaleDateString("pt-BR")}`
+                          : "Sem visitas"}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">Sugerido</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {kpis.contasVencendo > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-500" /> Contas a vencer (15 dias)
+                </CardTitle>
+                <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                  <Link to="/app/rep/contas-receber">Ver todas <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {contasUrgentes.map((c: any) => (
+                  <div key={c.id} className="flex items-center justify-between border-b pb-1.5 last:border-0">
+                    <div>
+                      <div className="font-medium text-sm">
+                        {c.nutrir_clientes?.razao_social ?? "Cliente"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Vence {new Date(c.data_vencimento).toLocaleDateString("pt-BR")}
+                      </div>
+                    </div>
+                    <Badge
+                      variant={c.status === "vencendo" ? "destructive" : "secondary"}
+                      className="text-[10px]"
+                    >
+                      {fmtBRL(Number(c.valor))}
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function KpiCard({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-  accent: "primary" | "success" | "warning";
-}) {
-  const accentMap = {
-    primary: "text-primary bg-primary/10",
-    success: "text-[#b08826] bg-[#d4a843]/10",
-    warning: "text-amber-600 bg-amber-500/10",
-  };
+function KpiChip({
+  icon: Icon, label, value, color,
+}: { icon: any; label: string; value: string; color: string }) {
   return (
-    <Card>
-      <CardContent className="p-3">
-        <div className={`inline-flex p-1.5 rounded-md ${accentMap[accent]}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="mt-2 text-xs text-muted-foreground">{label}</div>
-        <div className="text-base font-semibold leading-tight">{value}</div>
-      </CardContent>
-    </Card>
+    <div className="bg-card border border-border rounded-xl p-2.5 flex flex-col items-center text-center gap-0.5">
+      <Icon className={`h-4 w-4 ${color}`} />
+      <div className="text-[11px] text-muted-foreground leading-tight">{label}</div>
+      <div className="text-sm font-bold leading-tight truncate w-full text-center">{value}</div>
+    </div>
   );
 }

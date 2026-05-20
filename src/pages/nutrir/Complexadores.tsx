@@ -35,6 +35,18 @@ export default function Complexadores() {
 
   useEffect(() => { load(); }, []);
 
+  const seedPadrao = async () => {
+    const defaults = [
+      { nome: "TSH", descricao: "Complexante TSH — 15% sobre ureia em N180", preco_litro: 16.5, ativo: true },
+      { nome: "Life Grow", descricao: "Complexante Life Grow — 18,75% sobre ureia em N180", preco_litro: 25.0, ativo: true },
+      { nome: "LEG", descricao: "Complexante LEG — 6,25% sobre ureia / foliares", preco_litro: 22.0, ativo: true },
+      { nome: "Bor", descricao: "Boro complexado líquido — 0,65 L por kg de ácido bórico", preco_litro: 32.0, ativo: true },
+    ];
+    const { error } = await supabase.from("nutrir_complexadores").upsert(defaults, { onConflict: "nome" });
+    if (error) toast.error("Erro ao popular: " + error.message);
+    else { toast.success("Complexantes padrão inseridos!"); load(); }
+  };
+
   const salvar = async () => {
     if (!edit?.nome) return toast.error("Nome obrigatório");
     const payload = { nome: edit.nome, descricao: edit.descricao, preco_litro: edit.preco_litro, ativo: edit.ativo };
@@ -76,9 +88,16 @@ export default function Complexadores() {
           <h1 className="text-3xl font-bold flex items-center gap-2"><FlaskRound /> Complexadores</h1>
           <p className="text-muted-foreground">Banco de complexadores (TSH, LEG, ÍON, BOR…) e fatores L/kg de sal</p>
         </div>
-        <Button onClick={() => { setEdit({ id: "", nome: "", descricao: "", preco_litro: 0, ativo: true }); setOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" /> Novo
-        </Button>
+        <div className="flex gap-2">
+          {list.length === 0 && (
+            <Button variant="outline" onClick={seedPadrao}>
+              ✨ Popular padrão (TSH / LEG / Life Grow / Bor)
+            </Button>
+          )}
+          <Button onClick={() => { setEdit({ id: "", nome: "", descricao: "", preco_litro: 0, ativo: true }); setOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" /> Novo
+          </Button>
+        </div>
       </div>
 
       <Card>

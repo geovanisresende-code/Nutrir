@@ -43,6 +43,24 @@ export default function MateriasPrimas() {
     await (supabase as any).from("nutrir_materias_primas").delete().eq("id", id); reload();
   };
 
+  const seedPadrao = async () => {
+    if (!current) return;
+    const defaults = [
+      { codigo: "URB", nome: "Ureia Branca",       preco_atual: 2.20, unidade_preco: "kg", observacoes: "45% N", ativo: true },
+      { codigo: "URP", nome: "Ureia Protegida",     preco_atual: 4.20, unidade_preco: "kg", observacoes: "45% N revestida", ativo: true },
+      { codigo: "SFA", nome: "Sulfato de Amônio",   preco_atual: 1.80, unidade_preco: "kg", observacoes: "21% N · 24% S", ativo: true },
+      { codigo: "NTA", nome: "Nitrato de Amônio",   preco_atual: 3.20, unidade_preco: "kg", observacoes: "33% N", ativo: true },
+      { codigo: "MAP", nome: "MAP Purificado",       preco_atual: 4.50, unidade_preco: "kg", observacoes: "12% N · 60% P2O5", ativo: true },
+      { codigo: "KCL", nome: "KCl Branco",           preco_atual: 2.80, unidade_preco: "kg", observacoes: "60% K2O", ativo: true },
+      { codigo: "ACB", nome: "Ácido Bórico",         preco_atual: 18.0, unidade_preco: "kg", observacoes: "17% B", ativo: true },
+    ].map(r => ({ ...r, organization_id: current.id, fornecedor: null }));
+    const { error } = await (supabase as any)
+      .from("nutrir_materias_primas")
+      .upsert(defaults, { onConflict: "organization_id,codigo" });
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else { toast({ title: "✅ Matérias-primas padrão inseridas!" }); reload(); }
+  };
+
   return (
     <>
       <CrudList
@@ -50,6 +68,9 @@ export default function MateriasPrimas() {
         data={data} loading={loading} searchKeys={["nome","codigo","fornecedor"]}
         headers={["Código","Nome","Fornecedor","Preço","Ativo","Ações"]}
         onNew={() => { setEdit({ ativo: true, unidade_preco: "kg" }); setOpen(true); }}
+        toolbar={data.length === 0 ? (
+          <Button variant="outline" onClick={seedPadrao}>✨ Popular padrão</Button>
+        ) : undefined}
         renderRow={(r) => (<>
           <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{r.codigo ?? "—"}</td>
           <td className="px-4 py-2 font-medium">{r.nome}</td>
