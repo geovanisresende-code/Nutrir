@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/AppShell";
-import { useGlobalTable } from "@/lib/nutrir/useNutrirData";
+import { useGlobalTable, useOrgTable } from "@/lib/nutrir/useNutrirData";
 import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
 import { FlaskConical, ShoppingCart, Droplets } from "lucide-react";
 
 interface Cultura { id: string; nome: string; }
+interface MP { id: string; codigo: string | null; nome: string; preco_atual: number | null; unidade_preco: string; ativo: boolean; }
+interface Complexador { id: string; nome: string; preco_litro: number; ativo: boolean; }
 
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: number, d = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -45,8 +47,10 @@ function PrecoInput({ value, onChange, label, step = "1" }: { value: number; onC
 export default function CalculadoraN180() {
   const navigate = useNavigate();
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
+  const { data: mps, loading: mpsLoading } = useOrgTable<MP>("nutrir_materias_primas", { orderBy: "nome" });
+  const { data: complexadores, loading: cmpLoading } = useGlobalTable<Complexador>("nutrir_complexadores", "nome");
   const { params, loading: cfgLoading } = useMotorConfig();
-  const [cfgInit, setCfgInit] = useState(false);
+  const [precoInit, setPrecoInit] = useState(false);
 
   const [meta, setMeta] = useState({ produtor: "", fazenda: "", cultura: "Soja", areaHa: 100 });
   const [n180, setN180] = useState({
@@ -63,17 +67,45 @@ export default function CalculadoraN180() {
   });
   const [volBatelada, setVolBatelada] = useState(6000);
 
-  // ── Inicializa preços a partir do motor config ──────────────
+  // ── Inicializa preços: nutrir_materias_primas > nutrir_complexadores > motor_config ──
   useEffect(() => {
-    if (!cfgLoading && !cfgInit && params.length > 0) {
-      const cfg = paramMap(params);
-      if (cfg.preco_ureia_kg)    setN180(p => ({ ...p, precoUreia:   cfg.preco_ureia_kg * 1000 }));
-      if (cfg.preco_lifegrow_l)  setN180(p => ({ ...p, precoLifeGrow: cfg.preco_lifegrow_l }));
-      if (cfg.preco_kcl_kg)      setK180(p => ({ ...p, precoKcl:      cfg.preco_kcl_kg * 1000 }));
-      if (cfg.preco_tsh_l)       setK180(p => ({ ...p, precoTsh:      cfg.preco_tsh_l }));
-      setCfgInit(true);
-    }
-  }, [cfgLoading, cfgInit, params]);
+    if (precoInit) return;
+    if (cfgLoading || mpsLoading || cmpLoading) return;
+
+    const cfg = paramMap(params);
+
+    // Matérias-primas pelo código
+    const byCode = (cod: string) => mps.find(m => m.codigo?.toUpperCase() === cod && m.ativo && m.preco_atual != null);
+    const urb = byCode("URB");
+    const kcl = byCode("KCL");
+
+    // Complexadores pelo nome
+    const byCmp = (nome: string) => complexadores.find(c => c.nome.toLowerCase().includes(nome.toLowerCase()) && c.ativo);
+    const lifeGrow = byCmp("Life Grow") ?? byCmp("lifegrow");
+    const tsh = byCmp("TSH");
+
+    setN180(p => ({
+      ...p,
+      // Ureia: MP (R$/kg → R$/t) > motor_config > default
+      precoUreia: urb?.preco_atual != null
+        ? urb.preco_atual * 1000
+        : cfg.preco_ureia_kg ? cfg.preco_ureia_kg * 1000 : p.precoUreia,
+      // Life Grow: complexador > motor_config > default
+      precoLifeGrow: lifeGrow?.preco_litro ?? cfg.preco_lifegrow_l ?? p.precoLifeGrow,
+    }));
+
+    setK180(p => ({
+      ...p,
+      // KCl: MP (R$/kg → R$/t) > motor_config > default
+      precoKcl: kcl?.preco_atual != null
+        ? kcl.preco_atual * 1000
+        : cfg.preco_kcl_kg ? cfg.preco_kcl_kg * 1000 : p.precoKcl,
+      // TSH: complexador > motor_config > default
+      precoTsh: tsh?.preco_litro ?? cfg.preco_tsh_l ?? p.precoTsh,
+    }));
+
+    setPrecoInit(true);
+  }, [cfgLoading, mpsLoading, cmpLoading, precoInit, params, mps, complexadores]);
 
   // Ureia por litro de N180 — vem do motor config (padrão 400 kg/1000L = 0,400 kg/L)
   const ureiaKgPerLN180 = useMemo(() => {
@@ -138,6 +170,9 @@ export default function CalculadoraN180() {
   };
 
   const listaCulturas = culturas.length > 0 ? culturas.map(c => c.nome) : CULTURAS_FALLBACK;
+  const fontePrecosMsg = mps.length > 0
+    ? `✓ Preços carregados do banco (${mps.length} mat. primas · ${complexadores.length} complexantes)`
+    : "⚠ Cadastre matérias-primas e complexantes para carregar preços automáticos";
 
   return (
     <div className="flex flex-col gap-4 pb-10">
@@ -155,7 +190,12 @@ export default function CalculadoraN180() {
 
         {/* Identificação */}
         <Card><CardContent className="pt-4">
-          <p className="text-sm font-semibold text-primary mb-3">Identificação</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-primary">Identificação</p>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${mps.length > 0 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+              {fontePrecosMsg}
+            </span>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Lbl t="Produtor">
               <Input value={meta.produtor} onChange={e => setMeta({...meta, produtor: e.target.value})} placeholder="Nome do produtor" />
