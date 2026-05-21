@@ -49,6 +49,15 @@ export const MOTOR_DEFAULTS: MotorParam[] = [
   { chave: "npk_tsh_pct_ureia",        categoria: "npk",        label: "NPK: TSH sobre Ureia (%)",             valor: 12.5,  unidade: "%",    descricao: "12,5% TSH sobre ureia na calda NPK" },
   { chave: "npk_tsh_pct_kcl",          categoria: "npk",        label: "NPK: TSH sobre KCl (%)",              valor: 10,    unidade: "%",    descricao: "10% TSH sobre KCl" },
   { chave: "npk_tsh_pct_map",          categoria: "npk",        label: "NPK: TSH sobre MAP (%)",              valor: 10,    unidade: "%",    descricao: "10% TSH sobre MAP" },
+  // N180 + Boro (N180+B) — parâmetros do sulco e receita
+  { chave: "n180b_boro_sulco_g_ha",    categoria: "n180b",      label: "Boro no sulco (g/ha)",                 valor: 80,    unidade: "g/ha", descricao: "Dose máxima de boro aplicada no sulco de plantio" },
+  { chave: "n180b_sulco_vazao_l_ha",   categoria: "n180b",      label: "Vazão do sulco com boro (L/ha)",       valor: 40,    unidade: "L/ha", descricao: "Volume de calda no sulco (N180+B)" },
+  { chave: "n180b_ab_kg_por_1000l",    categoria: "n180b",      label: "Ácido Bórico no sulco (kg/1.000L)",   valor: 12,    unidade: "kg",   descricao: "Receita do sulco: ácido bórico por 1.000 L de calda" },
+  { chave: "n180b_bor_l_por_1000l",    categoria: "n180b",      label: "Bor no sulco (L/1.000L)",             valor: 7.5,   unidade: "L",    descricao: "Receita do sulco: Bor por 1.000 L de calda" },
+  // N32+B Foliar — parâmetros do cálculo
+  { chave: "n32b_n_ajuste_pct",        categoria: "n32b",       label: "N32+B: ajuste N (%)",                 valor: 15,    unidade: "%",    descricao: "Acréscimo sobre o N do produto N32 para compensar absorção foliar" },
+  { chave: "n32b_leg_pct_ureia",       categoria: "n32b",       label: "N32+B: LEG sobre ureia (%)",          valor: 18.75, unidade: "%",    descricao: "18,75% de LEG sobre a ureia convertida na calda N32+B" },
+  { chave: "n32b_calda_boro_fator",    categoria: "n32b",       label: "N32+B: fator calda boro (L/kg AB)",   valor: 2.8,   unidade: "L/kg", descricao: "Volume de calda do boro = ácido bórico (kg) × este fator" },
   // Preços padrão
   { chave: "preco_ureia_kg",           categoria: "precos",     label: "Ureia branca (R$/kg)",                 valor: 2.20,  unidade: "R$/kg",descricao: "Preço padrão da ureia branca" },
   { chave: "preco_tsh_l",             categoria: "precos",     label: "TSH (R$/L)",                           valor: 16.5,  unidade: "R$/L", descricao: "Preço padrão TSH" },
@@ -93,7 +102,10 @@ export function useMotorConfig() {
           ...(dbMap[def.chave] ?? {}),
           valor: dbMap[def.chave]?.valor ?? def.valor,
         }));
-        setParams(merged);
+        // Inclui parâmetros customizados (no banco mas não nos defaults)
+        const defaultChaves = new Set(MOTOR_DEFAULTS.map(d => d.chave));
+        const custom = data.filter((r: any) => !defaultChaves.has(r.chave));
+        setParams([...merged, ...custom]);
       }
     } catch {
       setParams(MOTOR_DEFAULTS);
