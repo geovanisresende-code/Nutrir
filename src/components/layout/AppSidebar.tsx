@@ -45,7 +45,7 @@ const repSection: NavSection = {
       label: "Ferramentas",
       icon: FlaskConical,
       children: [
-        { to: "/app/nutrir",           label: "Calculadora Nutrir", icon: Calculator },
+        { to: "/app/rep/calculadoras", label: "Calculadora Nutrir", icon: Calculator },
         { to: "/app/rep/campos-teste", label: "Campos de Teste",    icon: TestTube },
         { to: "/app/rep/talhoes",      label: "Talhões / GPS",      icon: Map },
         { to: "/app/ia/solo",          label: "IA Agronômica",      icon: Brain },
