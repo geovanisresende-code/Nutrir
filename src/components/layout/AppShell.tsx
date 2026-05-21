@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { Topbar } from "./Topbar";
 import { useOrg } from "@/contexts/OrganizationContext";
@@ -85,6 +85,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { pathname } = useLocation();
 
+  // Fecha o drawer quando a rota muda (navegação por NavLink)
+  useEffect(() => { setSheetOpen(false); }, [pathname]);
+
   const fullscreen = FULLSCREEN_ROUTES.some(r => pathname === r || pathname.startsWith(r + "/"));
 
   if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Carregando workspace…</div>;
@@ -101,9 +104,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       {/* Sidebar — mobile drawer */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-sidebar-border">
-          <div onClick={() => setSheetOpen(false)}>
-            <AppSidebar />
-          </div>
+          <AppSidebar />
         </SheetContent>
       </Sheet>
 
