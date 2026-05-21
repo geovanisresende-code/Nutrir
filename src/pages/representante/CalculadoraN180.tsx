@@ -78,7 +78,6 @@ function distribuirCobertura(totalHa: number, nCoberturas: number): { stage: str
   const volPorApp = totalHa / n;
   return COB_STAGES.slice(0, n).map(s => ({ stage: s.stage, vol: volPorApp, max: s.max, min: s.min }));
 }
-}
 
 function isLiquidoForma(forma: FormaAplicacao) {
   return ["drench", "nonino", "fertirrigacao"].includes(forma);
