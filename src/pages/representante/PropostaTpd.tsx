@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,6 +96,30 @@ export default function PropostaTpd() {
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [formulaCustom, setFormulaCustom] = useState(false);
 
+  // Pré-preenche com dados vindos do N180 / K180
+  useEffect(() => {
+    const raw = sessionStorage.getItem("nutrir.proposta_tpd_draft");
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      setP(prev => ({
+        ...prev,
+        produtor:       d.produtor  || prev.produtor,
+        area:           d.area      || prev.area,
+        cultura:        d.cultura   || prev.cultura,
+        n180LHa:        d.n180LHa   || prev.n180LHa,
+        n180CustoHa:    d.n180CustoHa || prev.n180CustoHa,
+        ureiaKgHa:      d.ureiaKgHa || prev.ureiaKgHa,
+        ureiaPrecoTon:  d.ureiaPrecoTon || prev.ureiaPrecoTon,
+        lifeGrowLHa:    d.lifeGrowLHa ?? prev.lifeGrowLHa,
+        lifeGrowPrecoL: d.lifeGrowPrecoL || prev.lifeGrowPrecoL,
+        tshLHa:         d.tshLHa ?? prev.tshLHa,
+        tshPrecoL:      d.tshPrecoL || prev.tshPrecoL,
+      }));
+      sessionStorage.removeItem("nutrir.proposta_tpd_draft");
+    } catch { /* ignora parse error */ }
+  }, []);
+
   const set = (k: keyof Proposta, v: any) => setP(prev => ({ ...prev, [k]: v }));
 
   // ── Cálculos derivados ───────────────────────────────────────
@@ -181,7 +205,7 @@ export default function PropostaTpd() {
       };
       const footer = (n: number) => {
         doc.setTextColor(150).setFont("helvetica", "normal").setFontSize(8);
-        doc.text("Agrociência · Proposta TPD", 15, H - 6);
+        doc.text("Fertagro · Proposta TPD", 15, H - 6);
         doc.text(`${String(n).padStart(2, "0")}/09`, W - 20, H - 6);
       };
 
@@ -191,7 +215,7 @@ export default function PropostaTpd() {
       doc.setTextColor(...GOLD).setFont("helvetica", "bold").setFontSize(9);
       doc.text("AGROCIÊNCIA", 32.5, 23, { align: "center" });
       chip("Proposta Comercial", 46);
-      let y = title(`TPD Agrociência para\n${p.cultura}`, 54, 20);
+      let y = title(`TPD Fertagro para\n${p.cultura}`, 54, 20);
       subtitle("Não é só trocar adubo. É parar de comprar tecnologia pronta\ne começar a produzir fertilizante dentro da fazenda,\ncom custo menor e controle total.", y + 3);
       // Card produtor
       card(10, 120, W - 20, 30, CREAM);

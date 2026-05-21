@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/layout/AppShell";
 import { useGlobalTable, useOrgTable } from "@/lib/nutrir/useNutrirData";
 import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
-import { FlaskConical, ShoppingCart } from "lucide-react";
+import { FlaskConical, ShoppingCart, FileText } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface Cultura { id: string; nome: string; }
 interface MP { id: string; codigo: string | null; nome: string; preco_atual: number | null; unidade_preco: string; ativo: boolean; }
@@ -222,28 +223,49 @@ export default function CalculadoraN180() {
   const batCheias     = Math.floor(calc.volTotalL / vBat);
   const batParcialVol = Math.round(calc.volTotalL % vBat);
 
-  const irParaPedido = () => {
-    const itens: any[] = [
-      { produto_nome: "Ureia Branca", quantidade: Math.ceil(calc.ureiaTotal), unidade: "kg", preco_unitario: precos.ureia / 1000 },
-    ];
-    if (calc.saTotal > 0)
-      itens.push({ produto_nome: "Sulfato de Amônio", quantidade: Math.ceil(calc.saTotal), unidade: "kg", preco_unitario: 0 });
+  // Gerar Recomendação — abre PropostaTpd pré-preenchido com dados do N180
+  const irParaRecomendacao = () => {
+    sessionStorage.setItem("nutrir.proposta_tpd_draft", JSON.stringify({
+      origem:         "calc_n180",
+      produtor:       meta.produtor,
+      fazenda:        meta.fazenda,
+      area:           meta.areaHa,
+      cultura:        meta.cultura,
+      n180LHa:        calc.volCaldaHa,
+      n180CustoHa:    calc.custoPorHa,
+      ureiaKgHa:      calc.ureiaKgHa,
+      ureiaPrecoTon:  precos.ureia,
+      lifeGrowLHa:    calc.cxTotal.lifegrow ?? 0,
+      lifeGrowPrecoL: precos.lifeGrow,
+      tshLHa:         (calc.cxTotal.tsh ?? 0) + (calc.cxTotal.leg ?? 0),
+      tshPrecoL:      precos.tsh,
+    }));
+    navigate("/app/rep/proposta-tpd");
+  };
+
+  // Gerar Pedido Fertagro — apenas complexantes (TSH, Life Grow, LEG), sem ureia/KCl/SA
+  const irParaPedidoFertagro = () => {
+    const itens: any[] = [];
     (["tsh", "lifegrow", "leg"] as Complexante[]).forEach(k => {
       const v = calc.cxTotal[k];
       if (v && v > 0.01)
         itens.push({
-          produto_nome:    CX_LABEL[k],
-          quantidade:      Math.ceil(v),
-          unidade:         "L",
-          preco_unitario:  k === "tsh" ? precos.tsh : k === "lifegrow" ? precos.lifeGrow : precos.leg,
+          produto_nome:   CX_LABEL[k],
+          quantidade:     Math.ceil(v),
+          unidade:        "L",
+          preco_unitario: k === "tsh" ? precos.tsh : k === "lifegrow" ? precos.lifeGrow : precos.leg,
         });
     });
+    if (itens.length === 0) {
+      toast({ title: "Nenhum produto Fertagro nesta configuração", variant: "destructive" });
+      return;
+    }
     sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
-      origem:       "calc_n180",
-      titulo:       `N180 — ${meta.fazenda || meta.produtor || meta.cultura}`,
+      origem:       "calc_n180_fertagro",
+      titulo:       `Fertagro N180 — ${meta.fazenda || meta.produtor || meta.cultura}`,
       cliente_nome: meta.produtor || meta.fazenda || null,
       area_ha:      meta.areaHa,
-      observacoes:  `N180 · ${ADUBOS[adubo].label} · ${meta.cultura} · ${meta.areaHa} ha`,
+      observacoes:  `Complexantes N180 Fertagro · ${meta.cultura} · ${meta.areaHa} ha`,
       itens,
     }));
     navigate("/app/rep/pedidos");
@@ -259,7 +281,7 @@ export default function CalculadoraN180() {
       <PageHeader
         title={<span className="flex items-center gap-2"><FlaskConical className="w-5 h-5 text-primary" />N180 — Nitrogênio Líquido</span> as any}
         description="Ureia complexada · substituição de adubação de base · bateladas · lista de compras"
-        actions={<Button onClick={irParaPedido} className="gap-1.5"><ShoppingCart className="w-4 h-4" />Criar Pedido</Button>}
+        actions={<Button onClick={irParaRecomendacao} className="gap-1.5"><FileText className="w-4 h-4" />Gerar Recomendação</Button>}
       />
 
       <div className="px-4 space-y-4">
@@ -598,8 +620,11 @@ export default function CalculadoraN180() {
               <p className="font-bold text-primary">{moeda(calc.custoTotal)}</p>
             </div>
           </div>
-          <Button className="w-full mt-2 gap-2" onClick={irParaPedido}>
-            <ShoppingCart className="h-4 w-4" />Gerar Pedido com estes insumos
+          <Button className="w-full mt-2 gap-2" onClick={irParaRecomendacao}>
+            <FileText className="h-4 w-4" />Gerar Recomendação
+          </Button>
+          <Button variant="outline" className="w-full mt-2 gap-2" onClick={irParaPedidoFertagro}>
+            <ShoppingCart className="h-4 w-4" />Gerar Pedido Fertagro (TSH / Life Grow / LEG)
           </Button>
         </CardContent></Card>
 
