@@ -298,9 +298,6 @@ export default function CalculadoraNitroPlus() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
     const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const emSacos = (kg: number, saco = 50) => `${Math.ceil(kg / saco)} saco${Math.ceil(kg / saco) !== 1 ? "s" : ""} &times; ${saco}&nbsp;kg`;
-    const emTambores = (l: number, tam = 200) => `${Math.ceil(l / tam)} tambor${Math.ceil(l / tam) !== 1 ? "es" : ""} &times; ${tam}&nbsp;L`;
-
     // Custo convencional: dose completa do adubo base
     const nPct = ADUBOS[adubo].nPct;
     const precoPorKg = precos.ureia / 1000;
@@ -312,32 +309,28 @@ export default function CalculadoraNitroPlus() {
     const saltsAtivos = MICRO_SALTS.filter(s => (calc.saisKgHa[s.elem] || 0) > 0);
 
     // Compras: sacos para sólidos, tambores para líquidos
-    const compras: {nome: string; necessario: string; comprar: string; unit: string; total: string}[] = [];
+    const compras: {nome: string; necessario: string; unit: string; total: string}[] = [];
     compras.push({
       nome: "Ureia Branca",
       necessario: `${n2(calc.ureiaTotal, 1)} kg`,
-      comprar: emSacos(calc.ureiaTotal, 50),
       unit: `${moedaP(precoPorKg)}/kg`,
       total: moedaP(calc.ureiaTotal * precoPorKg),
     });
     if (calc.legTotal > 0) compras.push({
       nome: "LEG (complexante)",
       necessario: `${n2(calc.legTotal, 1)} L`,
-      comprar: emTambores(calc.legTotal, 200),
       unit: `${moedaP(precos.leg)}/L`,
       total: moedaP(calc.legTotal * precos.leg),
     });
     if (calc.abTotal > 0) compras.push({
       nome: "&Aacute;cido B&oacute;rico",
       necessario: `${n2(calc.abTotal, 2)} kg`,
-      comprar: emSacos(calc.abTotal, 25),
       unit: `${moedaP(precos.acidoBorico)}/kg`,
       total: moedaP(calc.abTotal * precos.acidoBorico),
     });
     if (calc.borTotal > 0) compras.push({
       nome: "Complex Bor",
       necessario: `${n2(calc.borTotal, 1)} L`,
-      comprar: emTambores(calc.borTotal, 200),
       unit: `${moedaP(precos.complexBor)}/L`,
       total: moedaP(calc.borTotal * precos.complexBor),
     });
@@ -346,7 +339,6 @@ export default function CalculadoraNitroPlus() {
       compras.push({
         nome: s.sal,
         necessario: `${n2(totalKg, 3)} kg`,
-        comprar: emSacos(totalKg, 25),
         unit: "—",
         total: "—",
       });
@@ -356,14 +348,12 @@ export default function CalculadoraNitroPlus() {
     if (estimullTotal > 0) compras.push({
       nome: "Estimull",
       necessario: `${n2(estimullTotal, 2)} L`,
-      comprar: emTambores(estimullTotal, 20),
       unit: `${moedaP(precos.estimull)}/L`,
       total: moedaP(estimullTotal * precos.estimull),
     });
     if (aminoTotal > 0) compras.push({
       nome: "Amino+",
       necessario: `${n2(aminoTotal, 2)} L`,
-      comprar: emTambores(aminoTotal, 20),
       unit: `${moedaP(precos.aminoplus)}/L`,
       total: moedaP(aminoTotal * precos.aminoplus),
     });
@@ -372,7 +362,6 @@ export default function CalculadoraNitroPlus() {
       compras.push({
         nome: "&iacute;ON Complex",
         necessario: `${n2(ionTotal, 2)} L`,
-        comprar: emTambores(ionTotal, 20),
         unit: `${moedaP(precos.ion)}/L`,
         total: moedaP(ionTotal * precos.ion),
       });
@@ -471,11 +460,11 @@ tr:last-child td{border-bottom:none}
 
 <div class="sec">
   <div class="sec-title">Lista de Compras</div>
-  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>Comprar</th><th>R$/un</th><th>Total</th></tr></thead>
+  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>R$/un</th><th>Total</th></tr></thead>
   <tbody>
-    ${compras.map(c => `<tr><td><strong>${c.nome}</strong></td><td>${c.necessario}</td><td>${c.comprar}</td><td>${c.unit}</td><td>${c.total}</td></tr>`).join("")}
+    ${compras.map(c => `<tr><td><strong>${c.nome}</strong></td><td>${c.necessario}</td><td>${c.unit}</td><td>${c.total}</td></tr>`).join("")}
     <tr style="background:#f5f3ff;font-weight:700">
-      <td colspan="4" style="text-align:right;padding-right:12px">Total Geral</td>
+      <td colspan="3" style="text-align:right;padding-right:12px">Total Geral</td>
       <td>${moedaP(calc.custoTotal)}</td>
     </tr>
   </tbody></table>

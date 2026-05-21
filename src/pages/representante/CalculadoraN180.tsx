@@ -233,16 +233,6 @@ export default function CalculadoraN180() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const area = meta.areaHa || 0;
 
-    // ── Helpers embalagem ──────────────────────────────────────────
-    const emSacos = (kg: number, saco = 50) => {
-      const n = Math.ceil(kg / saco);
-      return `${num(n * saco, 0)} kg (${n} saco${n !== 1 ? "s" : ""} × ${saco} kg)`;
-    };
-    const emTambores = (l: number, tam = 200) => {
-      const n = Math.ceil(l / tam);
-      return `${num(n * tam, 0)} L (${n} tambor${n !== 1 ? "es" : ""} × ${tam} L)`;
-    };
-
     // ── Custo convencional (dose original × preço ureia) ──────────
     const precoKg = precos.ureia / 1000;
     const convHa   = doseHa * precoKg;
@@ -264,36 +254,24 @@ export default function CalculadoraN180() {
     });
 
     // ── Lista de compras ───────────────────────────────────────────
-    type CompraItem = { produto: string; necessario: string; comprar: string; prUn: string; total: string };
+    type CompraItem = { produto: string; necessario: string; prUn: string; total: string };
     const compras: CompraItem[] = [];
-    const addSolido = (nome: string, kg: number, prKg: number, saco = 50) => {
+    const addSolido = (nome: string, kg: number, prKg: number) => {
       if (kg < 0.1) return;
-      compras.push({
-        produto: nome,
-        necessario: `${num(kg, 0)} kg`,
-        comprar: emSacos(kg, saco),
-        prUn: `R$ ${num(prKg, 2)}/kg`,
-        total: moeda(kg * prKg),
-      });
+      compras.push({ produto: nome, necessario: `${num(kg, 0)} kg`, prUn: `R$ ${num(prKg, 2)}/kg`, total: moeda(kg * prKg) });
     };
-    const addLiquido = (nome: string, l: number, prL: number, tam = 200) => {
+    const addLiquido = (nome: string, l: number, prL: number) => {
       if (l < 0.1) return;
-      compras.push({
-        produto: nome,
-        necessario: `${num(l, 0)} L`,
-        comprar: emTambores(l, tam),
-        prUn: `R$ ${num(prL, 2)}/L`,
-        total: moeda(l * prL),
-      });
+      compras.push({ produto: nome, necessario: `${num(l, 0)} L`, prUn: `R$ ${num(prL, 2)}/L`, total: moeda(l * prL) });
     };
 
-    addSolido("Ureia", calc.ureiaTotal, precoKg, 50);
-    if (calc.saTotal > 0) addSolido("Sulfato de Amônio", calc.saTotal, 1.20, 50);
+    addSolido("Ureia", calc.ureiaTotal, precoKg);
+    if (calc.saTotal > 0) addSolido("Sulfato de Amônio", calc.saTotal, 1.20);
     (["tsh", "lifegrow", "leg"] as Complexante[]).forEach(k => {
       const v = calc.cxTotal[k];
       if (v && v > 0.01) {
         const pr = k === "tsh" ? precos.tsh : k === "lifegrow" ? precos.lifeGrow : precos.leg;
-        addLiquido(CX_LABEL[k], v, pr, 200);
+        addLiquido(CX_LABEL[k], v, pr);
       }
     });
     const totalCompras = compras.reduce((s, c) => s + parseFloat(c.total.replace(/[^\d,]/g, "").replace(",", ".") || "0"), 0);
@@ -413,10 +391,10 @@ tbody tr:nth-child(even) td,tbody tr:nth-child(even) th{background:#f8fffe}
 <!-- LISTA DE COMPRAS -->
 <h2>Lista de Compras (Matérias-primas)</h2>
 <table>
-  <thead><tr><th>Produto</th><th>Necessário</th><th>Comprar</th><th>R$/un</th><th class="num">Total</th></tr></thead>
+  <thead><tr><th>Produto</th><th>Necessário</th><th>R$/un</th><th class="num">Total</th></tr></thead>
   <tbody>
-    ${compras.map(c => `<tr><td class="b">${c.produto}</td><td>${c.necessario}</td><td>${c.comprar}</td><td>${c.prUn}</td><td class="num g">${c.total}</td></tr>`).join("")}
-    <tr style="background:#f0fdf4"><td colspan="4" style="font-weight:bold;text-align:right">TOTAL</td><td class="num g" style="font-weight:bold;font-size:13px">${moeda(compras.reduce((s,c) => {
+    ${compras.map(c => `<tr><td class="b">${c.produto}</td><td>${c.necessario}</td><td>${c.prUn}</td><td class="num g">${c.total}</td></tr>`).join("")}
+    <tr style="background:#f0fdf4"><td colspan="3" style="font-weight:bold;text-align:right">TOTAL</td><td class="num g" style="font-weight:bold;font-size:13px">${moeda(compras.reduce((s,c) => {
       const v = parseFloat(c.total.replace(/[R$\s.]/g,"").replace(",","."));
       return s + (isNaN(v) ? 0 : v);
     }, 0))}</td></tr>

@@ -85,9 +85,6 @@ export default function CalculadoraN32() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
     const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const emSacos = (kg: number, saco = 50) => `${Math.ceil(kg / saco)} saco${Math.ceil(kg / saco) !== 1 ? "s" : ""} &times; ${saco}&nbsp;kg`;
-    const emTambores = (l: number, tam = 200) => `${Math.ceil(l / tam)} tambor${Math.ceil(l / tam) !== 1 ? "es" : ""} &times; ${tam}&nbsp;L`;
-
     const diffRha  = calc.custoN32Ha - calc.custoTpdHa;
     const diffTotal = diffRha * area;
     const diffPct   = calc.custoN32Ha > 0 ? (diffRha / calc.custoN32Ha) * 100 : 0;
@@ -171,24 +168,22 @@ tr:last-child td{border-bottom:none}
 
 <div class="sec">
   <div class="sec-title">Lista de Compras</div>
-  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>Comprar</th><th>R$/un</th><th>Total</th></tr></thead>
+  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>R$/un</th><th>Total</th></tr></thead>
   <tbody>
     <tr>
       <td><strong>Ureia Branca</strong></td>
       <td>${n2(calc.ureiaTotal, 1)} kg</td>
-      <td>${emSacos(calc.ureiaTotal, 50)}</td>
       <td>${moedaP(precoUreia / 1000)}/kg</td>
       <td>${moedaP(calc.ureiaTotal * precoUreia / 1000)}</td>
     </tr>
     <tr>
       <td><strong>LEG (complexante)</strong></td>
       <td>${n2(calc.legTotal, 1)} L</td>
-      <td>${emTambores(calc.legTotal, 200)}</td>
       <td>${moedaP(precoLeg)}/L</td>
       <td>${moedaP(calc.legTotal * precoLeg)}</td>
     </tr>
     <tr style="background:#f0fdf4;font-weight:700">
-      <td colspan="4" style="text-align:right;padding-right:12px">Total Geral</td>
+      <td colspan="3" style="text-align:right;padding-right:12px">Total Geral</td>
       <td>${moedaP(calc.custoTotal)}</td>
     </tr>
   </tbody></table>

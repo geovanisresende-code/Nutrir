@@ -121,9 +121,6 @@ export default function CalculadoraN32B() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
     const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const emSacos = (kg: number, saco = 50) => `${Math.ceil(kg / saco)} saco${Math.ceil(kg / saco) !== 1 ? "s" : ""} &times; ${saco}&nbsp;kg`;
-    const emTambores = (l: number, tam = 200) => `${Math.ceil(l / tam)} tambor${Math.ceil(l / tam) !== 1 ? "es" : ""} &times; ${tam}&nbsp;L`;
-
     const diffRha   = calc.custoConvHa - calc.custoTpdHa;
     const diffTotal = diffRha * area;
     const diffPct   = calc.custoConvHa > 0 ? (diffRha / calc.custoConvHa) * 100 : 0;
@@ -208,38 +205,34 @@ tr:last-child td{border-bottom:none}
 
 <div class="sec">
   <div class="sec-title">Lista de Compras</div>
-  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>Comprar</th><th>R$/un</th><th>Total</th></tr></thead>
+  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>R$/un</th><th>Total</th></tr></thead>
   <tbody>
     <tr>
       <td><strong>Ureia Branca</strong></td>
       <td>${n2(calc.ureiaTotal, 1)} kg</td>
-      <td>${emSacos(calc.ureiaTotal, 50)}</td>
       <td>${moedaP(precoUreia / 1000)}/kg</td>
       <td>${moedaP(calc.ureiaTotal * precoUreia / 1000)}</td>
     </tr>
     <tr>
       <td><strong>LEG (complexante)</strong></td>
       <td>${n2(calc.legTotal, 1)} L</td>
-      <td>${emTambores(calc.legTotal, 200)}</td>
       <td>${moedaP(precoLeg)}/L</td>
       <td>${moedaP(calc.legTotal * precoLeg)}</td>
     </tr>
     <tr>
       <td><strong>&Aacute;cido B&oacute;rico</strong></td>
       <td>${n2(calc.abTotal, 2)} kg</td>
-      <td>${emSacos(calc.abTotal, 25)}</td>
       <td>${moedaP(precoAB)}/kg</td>
       <td>${moedaP(calc.abTotal * precoAB)}</td>
     </tr>
     <tr>
       <td><strong>Complex Bor</strong></td>
       <td>${n2(calc.borTotal, 1)} L</td>
-      <td>${emTambores(calc.borTotal, 200)}</td>
       <td>${moedaP(precoBor)}/L</td>
       <td>${moedaP(calc.borTotal * precoBor)}</td>
     </tr>
     <tr style="background:#ecfdf5;font-weight:700">
-      <td colspan="4" style="text-align:right;padding-right:12px">Total Geral</td>
+      <td colspan="3" style="text-align:right;padding-right:12px">Total Geral</td>
       <td>${moedaP(calc.custoTotal)}</td>
     </tr>
   </tbody></table>

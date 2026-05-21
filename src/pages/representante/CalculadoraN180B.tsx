@@ -217,8 +217,6 @@ export default function CalculadoraN180B() {
   const irParaRecomendacao = () => {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const area = meta.areaHa || 0;
-    const emSacos = (kg: number, s = 50) => { const n = Math.ceil(kg/s); return `${(n*s).toLocaleString("pt-BR")} kg (${n} saco${n!==1?"s":""} × ${s} kg)`; };
-    const emTam   = (l:  number, t = 200) => { const n = Math.ceil(l/t);  return `${(n*t).toLocaleString("pt-BR")} L (${n} tambor${n!==1?"es":""} × ${t} L)`; };
     const m = (v: number) => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
     const n = (v: number, d=1) => v.toLocaleString("pt-BR",{maximumFractionDigits:d,minimumFractionDigits:d});
 
@@ -238,18 +236,18 @@ export default function CalculadoraN180B() {
     });
 
     // Lista de compras
-    type CI = {produto:string;necessario:string;comprar:string;prUn:string;total:string};
+    type CI = {produto:string;necessario:string;prUn:string;total:string};
     const compras:CI[] = [];
-    const add = (prod:string,necessario:string,comprar:string,prUn:string,val:number) =>
-      compras.push({produto:prod,necessario,comprar,prUn,total:m(val)});
-    add("Ureia",`${n(calc.ureiaTotal,0)} kg`,emSacos(calc.ureiaTotal),`R$ ${n(precoKg,2)}/kg`,calc.ureiaTotal*precoKg);
-    if(calc.saTotal>0) add("Sulfato de Amônio",`${n(calc.saTotal,0)} kg`,emSacos(calc.saTotal,50),`R$ 1,20/kg`,calc.saTotal*1.2);
-    add("Ácido Bórico",`${n(calc.abTotal,1)} kg`,emSacos(calc.abTotal,25),`R$ ${n(precos.acidoBorico,2)}/kg`,calc.abTotal*precos.acidoBorico);
-    add("Complex Bor",`${n(calc.borTotal,1)} L`,emTam(calc.borTotal),`R$ ${n(precos.complexBor,2)}/L`,calc.borTotal*precos.complexBor);
+    const add = (prod:string,necessario:string,prUn:string,val:number) =>
+      compras.push({produto:prod,necessario,prUn,total:m(val)});
+    add("Ureia",`${n(calc.ureiaTotal,0)} kg`,`R$ ${n(precoKg,2)}/kg`,calc.ureiaTotal*precoKg);
+    if(calc.saTotal>0) add("Sulfato de Amônio",`${n(calc.saTotal,0)} kg`,`R$ 1,20/kg`,calc.saTotal*1.2);
+    add("Ácido Bórico",`${n(calc.abTotal,1)} kg`,`R$ ${n(precos.acidoBorico,2)}/kg`,calc.abTotal*precos.acidoBorico);
+    add("Complex Bor",`${n(calc.borTotal,1)} L`,`R$ ${n(precos.complexBor,2)}/L`,calc.borTotal*precos.complexBor);
     (["tsh","lifegrow","leg"] as Complexante[]).forEach(k=>{
       const v=calc.cxTotal[k]; if(!v||v<0.01) return;
       const pr=k==="tsh"?precos.tsh:k==="lifegrow"?precos.lifeGrow:precos.leg;
-      add(CX_LABEL[k],`${n(v,0)} L`,emTam(v),`R$ ${n(pr,2)}/L`,v*pr);
+      add(CX_LABEL[k],`${n(v,0)} L`,`R$ ${n(pr,2)}/L`,v*pr);
     });
     const totalCompras = compras.reduce((s,c)=>{const v=parseFloat(c.total.replace(/[R$\s.]/g,"").replace(",","."));return s+(isNaN(v)?0:v);},0);
 
@@ -281,9 +279,9 @@ export default function CalculadoraN180B() {
 <table><thead><tr><th>#</th><th>Estágio</th><th>Tipo Aplicação</th><th>Descrição</th></tr></thead>
 <tbody>${apps.map(a=>`<tr><td class="b">${a.idx}</td><td class="b">${a.etapa}</td><td>${a.tipo}</td><td>${a.desc}</td></tr>`).join("")}</tbody></table>
 <h2>Lista de Compras (Matérias-primas)</h2>
-<table><thead><tr><th>Produto</th><th>Necessário</th><th>Comprar</th><th>R$/un</th><th class="num">Total</th></tr></thead>
-<tbody>${compras.map(c=>`<tr><td class="b">${c.produto}</td><td>${c.necessario}</td><td>${c.comprar}</td><td>${c.prUn}</td><td class="num g">${c.total}</td></tr>`).join("")}
-<tr style="background:#ecfeff"><td colspan="4" style="font-weight:bold;text-align:right">TOTAL</td><td class="num g" style="font-weight:bold;font-size:13px">${m(totalCompras)}</td></tr></tbody></table>
+<table><thead><tr><th>Produto</th><th>Necessário</th><th>R$/un</th><th class="num">Total</th></tr></thead>
+<tbody>${compras.map(c=>`<tr><td class="b">${c.produto}</td><td>${c.necessario}</td><td>${c.prUn}</td><td class="num g">${c.total}</td></tr>`).join("")}
+<tr style="background:#ecfeff"><td colspan="3" style="font-weight:bold;text-align:right">TOTAL</td><td class="num g" style="font-weight:bold;font-size:13px">${m(totalCompras)}</td></tr></tbody></table>
 <h2>Receita de Preparo da Calda (por 1.000 L)</h2>
 <div class="rec-title">${possuiMicron?"Coberturas — ":""}1ª Cobertura — ${CX_LABEL[cxRec]} + Boro</div>
 <table><thead><tr><th style="width:40px">#</th><th>Ingrediente</th><th>Quantidade</th><th>Instrução</th></tr></thead>
