@@ -115,6 +115,7 @@ import ClientesRep from "./pages/representante/ClientesRep";
 import CalculadorasHub from "./pages/representante/CalculadorasHub";
 import PropostaTpd from "./pages/representante/PropostaTpd";
 import CalculadoraN180 from "./pages/representante/CalculadoraN180";
+import CalculadoraK180 from "./pages/representante/CalculadoraK180";
 
 const queryClient = new QueryClient();
 
@@ -202,6 +203,7 @@ const App = () => (
               <Route path="/app/rep/calculadoras" element={<ProtectedRoute><AppShell><CalculadorasHub /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/proposta-tpd" element={<ProtectedRoute><AppShell><PropostaTpd /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/calculadora-n180" element={<ProtectedRoute><AppShell><CalculadoraN180 /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/calculadora-k180" element={<ProtectedRoute><AppShell><CalculadoraK180 /></AppShell></ProtectedRoute>} />
 
               {/* Programa Nutrir — extras Fase 1 */}
               <Route path="/app/nutrir/orcamento-nutricao" element={<ProtectedRoute><AppShell><OrcamentoConsultoriaNutricao /></AppShell></ProtectedRoute>} />

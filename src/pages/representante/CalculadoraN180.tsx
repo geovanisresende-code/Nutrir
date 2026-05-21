@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/layout/AppShell";
 import { useGlobalTable, useOrgTable } from "@/lib/nutrir/useNutrirData";
 import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
-import { FlaskConical, ShoppingCart, Droplets } from "lucide-react";
+import { FlaskConical, ShoppingCart } from "lucide-react";
 
 interface Cultura { id: string; nome: string; }
 interface MP { id: string; codigo: string | null; nome: string; preco_atual: number | null; unidade_preco: string; ativo: boolean; }
@@ -16,155 +16,238 @@ interface Complexador { id: string; nome: string; preco_litro: number; ativo: bo
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: number, d = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
 
-// K180: 180 g K₂O/L → KCl 60% K₂O → 0,300 kg KCl por L
-const KCL_KG_PER_L_K180  = 0.180 / 0.60; // 0,300
+const CULTURAS_FALLBACK = ["Soja", "Milho", "Cana-de-açúcar", "Café", "Algodão", "Laranja", "Arroz", "Eucalipto"];
 
-const CULTURAS_FALLBACK = ["Soja","Milho","Cana-de-açúcar","Café","Algodão","Laranja","Arroz","Eucalipto"];
+type AduboKey = "ureia_branca" | "ureia_protegida" | "sulfato_amonio" | "nitrato_amonio";
+type FormaAplicacao = "drench" | "nonino" | "fertirrigacao" | "pulverizador" | "drone" | "aviao";
+type Complexante = "tsh" | "lifegrow" | "leg";
 
-// ── Componentes menores ─────────────────────────────────────────
-function Lbl({ t, children }: { t: string; children: React.ReactNode }) {
-  return <div><label className="text-xs font-medium text-muted-foreground block mb-1">{t}</label>{children}</div>;
+const ADUBOS: Record<AduboKey, { label: string; nPct: number }> = {
+  ureia_branca:    { label: "Ureia Branca",     nPct: 0.45 },
+  ureia_protegida: { label: "Ureia Protegida",   nPct: 0.45 },
+  sulfato_amonio:  { label: "Sulfato de Amônio", nPct: 0.21 },
+  nitrato_amonio:  { label: "Nitrato de Amônio", nPct: 0.327 },
+};
+
+const FORMAS: Record<FormaAplicacao, string> = {
+  drench:        "Drench",
+  nonino:        "Nonino",
+  fertirrigacao: "Fertirrigação",
+  pulverizador:  "Pulverizador",
+  drone:         "Drone",
+  aviao:         "Avião",
+};
+
+// Litros de complexante por 1.000 L de N180
+const CX_L_1000: Record<Complexante, number> = { tsh: 60, lifegrow: 75, leg: 25 };
+const CX_LABEL:  Record<Complexante, string>  = { tsh: "TSH", lifegrow: "Life Grow", leg: "LEG" };
+
+// Ureia reduzida (kg/ha) após aplicar as regras de redução por tipo de adubo
+function calcUreiaReduzida(adubo: AduboKey, dose: number): number {
+  switch (adubo) {
+    case "ureia_branca":    return dose * 0.40;                                           // reduz 60%
+    case "ureia_protegida": return dose * 0.45;                                           // reduz 55%
+    case "sulfato_amonio":
+      if (dose > 400) return (dose - 200) * 0.21 * 0.50 / 0.45;                         // max 200 kg SA
+      if (dose > 300) return (dose - 150) * 0.21 * 0.50 / 0.45;                         // max 150 kg SA
+      return dose * 0.21 * 0.50 / 0.45;                                                  // substituição completa
+    case "nitrato_amonio":  return dose * 0.327 * 0.55 / 0.45;                           // reduz 45%
+  }
 }
-function PrecoInput({ value, onChange, label, step = "1" }: { value: number; onChange: (v: number) => void; label: string; step?: string }) {
+
+// Quantidade de SA a ser aplicado (kg/ha), se aplicável
+function calcSAUsado(adubo: AduboKey, dose: number): number {
+  if (adubo !== "sulfato_amonio") return 0;
+  if (dose > 400) return 200;
+  if (dose > 300) return 150;
+  return dose;
+}
+
+// Distribuição do volume de cobertura em aplicações (L/ha por estágio)
+const COB_LIMITS = [
+  { stage: "V2",  max: 120 },
+  { stage: "V4",  max: 100 },
+  { stage: "V6",  max: 80  },
+  { stage: "V8",  max: 60  },
+  { stage: "R1",  max: 40  },
+];
+
+function distribuirCobertura(totalHa: number): { stage: string; vol: number }[] {
+  const apps: { stage: string; vol: number }[] = [];
+  let remaining = totalHa;
+  for (const lim of COB_LIMITS) {
+    if (remaining < 0.5) break;
+    const vol = Math.min(remaining, lim.max);
+    apps.push({ stage: lim.stage, vol });
+    remaining -= vol;
+  }
+  return apps;
+}
+
+function isLiquidoForma(forma: FormaAplicacao) {
+  return ["drench", "nonino", "fertirrigacao"].includes(forma);
+}
+
+function Lbl({ t, children }: { t: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground block mb-1">{t}</label>
+      {children}
+    </div>
+  );
+}
+
+function PrecoInput({ value, onChange, label, step = "1" }: {
+  value: number; onChange: (v: number) => void; label: string; step?: string;
+}) {
   return (
     <Lbl t={label}>
       <div className="flex items-center">
         <span className="text-xs text-muted-foreground px-2 border border-r-0 rounded-l-md h-10 flex items-center bg-muted shrink-0">R$</span>
-        <Input
-          type="number"
-          step={step}
-          value={value || ""}
-          onFocus={e => e.target.select()}
-          onChange={e => onChange(parseFloat(e.target.value) || 0)}
-          className="rounded-l-none"
-        />
+        <Input type="number" step={step} value={value || ""} onFocus={e => e.target.select()}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)} className="rounded-l-none" />
       </div>
     </Lbl>
   );
 }
 
-// ── Página Principal ────────────────────────────────────────────
 export default function CalculadoraN180() {
   const navigate = useNavigate();
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
   const { data: mps, loading: mpsLoading } = useOrgTable<MP>("nutrir_materias_primas", { orderBy: "nome" });
-  const { data: complexadores, loading: cmpLoading } = useGlobalTable<Complexador>("nutrir_complexadores", "nome");
+  const { data: complexadores, loading: cmpLoading } = useOrgTable<Complexador>("nutrir_complexadores", { orderBy: "nome" });
   const { params, loading: cfgLoading } = useMotorConfig();
   const [precoInit, setPrecoInit] = useState(false);
 
+  // Identificação
   const [meta, setMeta] = useState({ produtor: "", fazenda: "", cultura: "Soja", areaHa: 100 });
-  const [n180, setN180] = useState({
-    doseHa: 175,            // L/ha
-    lifeGrowLper1000: 8.75, // L de Life Grow por 1000 L de N180
-    precoUreia: 4000,       // R$/t (será sobrescrito pelo motor config)
-    precoLifeGrow: 25,      // R$/L
-  });
-  const [k180, setK180] = useState({
-    doseHa: 270,            // L/ha
-    tshLper1000: 8.1,       // L de TSH por 1000 L de K180
-    precoKcl: 2800,         // R$/t
-    precoTsh: 16.5,         // R$/L
-  });
+
+  // Configuração da calda
+  const [adubo, setAdubo] = useState<AduboKey>("ureia_branca");
+  const [doseHa, setDoseHa] = useState(200);           // kg/ha do adubo selecionado
+  const [formaAplicacao, setFormaAplicacao] = useState<FormaAplicacao>("pulverizador");
+  const [possuiMicron, setPossuiMicron] = useState(false);
+  const [vazaoMicron, setVazaoMicron] = useState(50);  // L/ha antes do ajuste -10
+  const [complexanteSulco, setComplexanteSulco] = useState<"tsh" | "lifegrow">("tsh");
+  const [complexanteV2, setComplexanteV2] = useState<Complexante>("tsh");
+  const [complexanteGeral, setComplexanteGeral] = useState<Complexante>("tsh");
   const [volBatelada, setVolBatelada] = useState(6000);
 
-  // ── Inicializa preços: nutrir_materias_primas > nutrir_complexadores > motor_config ──
+  // Preços
+  const [precos, setPrecos] = useState({ ureia: 4000, tsh: 18.0, lifeGrow: 25.0, leg: 22.0 });
+
+  // Carrega preços do motor de cálculos / matérias-primas
   useEffect(() => {
-    if (precoInit) return;
-    if (cfgLoading || mpsLoading || cmpLoading) return;
-
+    if (precoInit || cfgLoading || mpsLoading || cmpLoading) return;
     const cfg = paramMap(params);
-
-    // Matérias-primas pelo código
     const byCode = (cod: string) => mps.find(m => m.codigo?.toUpperCase() === cod && m.ativo && m.preco_atual != null);
-    const urb = byCode("URB");
-    const kcl = byCode("KCL");
-
-    // Complexadores pelo nome
-    const byCmp = (nome: string) => complexadores.find(c => c.nome.toLowerCase().includes(nome.toLowerCase()) && c.ativo);
-    const lifeGrow = byCmp("Life Grow") ?? byCmp("lifegrow");
-    const tsh = byCmp("TSH");
-
-    setN180(p => ({
-      ...p,
-      // Ureia: MP (R$/kg → R$/t) > motor_config > default
-      precoUreia: urb?.preco_atual != null
-        ? urb.preco_atual * 1000
-        : cfg.preco_ureia_kg ? cfg.preco_ureia_kg * 1000 : p.precoUreia,
-      // Life Grow: complexador > motor_config > default
-      precoLifeGrow: lifeGrow?.preco_litro ?? cfg.preco_lifegrow_l ?? p.precoLifeGrow,
+    const byCmp  = (nome: string) => complexadores.find(c => c.nome.toLowerCase().includes(nome.toLowerCase()) && c.ativo);
+    const urb      = byCode("URB");
+    const tshCmp   = byCmp("TSH");
+    const lgCmp    = byCmp("Life Grow") ?? byCmp("lifegrow");
+    const legCmp   = byCmp("LEG") ?? byCmp("Leg");
+    setPrecos(p => ({
+      ureia:    urb?.preco_atual != null ? urb.preco_atual * 1000 : cfg.preco_ureia_kg ? cfg.preco_ureia_kg * 1000 : p.ureia,
+      tsh:      tshCmp?.preco_litro ?? cfg.preco_tsh_l    ?? p.tsh,
+      lifeGrow: lgCmp?.preco_litro  ?? cfg.preco_lifegrow_l ?? p.lifeGrow,
+      leg:      legCmp?.preco_litro ?? cfg.preco_leg_l    ?? p.leg,
     }));
-
-    setK180(p => ({
-      ...p,
-      // KCl: MP (R$/kg → R$/t) > motor_config > default
-      precoKcl: kcl?.preco_atual != null
-        ? kcl.preco_atual * 1000
-        : cfg.preco_kcl_kg ? cfg.preco_kcl_kg * 1000 : p.precoKcl,
-      // TSH: complexador > motor_config > default
-      precoTsh: tsh?.preco_litro ?? cfg.preco_tsh_l ?? p.precoTsh,
-    }));
-
     setPrecoInit(true);
   }, [cfgLoading, mpsLoading, cmpLoading, precoInit, params, mps, complexadores]);
 
-  // Ureia por litro de N180 — vem do motor config (padrão 400 kg/1000L = 0,400 kg/L)
-  const ureiaKgPerLN180 = useMemo(() => {
-    const cfg = paramMap(params);
-    return (cfg.n180_ureia_kg_1000l ?? 400) / 1000;
-  }, [params]);
+  // Forma líquida (drench/nonino/fertirrigação) não permite LEG
+  const allowLeg = !isLiquidoForma(formaAplicacao);
+  useEffect(() => {
+    if (isLiquidoForma(formaAplicacao)) {
+      if (complexanteGeral === "leg") setComplexanteGeral("tsh");
+      if (complexanteV2   === "leg") setComplexanteV2("tsh");
+    }
+  }, [formaAplicacao]);
 
-  // ── Cálculos N180 ───────────────────────────────────────────
-  const n180c = useMemo(() => {
-    const ureiaKgHa    = ureiaKgPerLN180 * n180.doseHa;
-    const lifeGrowLHa  = (n180.lifeGrowLper1000 / 1000) * n180.doseHa;
-    const custoUreia   = ureiaKgHa * n180.precoUreia / 1000;
-    const custoLG      = lifeGrowLHa * n180.precoLifeGrow;
-    const custoPorHa   = custoUreia + custoLG;
-    const volTotal     = n180.doseHa * meta.areaHa;
-    const ureiaTotal   = ureiaKgHa * meta.areaHa;
-    const lifeGrowTotal = lifeGrowLHa * meta.areaHa;
-    const custoTotal   = custoPorHa * meta.areaHa;
-    return { ureiaKgHa, lifeGrowLHa, custoUreia, custoLG, custoPorHa, volTotal, ureiaTotal, lifeGrowTotal, custoTotal };
-  }, [n180, meta, ureiaKgPerLN180]);
+  // ── Cálculos principais ───────────────────────────────────────────
+  const calc = useMemo(() => {
+    const pontosN   = doseHa * ADUBOS[adubo].nPct;
+    const ureiaKgHa = calcUreiaReduzida(adubo, doseHa);
+    const saKgHa    = calcSAUsado(adubo, doseHa);
+    const volCaldaHa = ureiaKgHa * 2.5;                // L/ha de N180
 
-  // ── Cálculos K180 ───────────────────────────────────────────
-  const k180c = useMemo(() => {
-    const kclKgHa    = KCL_KG_PER_L_K180 * k180.doseHa;
-    const tshLHa     = (k180.tshLper1000 / 1000) * k180.doseHa;
-    const custoKcl   = kclKgHa * k180.precoKcl / 1000;
-    const custoTsh   = tshLHa * k180.precoTsh;
-    const custoPorHa = custoKcl + custoTsh;
-    const volTotal   = k180.doseHa * meta.areaHa;
-    const kclTotal   = kclKgHa * meta.areaHa;
-    const tshTotal   = tshLHa * meta.areaHa;
-    const custoTotal = custoPorHa * meta.areaHa;
-    return { kclKgHa, tshLHa, custoKcl, custoTsh, custoPorHa, volTotal, kclTotal, tshTotal, custoTotal };
-  }, [k180, meta]);
+    const sulcoVolHa      = possuiMicron ? Math.max(0, Math.min(vazaoMicron - 10, volCaldaHa)) : 0;
+    const coberturaVolHa  = volCaldaHa - sulcoVolHa;
+    const coberturaApps   = possuiMicron ? distribuirCobertura(coberturaVolHa) : [];
 
-  const custoPorHa = n180c.custoPorHa + k180c.custoPorHa;
-  const custoTotal = n180c.custoTotal + k180c.custoTotal;
+    const cxPorL = (cx: Complexante) => CX_L_1000[cx] / 1000; // L cx por L de N180
 
-  // ── Bateladas ────────────────────────────────────────────────
-  const vBat = volBatelada > 0 ? volBatelada : 6000;
-  const batN180Cheias  = Math.floor(n180c.volTotal / vBat);
-  const batN180Parcial = Math.round(n180c.volTotal % vBat);
-  const batK180Cheias  = Math.floor(k180c.volTotal / vBat);
-  const batK180Parcial = Math.round(k180c.volTotal % vBat);
+    // Complexante total por ha (somado por tipo)
+    const totalCx: Partial<Record<Complexante, number>> = {};
+    const addCx = (cx: Complexante, vol: number) => {
+      totalCx[cx] = (totalCx[cx] ?? 0) + vol * cxPorL(cx);
+    };
 
-  // ── Gerar Pedido ─────────────────────────────────────────────
+    if (possuiMicron) {
+      addCx(complexanteSulco, sulcoVolHa);
+      if (coberturaApps.length > 0) {
+        addCx(complexanteV2, coberturaApps[0].vol);          // V2 = 1ª cobertura
+        for (let i = 1; i < coberturaApps.length; i++) {
+          addCx("leg", coberturaApps[i].vol);                 // V4+ = LEG obrigatório
+        }
+      }
+    } else {
+      addCx(complexanteGeral, volCaldaHa);
+    }
+
+    // Custos por ha
+    const custoUreia = ureiaKgHa * precos.ureia / 1000;
+    const custoCx    =
+      (totalCx.tsh      ?? 0) * precos.tsh +
+      (totalCx.lifegrow ?? 0) * precos.lifeGrow +
+      (totalCx.leg      ?? 0) * precos.leg;
+    const custoPorHa = custoUreia + custoCx;
+
+    // Totais para a área
+    const area       = meta.areaHa || 0;
+    const volTotalL  = volCaldaHa * area;
+    const ureiaTotal = ureiaKgHa  * area;
+    const saTotal    = saKgHa     * area;
+    const cxTotal: Partial<Record<Complexante, number>> = {};
+    (["tsh", "lifegrow", "leg"] as Complexante[]).forEach(k => {
+      if (totalCx[k]) cxTotal[k] = totalCx[k]! * area;
+    });
+    const custoTotal = custoPorHa * area;
+
+    return {
+      pontosN, ureiaKgHa, saKgHa, volCaldaHa,
+      sulcoVolHa, coberturaVolHa, coberturaApps,
+      totalCx, custoPorHa,
+      volTotalL, ureiaTotal, saTotal, cxTotal, custoTotal,
+    };
+  }, [adubo, doseHa, possuiMicron, vazaoMicron, complexanteSulco, complexanteV2, complexanteGeral, meta.areaHa, precos]);
+
+  const vBat          = Math.max(volBatelada, 100);
+  const batCheias     = Math.floor(calc.volTotalL / vBat);
+  const batParcialVol = Math.round(calc.volTotalL % vBat);
+
   const irParaPedido = () => {
-    const itens = [
-      { produto_nome: "Ureia Branca", quantidade: Math.ceil(n180c.ureiaTotal), unidade: "kg", preco_unitario: n180.precoUreia / 1000 },
-      { produto_nome: "Life Grow",    quantidade: Math.ceil(n180c.lifeGrowTotal), unidade: "L",  preco_unitario: n180.precoLifeGrow },
-      { produto_nome: "KCl",          quantidade: Math.ceil(k180c.kclTotal),     unidade: "kg", preco_unitario: k180.precoKcl / 1000 },
-      { produto_nome: "TSH",          quantidade: Math.ceil(k180c.tshTotal),     unidade: "L",  preco_unitario: k180.precoTsh },
+    const itens: any[] = [
+      { produto_nome: "Ureia Branca", quantidade: Math.ceil(calc.ureiaTotal), unidade: "kg", preco_unitario: precos.ureia / 1000 },
     ];
+    if (calc.saTotal > 0)
+      itens.push({ produto_nome: "Sulfato de Amônio", quantidade: Math.ceil(calc.saTotal), unidade: "kg", preco_unitario: 0 });
+    (["tsh", "lifegrow", "leg"] as Complexante[]).forEach(k => {
+      const v = calc.cxTotal[k];
+      if (v && v > 0.01)
+        itens.push({
+          produto_nome:    CX_LABEL[k],
+          quantidade:      Math.ceil(v),
+          unidade:         "L",
+          preco_unitario:  k === "tsh" ? precos.tsh : k === "lifegrow" ? precos.lifeGrow : precos.leg,
+        });
+    });
     sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
-      origem: "calc_n180",
-      titulo: `N180/K180 — ${meta.fazenda || meta.produtor || meta.cultura}`,
+      origem:       "calc_n180",
+      titulo:       `N180 — ${meta.fazenda || meta.produtor || meta.cultura}`,
       cliente_nome: meta.produtor || meta.fazenda || null,
-      area_ha: meta.areaHa,
-      observacoes: `Produção TPD N180+K180 · ${meta.cultura} · ${meta.areaHa} ha`,
+      area_ha:      meta.areaHa,
+      observacoes:  `N180 · ${ADUBOS[adubo].label} · ${meta.cultura} · ${meta.areaHa} ha`,
       itens,
     }));
     navigate("/app/rep/pedidos");
@@ -172,19 +255,15 @@ export default function CalculadoraN180() {
 
   const listaCulturas = culturas.length > 0 ? culturas.map(c => c.nome) : CULTURAS_FALLBACK;
   const fontePrecosMsg = mps.length > 0
-    ? `✓ Preços carregados do banco (${mps.length} mat. primas · ${complexadores.length} complexantes)`
-    : "⚠ Cadastre matérias-primas e complexantes para carregar preços automáticos";
+    ? `✓ Preços do banco (${mps.length} MPs · ${complexadores.length} complexantes)`
+    : "⚠ Cadastre matérias-primas para preços automáticos";
 
   return (
     <div className="flex flex-col gap-4 pb-10">
       <PageHeader
-        title={<span className="flex items-center gap-2"><FlaskConical className="w-5 h-5 text-primary"/>Calculadora N180 / K180</span> as any}
-        description="Produção de fertilizante líquido na fazenda · bateladas · lista de compras"
-        actions={
-          <Button onClick={irParaPedido} className="gap-1.5">
-            <ShoppingCart className="w-4 h-4" />Criar Pedido
-          </Button>
-        }
+        title={<span className="flex items-center gap-2"><FlaskConical className="w-5 h-5 text-primary" />N180 — Nitrogênio Líquido</span> as any}
+        description="Ureia complexada · substituição de adubação de base · bateladas · lista de compras"
+        actions={<Button onClick={irParaPedido} className="gap-1.5"><ShoppingCart className="w-4 h-4" />Criar Pedido</Button>}
       />
 
       <div className="px-4 space-y-4">
@@ -199,91 +278,234 @@ export default function CalculadoraN180() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Lbl t="Produtor">
-              <Input value={meta.produtor} onChange={e => setMeta({...meta, produtor: e.target.value})} placeholder="Nome do produtor" />
+              <Input value={meta.produtor} onChange={e => setMeta({ ...meta, produtor: e.target.value })} placeholder="Nome do produtor" />
             </Lbl>
             <Lbl t="Fazenda">
-              <Input value={meta.fazenda} onChange={e => setMeta({...meta, fazenda: e.target.value})} placeholder="Nome da fazenda" />
+              <Input value={meta.fazenda} onChange={e => setMeta({ ...meta, fazenda: e.target.value })} placeholder="Nome da fazenda" />
             </Lbl>
             <Lbl t="Cultura">
-              <Select value={meta.cultura} onValueChange={v => setMeta({...meta, cultura: v})}>
+              <Select value={meta.cultura} onValueChange={v => setMeta({ ...meta, cultura: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {listaCulturas.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{listaCulturas.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </Lbl>
             <Lbl t="Área (ha)">
               <Input type="number" value={meta.areaHa || ""} onFocus={e => e.target.select()}
-                onChange={e => setMeta({...meta, areaHa: parseFloat(e.target.value) || 0})} />
+                onChange={e => setMeta({ ...meta, areaHa: parseFloat(e.target.value) || 0 })} />
             </Lbl>
           </div>
         </CardContent></Card>
 
-        {/* N180 */}
+        {/* Configuração N180 */}
         <Card className="border-green-200"><CardContent className="pt-4">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-3">
             <FlaskConical className="w-4 h-4 text-green-700" />
-            <p className="text-sm font-semibold text-green-700">N180 — Nitrogênio Líquido</p>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">Ureia branca + Life Grow + água · 180 g N/L · Ureia = 0,400 kg/L</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Lbl t="Dose (L/ha)">
-              <Input type="number" value={n180.doseHa || ""} onFocus={e => e.target.select()}
-                onChange={e => setN180({...n180, doseHa: parseFloat(e.target.value) || 0})} />
-            </Lbl>
-            <Lbl t="Life Grow (L / 1.000 L N180)">
-              <Input type="number" step="0.01" value={n180.lifeGrowLper1000 || ""} onFocus={e => e.target.select()}
-                onChange={e => setN180({...n180, lifeGrowLper1000: parseFloat(e.target.value) || 0})} />
-            </Lbl>
-            <PrecoInput label="Ureia (R$/t)" value={n180.precoUreia} step="100"
-              onChange={v => setN180({...n180, precoUreia: v})} />
-            <PrecoInput label="Life Grow (R$/L)" value={n180.precoLifeGrow} step="0.50"
-              onChange={v => setN180({...n180, precoLifeGrow: v})} />
+            <p className="text-sm font-semibold text-green-700">Configuração N180</p>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-green-50 rounded-lg text-xs">
-            <div><p className="text-muted-foreground">Ureia/ha</p><p className="font-bold">{num(n180c.ureiaKgHa)} kg</p></div>
-            <div><p className="text-muted-foreground">Life Grow/ha</p><p className="font-bold">{num(n180c.lifeGrowLHa)} L</p></div>
-            <div><p className="text-muted-foreground">Custo N180/ha</p><p className="font-bold text-green-700">{moeda(n180c.custoPorHa)}</p></div>
-            <div><p className="text-muted-foreground">Volume total</p><p className="font-bold">{num(n180c.volTotal, 0)} L</p></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {/* Adubo */}
+            <Lbl t="Adubo">
+              <Select value={adubo} onValueChange={v => setAdubo(v as AduboKey)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(ADUBOS) as [AduboKey, { label: string; nPct: number }][]).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Lbl>
+
+            {/* Dose */}
+            <Lbl t="Dose (kg/ha)">
+              <Input type="number" step="10" value={doseHa || ""} onFocus={e => e.target.select()}
+                onChange={e => setDoseHa(parseFloat(e.target.value) || 0)} />
+            </Lbl>
+
+            {/* Pontos de N — auto */}
+            <Lbl t="Pontos de N (kg N/ha)">
+              <div className="h-10 flex items-center px-3 bg-green-50 border border-green-200 rounded-md">
+                <span className="font-bold text-green-700 text-sm">{num(calc.pontosN, 1)} kg N/ha</span>
+              </div>
+            </Lbl>
+
+            {/* Forma de aplicação */}
+            <Lbl t="Forma de Aplicação">
+              <Select value={formaAplicacao} onValueChange={v => setFormaAplicacao(v as FormaAplicacao)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(FORMAS) as [FormaAplicacao, string][]).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Lbl>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground px-1">
-            <div>Ureia total: <span className="font-semibold text-foreground">{num(n180c.ureiaTotal / 1000, 3)} t</span></div>
-            <div>Life Grow total: <span className="font-semibold text-foreground">{num(n180c.lifeGrowTotal, 0)} L</span></div>
+
+          {/* Possui Micron */}
+          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg mb-4 cursor-pointer" onClick={() => setPossuiMicron(p => !p)}>
+            <input type="checkbox" readOnly checked={possuiMicron} className="w-4 h-4 accent-primary pointer-events-none" />
+            <span className="text-sm font-medium">Possui Micron (aplicação em sulco de plantio)</span>
+          </div>
+
+          {possuiMicron && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <Lbl t="Vazão Micron (L/ha)">
+                <Input type="number" step="5" value={vazaoMicron || ""} onFocus={e => e.target.select()}
+                  onChange={e => setVazaoMicron(parseFloat(e.target.value) || 0)} />
+              </Lbl>
+              <Lbl t="Dose no Sulco (L/ha)">
+                <div className="h-10 flex items-center px-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <span className="font-bold text-blue-700 text-sm">{num(calc.sulcoVolHa, 0)} L/ha</span>
+                </div>
+              </Lbl>
+              <Lbl t="Complexante — Sulco">
+                <Select value={complexanteSulco} onValueChange={v => setComplexanteSulco(v as "tsh" | "lifegrow")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tsh">TSH</SelectItem>
+                    <SelectItem value="lifegrow">Life Grow</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Lbl>
+              <Lbl t="Complexante — V2 (1ª cobertura)">
+                <Select value={complexanteV2} onValueChange={v => setComplexanteV2(v as Complexante)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tsh">TSH</SelectItem>
+                    <SelectItem value="lifegrow">Life Grow</SelectItem>
+                    {allowLeg && <SelectItem value="leg">LEG</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </Lbl>
+            </div>
+          )}
+
+          {!possuiMicron && (
+            <div className="max-w-xs">
+              <Lbl t="Complexante">
+                <Select value={complexanteGeral} onValueChange={v => setComplexanteGeral(v as Complexante)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tsh">TSH</SelectItem>
+                    <SelectItem value="lifegrow">Life Grow</SelectItem>
+                    {allowLeg && <SelectItem value="leg">LEG</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </Lbl>
+            </div>
+          )}
+        </CardContent></Card>
+
+        {/* Resultado por hectare */}
+        <Card className="border-green-200"><CardContent className="pt-4">
+          <p className="text-sm font-semibold text-green-700 mb-3">Resultado por Hectare</p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-green-50 rounded-lg text-xs mb-3">
+            <div>
+              <p className="text-muted-foreground">Ureia N180/ha</p>
+              <p className="font-bold">{num(calc.ureiaKgHa, 1)} kg</p>
+            </div>
+            {calc.saKgHa > 0 && (
+              <div>
+                <p className="text-muted-foreground">Sulfato Amônio/ha</p>
+                <p className="font-bold">{num(calc.saKgHa, 0)} kg</p>
+              </div>
+            )}
+            <div>
+              <p className="text-muted-foreground">Volume N180/ha</p>
+              <p className="font-bold">{num(calc.volCaldaHa, 0)} L</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Custo N180/ha</p>
+              <p className="font-bold text-green-700">{moeda(calc.custoPorHa)}</p>
+            </div>
+          </div>
+
+          {/* Complexantes por ha */}
+          <div className="text-xs space-y-0.5 px-1 mb-3">
+            {(["tsh", "lifegrow", "leg"] as Complexante[]).map(k => {
+              const v = calc.totalCx[k];
+              if (!v || v < 0.01) return null;
+              return (
+                <div key={k}>
+                  {CX_LABEL[k]}/ha:{" "}
+                  <span className="font-semibold text-foreground">{num(v, 2)} L</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Receita por 1.000 L */}
+          <div className="p-3 bg-muted/40 rounded-lg text-xs">
+            <p className="font-semibold mb-2">Fórmula por 1.000 L de N180:</p>
+            {possuiMicron ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="font-medium text-muted-foreground">Sulco — {CX_LABEL[complexanteSulco]}</p>
+                  <p>400 L água + 400 kg ureia + {CX_L_1000[complexanteSulco]} L {CX_LABEL[complexanteSulco]} + água até 1.000 L</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">V2 — 1ª cobertura — {CX_LABEL[complexanteV2]}</p>
+                  <p>400 L água + 400 kg ureia + {CX_L_1000[complexanteV2]} L {CX_LABEL[complexanteV2]} + água até 1.000 L</p>
+                </div>
+                {calc.coberturaApps.length > 1 && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">V4 em diante — LEG (obrigatório)</p>
+                    <p>400 L água + 400 kg ureia + 25 L LEG + água até 1.000 L</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p>400 L água + 400 kg ureia + {CX_L_1000[complexanteGeral]} L {CX_LABEL[complexanteGeral]} + água até 1.000 L</p>
+            )}
           </div>
         </CardContent></Card>
 
-        {/* K180 */}
-        <Card className="border-sky-200"><CardContent className="pt-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Droplets className="w-4 h-4 text-sky-700" />
-            <p className="text-sm font-semibold text-sky-700">K180 — Potássio Líquido</p>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">KCl + TSH + água · 180 g K₂O/L · KCl = 0,300 kg/L</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Lbl t="Dose (L/ha)">
-              <Input type="number" value={k180.doseHa || ""} onFocus={e => e.target.select()}
-                onChange={e => setK180({...k180, doseHa: parseFloat(e.target.value) || 0})} />
-            </Lbl>
-            <Lbl t="TSH (L / 1.000 L K180)">
-              <Input type="number" step="0.01" value={k180.tshLper1000 || ""} onFocus={e => e.target.select()}
-                onChange={e => setK180({...k180, tshLper1000: parseFloat(e.target.value) || 0})} />
-            </Lbl>
-            <PrecoInput label="KCl (R$/t)" value={k180.precoKcl} step="100"
-              onChange={v => setK180({...k180, precoKcl: v})} />
-            <PrecoInput label="TSH (R$/L)" value={k180.precoTsh} step="0.50"
-              onChange={v => setK180({...k180, precoTsh: v})} />
-          </div>
+        {/* Distribuição de aplicações — apenas com micron */}
+        {possuiMicron && (
+          <Card><CardContent className="pt-4">
+            <p className="text-sm font-semibold text-primary mb-3">Distribuição de Aplicações</p>
+            <div className="space-y-1">
+              {/* Sulco */}
+              <div className="flex items-center justify-between py-2.5 border-b">
+                <div>
+                  <p className="text-sm font-medium">Sulco de Plantio</p>
+                  <p className="text-xs text-muted-foreground">{CX_LABEL[complexanteSulco]} · {num(calc.sulcoVolHa, 0)} L/ha</p>
+                </div>
+                <div className="text-right text-xs">
+                  <p className="font-semibold">{num(calc.sulcoVolHa * meta.areaHa, 0)} L total</p>
+                  <p className="text-muted-foreground">{num(calc.sulcoVolHa * 0.4, 1)} kg ureia/ha</p>
+                </div>
+              </div>
+              {/* Coberturas */}
+              {calc.coberturaApps.map((app, i) => {
+                const cx: Complexante = i === 0 ? complexanteV2 : "leg";
+                return (
+                  <div key={app.stage} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                    <div>
+                      <p className="text-sm font-medium">{app.stage}</p>
+                      <p className="text-xs text-muted-foreground">{CX_LABEL[cx]} · {num(app.vol, 0)} L/ha</p>
+                    </div>
+                    <div className="text-right text-xs">
+                      <p className="font-semibold">{num(app.vol * meta.areaHa, 0)} L total</p>
+                      <p className="text-muted-foreground">{num(app.vol * 0.4, 1)} kg ureia/ha</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent></Card>
+        )}
 
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-sky-50 rounded-lg text-xs">
-            <div><p className="text-muted-foreground">KCl/ha</p><p className="font-bold">{num(k180c.kclKgHa)} kg</p></div>
-            <div><p className="text-muted-foreground">TSH/ha</p><p className="font-bold">{num(k180c.tshLHa)} L</p></div>
-            <div><p className="text-muted-foreground">Custo K180/ha</p><p className="font-bold text-sky-700">{moeda(k180c.custoPorHa)}</p></div>
-            <div><p className="text-muted-foreground">Volume total</p><p className="font-bold">{num(k180c.volTotal, 0)} L</p></div>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground px-1">
-            <div>KCl total: <span className="font-semibold text-foreground">{num(k180c.kclTotal / 1000, 3)} t</span></div>
-            <div>TSH total: <span className="font-semibold text-foreground">{num(k180c.tshTotal, 0)} L</span></div>
+        {/* Preços de insumos */}
+        <Card><CardContent className="pt-4">
+          <p className="text-sm font-semibold text-primary mb-3">Preços de Insumos</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <PrecoInput label="Ureia (R$/t)"     value={precos.ureia}    step="100"  onChange={v => setPrecos({ ...precos, ureia: v })} />
+            <PrecoInput label="TSH (R$/L)"        value={precos.tsh}      step="0.50" onChange={v => setPrecos({ ...precos, tsh: v })} />
+            <PrecoInput label="Life Grow (R$/L)"  value={precos.lifeGrow} step="0.50" onChange={v => setPrecos({ ...precos, lifeGrow: v })} />
+            <PrecoInput label="LEG (R$/L)"        value={precos.leg}      step="0.50" onChange={v => setPrecos({ ...precos, leg: v })} />
           </div>
         </CardContent></Card>
 
@@ -296,48 +518,59 @@ export default function CalculadoraN180() {
                 onChange={e => setVolBatelada(parseFloat(e.target.value) || 1000)} />
             </Lbl>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-xs font-bold text-green-700 mb-2">N180 — {num(n180c.volTotal, 0)} L totais</p>
-              <p className="text-sm font-semibold">
-                {batN180Cheias} batelada{batN180Cheias !== 1 ? "s" : ""} de {num(vBat, 0)} L
-                {batN180Parcial > 0 && <span className="text-muted-foreground font-normal"> + 1 parcial de {num(batN180Parcial, 0)} L</span>}
-              </p>
-              <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                {n180.doseHa > 0
-                  ? <p>Por batelada: {num(n180c.ureiaKgHa / n180.doseHa * vBat, 1)} kg ureia + {num(n180c.lifeGrowLHa / n180.doseHa * vBat, 1)} L Life Grow</p>
-                  : <p>Informe a dose L/ha para ver a receita por batelada</p>}
-                <p>Completar com água até {num(vBat, 0)} L</p>
-              </div>
-            </div>
-            <div className="p-4 bg-sky-50 border border-sky-200 rounded-lg">
-              <p className="text-xs font-bold text-sky-700 mb-2">K180 — {num(k180c.volTotal, 0)} L totais</p>
-              <p className="text-sm font-semibold">
-                {batK180Cheias} batelada{batK180Cheias !== 1 ? "s" : ""} de {num(vBat, 0)} L
-                {batK180Parcial > 0 && <span className="text-muted-foreground font-normal"> + 1 parcial de {num(batK180Parcial, 0)} L</span>}
-              </p>
-              <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                {k180.doseHa > 0
-                  ? <p>Por batelada: {num(k180c.kclKgHa / k180.doseHa * vBat, 1)} kg KCl + {num(k180c.tshLHa / k180.doseHa * vBat, 1)} L TSH</p>
-                  : <p>Informe a dose L/ha para ver a receita por batelada</p>}
-                <p>Completar com água até {num(vBat, 0)} L</p>
-              </div>
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-xs font-bold text-green-700 mb-2">N180 — {num(calc.volTotalL, 0)} L totais ({num(meta.areaHa, 0)} ha)</p>
+            <p className="text-sm font-semibold">
+              {batCheias} batelada{batCheias !== 1 ? "s" : ""} de {num(vBat, 0)} L
+              {batParcialVol > 0 && (
+                <span className="text-muted-foreground font-normal"> + 1 parcial de {num(batParcialVol, 0)} L</span>
+              )}
+            </p>
+            <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
+              <p>Por batelada: {num(vBat * 0.4, 0)} kg ureia</p>
+              {!possuiMicron && (
+                <p>+ {num(CX_L_1000[complexanteGeral] * vBat / 1000, 1)} L {CX_LABEL[complexanteGeral]}</p>
+              )}
+              <p>Completar com água até {num(vBat, 0)} L</p>
             </div>
           </div>
         </CardContent></Card>
 
-        {/* Resumo + CTA */}
+        {/* Resumo final */}
         <Card className="border-primary/30 bg-primary/5"><CardContent className="pt-4">
-          <p className="text-sm font-semibold mb-3">Resumo de Custos</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            <div><p className="text-xs text-muted-foreground">N180/ha</p><p className="font-bold text-green-700">{moeda(n180c.custoPorHa)}</p></div>
-            <div><p className="text-xs text-muted-foreground">K180/ha</p><p className="font-bold text-sky-700">{moeda(k180c.custoPorHa)}</p></div>
-            <div><p className="text-xs text-muted-foreground">Total/ha (N+K)</p><p className="font-bold text-primary">{moeda(custoPorHa)}</p></div>
-            <div><p className="text-xs text-muted-foreground">Total {num(meta.areaHa, 0)} ha</p><p className="font-bold">{moeda(custoTotal)}</p></div>
+          <p className="text-sm font-semibold mb-3">Resumo de Insumos e Custos</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm mb-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Ureia total</p>
+              <p className="font-bold">{num(calc.ureiaTotal / 1000, 3)} t</p>
+            </div>
+            {calc.saTotal > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground">Sulfato de Amônio</p>
+                <p className="font-bold">{num(calc.saTotal, 0)} kg</p>
+              </div>
+            )}
+            {(["tsh", "lifegrow", "leg"] as Complexante[]).map(k => {
+              const v = calc.cxTotal[k];
+              if (!v || v < 0.01) return null;
+              return (
+                <div key={k}>
+                  <p className="text-xs text-muted-foreground">{CX_LABEL[k]} total</p>
+                  <p className="font-bold">{num(v, 0)} L</p>
+                </div>
+              );
+            })}
+            <div>
+              <p className="text-xs text-muted-foreground">Custo N180/ha</p>
+              <p className="font-bold text-green-700">{moeda(calc.custoPorHa)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total {num(meta.areaHa, 0)} ha</p>
+              <p className="font-bold text-primary">{moeda(calc.custoTotal)}</p>
+            </div>
           </div>
-          <Button className="w-full mt-4 gap-2" onClick={irParaPedido}>
-            <ShoppingCart className="h-4 w-4" />
-            Gerar Pedido com estes insumos
+          <Button className="w-full mt-2 gap-2" onClick={irParaPedido}>
+            <ShoppingCart className="h-4 w-4" />Gerar Pedido com estes insumos
           </Button>
         </CardContent></Card>
 
