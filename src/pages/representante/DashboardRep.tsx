@@ -64,7 +64,7 @@ const MODULOS = [
   {
     label: "Calculadora Nutrir",
     icon: Calculator,
-    to: "/app/nutrir",
+    to: "/app/rep/calculadoras",
     gradient: "from-green-600 to-teal-700",
     shadow: "shadow-green-300/50",
     desc: "N180, N32, NPK",
