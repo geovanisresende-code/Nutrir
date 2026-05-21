@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import logo1 from "@/assets/1.png";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -215,8 +216,9 @@ export default function CalculadoraN180B() {
   const borPor1000 = calc.volCaldaHa > 0 ? (boro.complexBorLHa   / calc.volCaldaHa) * 1000 : 0;
 
   const irParaRecomendacao = () => {
-    const hoje = new Date().toLocaleDateString("pt-BR");
-    const area = meta.areaHa || 0;
+    const hoje    = new Date().toLocaleDateString("pt-BR");
+    const area    = meta.areaHa || 0;
+    const logoUrl = window.location.origin + logo1;
     const m = (v: number) => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
     const n = (v: number, d=1) => v.toLocaleString("pt-BR",{maximumFractionDigits:d,minimumFractionDigits:d});
 
@@ -259,7 +261,7 @@ export default function CalculadoraN180B() {
 
     const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recomendação N180+B</title><style>${css}</style></head><body>
 <button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-<div class="hdr"><div class="hdr-top"><div><h1>Recomendação N180+B — Nitrogênio + Boro</h1><div class="sub">${[meta.produtor,meta.fazenda,meta.cultura,`${n(area,0)} ha`,hoje].filter(Boolean).join(" · ")}</div></div><span class="badge">N180+B</span></div></div>
+<div class="hdr"><img src="${logoUrl}" style="height:48px;margin-bottom:10px;display:block" alt="NUTRIR" /><div class="hdr-top"><div><h1>Recomendação N180+B — Nitrogênio + Boro</h1><div class="sub">${[meta.produtor,meta.fazenda,meta.cultura,`${n(area,0)} ha`,hoje].filter(Boolean).join(" · ")}</div></div><span class="badge">N180+B</span></div></div>
 <h2>Comparativo de Custos: Convencional × NUTRIR N180+B</h2>
 <div class="comp">
   <div class="comp-cell header">Convencional</div><div class="comp-cell header nutrir">NUTRIR N180+B</div><div class="comp-cell header dif">Diferença</div>
@@ -299,6 +301,30 @@ export default function CalculadoraN180B() {
   <div><div class="big">${m(calc.custoTotal)}</div><div class="sm">Custo total N180+B · ${n(area,0)} ha</div></div>
   <div style="text-align:right"><div class="big">${m(calc.custoPorHa)}</div><div class="sm">por hectare</div></div>
 </div>
+${difHa < 0 ? `
+<div style="margin:16px 0 14px;border:2px solid #0891b2;border-radius:10px;overflow:hidden">
+  <div style="background:#0891b2;color:#fff;padding:9px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+    &#9733; Destaque de Economia &mdash; N180+B NUTRIR vs Aduba&ccedil;&atilde;o Convencional
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;align-items:center">
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Convencional / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#ef4444">${m(convHa)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${m(convHa*area)}</div>
+    </div>
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">N180+B NUTRIR / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#0891b2">${m(calc.custoPorHa)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${m(calc.custoTotal)}</div>
+    </div>
+    <div style="text-align:center;padding:14px 12px;background:#ecfeff">
+      <div style="font-size:9px;color:#0e4f5c;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;font-weight:600">Economia com NUTRIR</div>
+      <div style="font-size:15px;font-weight:700;color:#16a34a;margin-bottom:2px">&#9660; ${m(Math.abs(difHa))}/ha &nbsp;(${n(Math.abs(difPct),1)}%)</div>
+      <div style="font-size:26px;font-weight:800;color:#0e4f5c;line-height:1.1">${m(Math.abs(difHa*area))}</div>
+      <div style="font-size:10px;color:#0891b2;margin-top:3px">em ${n(area,0)} ha</div>
+    </div>
+  </div>
+</div>` : ""}
 <div class="footer"><span>NUTRIR — Programa de Adubação N180+B</span><span>Gerado em ${hoje}</span></div>
 </body></html>`;
     const w=window.open("","_blank"); if(w){w.document.write(html);w.document.close();}

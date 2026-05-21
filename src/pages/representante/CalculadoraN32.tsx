@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import logo1 from "@/assets/1.png";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ export default function CalculadoraN32() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
     const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const logoUrl  = window.location.origin + logo1;
     const diffRha  = calc.custoN32Ha - calc.custoTpdHa;
     const diffTotal = diffRha * area;
     const diffPct   = calc.custoN32Ha > 0 ? (diffRha / calc.custoN32Ha) * 100 : 0;
@@ -115,6 +117,7 @@ tr:last-child td{border-bottom:none}
 </style></head><body>
 
 <div class="hdr">
+  <img src="${logoUrl}" style="height:48px;margin-bottom:10px;display:block" alt="NUTRIR" />
   <h1>N32 TPD &mdash; Aduba&ccedil;&atilde;o Foliar Nitrogenada</h1>
   <div class="sub">${[meta.produtor && `Produtor: ${meta.produtor}`, meta.fazenda && `Fazenda: ${meta.fazenda}`, `Cultura: ${meta.cultura}`, `&Aacute;rea: ${n2(area, 0)} ha`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</div>
   <div class="badge">N32 TPD &nbsp;&middot;&nbsp; ${formaAplicacao} &nbsp;&middot;&nbsp; ${n2(calc.nKgHa, 2)} kg N/ha &nbsp;&middot;&nbsp; ${n2(calc.volHa, 0)} L/ha</div>
@@ -199,6 +202,30 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+${diffRha > 0 ? `
+<div style="margin:16px 0 14px;border:2px solid #65a30d;border-radius:10px;overflow:hidden">
+  <div style="background:#65a30d;color:#fff;padding:9px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+    &#9733; Destaque de Economia &mdash; N32 TPD vs Convencional
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;align-items:center">
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">N32 Convencional / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#ef4444">${moedaP(calc.custoN32Ha)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${moedaP(calc.custoN32Ha * area)}</div>
+    </div>
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">N32 TPD NUTRIR / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#65a30d">${moedaP(calc.custoTpdHa)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${moedaP(calc.custoTpdHa * area)}</div>
+    </div>
+    <div style="text-align:center;padding:14px 12px;background:#f0fdf4">
+      <div style="font-size:9px;color:#4d7c0f;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;font-weight:600">Economia com NUTRIR</div>
+      <div style="font-size:15px;font-weight:700;color:#16a34a;margin-bottom:2px">&#9660; ${moedaP(Math.abs(diffRha))}/ha &nbsp;(${n2(Math.abs(diffPct),1)}%)</div>
+      <div style="font-size:26px;font-weight:800;color:#15803d;line-height:1.1">${moedaP(Math.abs(diffTotal))}</div>
+      <div style="font-size:10px;color:#4d7c0f;margin-top:3px">em ${n2(area,0)} ha</div>
+    </div>
+  </div>
+</div>` : ""}
 <div class="footer">
   <span>NUTRIR &mdash; Programa de Aduba&ccedil;&atilde;o Foliar &middot; Gerado em ${hoje}</span>
   <span>N32 TPD Fertagro &middot; ${meta.cultura} &middot; ${n2(area, 0)} ha</span>

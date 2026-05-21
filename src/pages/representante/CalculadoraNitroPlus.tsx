@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import logo1 from "@/assets/1.png";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -298,6 +299,7 @@ export default function CalculadoraNitroPlus() {
     const hoje = new Date().toLocaleDateString("pt-BR");
     const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
     const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const logoUrl = window.location.origin + logo1;
     // Custo convencional: dose completa do adubo base
     const nPct = ADUBOS[adubo].nPct;
     const precoPorKg = precos.ureia / 1000;
@@ -409,6 +411,7 @@ tr:last-child td{border-bottom:none}
 </style></head><body>
 
 <div class="hdr">
+  <img src="${logoUrl}" style="height:48px;margin-bottom:10px;display:block" alt="NUTRIR" />
   <h1>NitroPlus &mdash; N180 + Micronutrientes</h1>
   <div class="sub">${[meta.produtor && `Produtor: ${meta.produtor}`, meta.fazenda && `Fazenda: ${meta.fazenda}`, `Cultura: ${meta.cultura}`, `&Aacute;rea: ${n2(area, 0)} ha`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</div>
   <div class="badge">${ADUBOS[adubo].label} ${n2(doseHa, 0)} kg/ha &nbsp;&middot;&nbsp; ${n2(calc.pontosN, 1)} kg N/ha &nbsp;&middot;&nbsp; Complexa&ccedil;&atilde;o: ${complexLevel} &nbsp;&middot;&nbsp; ${n2(calc.volTotalHa, 0)} L/ha</div>
@@ -481,6 +484,30 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+${diffRha > 0 ? `
+<div style="margin:16px 0 14px;border:2px solid #7c3aed;border-radius:10px;overflow:hidden">
+  <div style="background:#7c3aed;color:#fff;padding:9px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+    &#9733; Destaque de Economia &mdash; NitroPlus vs Aduba&ccedil;&atilde;o Convencional
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;align-items:center">
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Convencional / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#ef4444">${moedaP(custoConvHa)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${moedaP(custoConvHa * area)}</div>
+    </div>
+    <div style="text-align:center;border-right:1px solid #e5e7eb;padding:14px 12px">
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">NitroPlus NUTRIR / ha</div>
+      <div style="font-size:22px;font-weight:700;color:#7c3aed">${moedaP(calc.custoPorHa)}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">Total: ${moedaP(calc.custoTotal)}</div>
+    </div>
+    <div style="text-align:center;padding:14px 12px;background:#f5f3ff">
+      <div style="font-size:9px;color:#4c1d95;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;font-weight:600">Economia com NUTRIR</div>
+      <div style="font-size:15px;font-weight:700;color:#16a34a;margin-bottom:2px">&#9660; ${moedaP(Math.abs(diffRha))}/ha &nbsp;(${n2(Math.abs(diffPct),1)}%)</div>
+      <div style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1.1">${moedaP(Math.abs(diffRha * area))}</div>
+      <div style="font-size:10px;color:#7c3aed;margin-top:3px">em ${n2(area,0)} ha</div>
+    </div>
+  </div>
+</div>` : ""}
 <div class="footer">
   <span>NUTRIR &mdash; Programa de Aduba&ccedil;&atilde;o NitroPlus &middot; Gerado em ${hoje}</span>
   <span>NitroPlus Fertagro &middot; ${meta.cultura} &middot; ${n2(area, 0)} ha &middot; Complexa&ccedil;&atilde;o ${complexLevel}</span>
