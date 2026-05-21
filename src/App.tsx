@@ -116,6 +116,10 @@ import CalculadorasHub from "./pages/representante/CalculadorasHub";
 import PropostaTpd from "./pages/representante/PropostaTpd";
 import CalculadoraN180 from "./pages/representante/CalculadoraN180";
 import CalculadoraK180 from "./pages/representante/CalculadoraK180";
+import CalculadoraN180B from "./pages/representante/CalculadoraN180B";
+import CalculadoraN32 from "./pages/representante/CalculadoraN32";
+import CalculadoraN32B from "./pages/representante/CalculadoraN32B";
+import CalculadoraNitroPlus from "./pages/representante/CalculadoraNitroPlus";
 
 const queryClient = new QueryClient();
 
@@ -204,6 +208,10 @@ const App = () => (
               <Route path="/app/rep/proposta-tpd" element={<ProtectedRoute><AppShell><PropostaTpd /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/calculadora-n180" element={<ProtectedRoute><AppShell><CalculadoraN180 /></AppShell></ProtectedRoute>} />
               <Route path="/app/rep/calculadora-k180" element={<ProtectedRoute><AppShell><CalculadoraK180 /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/calculadora-n180b" element={<ProtectedRoute><AppShell><CalculadoraN180B /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/calculadora-n32" element={<ProtectedRoute><AppShell><CalculadoraN32 /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/calculadora-n32b" element={<ProtectedRoute><AppShell><CalculadoraN32B /></AppShell></ProtectedRoute>} />
+              <Route path="/app/rep/calculadora-nitroplus" element={<ProtectedRoute><AppShell><CalculadoraNitroPlus /></AppShell></ProtectedRoute>} />
 
               {/* Programa Nutrir — extras Fase 1 */}
               <Route path="/app/nutrir/orcamento-nutricao" element={<ProtectedRoute><AppShell><OrcamentoConsultoriaNutricao /></AppShell></ProtectedRoute>} />
