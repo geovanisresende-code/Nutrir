@@ -410,8 +410,8 @@ function CalcN180B() {
 
       <Separador titulo={`Custo total (${fmt2(area)} ha)`} />
       <div className="grid grid-cols-3 gap-3">
-        <Resultado label="Custo convencional (N+B)" valor={fmtBRL(custoUreia)} cor="red" />
-        <Resultado label="Custo N180+B" valor={fmtBRL(custoN180B)} cor="green" />
+        <Resultado label="Custo convencional (N+B)" valor={fmtBRL(custoUreiaHa * area)} cor="red" />
+        <Resultado label="Custo N180+B" valor={fmtBRL(custoN180BHa * area)} cor="green" />
         <Resultado label="Economia" valor={fmtBRL(economia)} cor={economia >= 0 ? "green" : "red"} destaque />
       </div>
     </div>
