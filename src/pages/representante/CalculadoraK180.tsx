@@ -49,7 +49,7 @@ export default function CalculadoraK180() {
   const navigate = useNavigate();
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
   const { data: mps, loading: mpsLoading } = useOrgTable<MP>("nutrir_materias_primas", { orderBy: "nome" });
-  const { data: complexadores, loading: cmpLoading } = useOrgTable<Complexador>("nutrir_complexadores", { orderBy: "nome" });
+  const { data: complexadores, loading: cmpLoading } = useGlobalTable<Complexador>("nutrir_complexadores", "nome");
   const { params, loading: cfgLoading } = useMotorConfig();
   const [precoInit, setPrecoInit] = useState(false);
 
