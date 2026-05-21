@@ -145,10 +145,11 @@ export default function CalculadoraN180() {
   const custoTotal = n180c.custoTotal + k180c.custoTotal;
 
   // ── Bateladas ────────────────────────────────────────────────
-  const batN180Cheias  = Math.floor(n180c.volTotal / volBatelada);
-  const batN180Parcial = Math.round(n180c.volTotal % volBatelada);
-  const batK180Cheias  = Math.floor(k180c.volTotal / volBatelada);
-  const batK180Parcial = Math.round(k180c.volTotal % volBatelada);
+  const vBat = volBatelada > 0 ? volBatelada : 6000;
+  const batN180Cheias  = Math.floor(n180c.volTotal / vBat);
+  const batN180Parcial = Math.round(n180c.volTotal % vBat);
+  const batK180Cheias  = Math.floor(k180c.volTotal / vBat);
+  const batK180Parcial = Math.round(k180c.volTotal % vBat);
 
   // ── Gerar Pedido ─────────────────────────────────────────────
   const irParaPedido = () => {
@@ -299,23 +300,27 @@ export default function CalculadoraN180() {
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-xs font-bold text-green-700 mb-2">N180 — {num(n180c.volTotal, 0)} L totais</p>
               <p className="text-sm font-semibold">
-                {batN180Cheias} batelada{batN180Cheias !== 1 ? "s" : ""} de {num(volBatelada, 0)} L
+                {batN180Cheias} batelada{batN180Cheias !== 1 ? "s" : ""} de {num(vBat, 0)} L
                 {batN180Parcial > 0 && <span className="text-muted-foreground font-normal"> + 1 parcial de {num(batN180Parcial, 0)} L</span>}
               </p>
               <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                <p>Por batelada: {num(n180c.ureiaKgHa / n180.doseHa * volBatelada, 1)} kg ureia + {num(n180c.lifeGrowLHa / n180.doseHa * volBatelada, 1)} L Life Grow</p>
-                <p>Completar com água até {num(volBatelada, 0)} L</p>
+                {n180.doseHa > 0
+                  ? <p>Por batelada: {num(n180c.ureiaKgHa / n180.doseHa * vBat, 1)} kg ureia + {num(n180c.lifeGrowLHa / n180.doseHa * vBat, 1)} L Life Grow</p>
+                  : <p>Informe a dose L/ha para ver a receita por batelada</p>}
+                <p>Completar com água até {num(vBat, 0)} L</p>
               </div>
             </div>
             <div className="p-4 bg-sky-50 border border-sky-200 rounded-lg">
               <p className="text-xs font-bold text-sky-700 mb-2">K180 — {num(k180c.volTotal, 0)} L totais</p>
               <p className="text-sm font-semibold">
-                {batK180Cheias} batelada{batK180Cheias !== 1 ? "s" : ""} de {num(volBatelada, 0)} L
+                {batK180Cheias} batelada{batK180Cheias !== 1 ? "s" : ""} de {num(vBat, 0)} L
                 {batK180Parcial > 0 && <span className="text-muted-foreground font-normal"> + 1 parcial de {num(batK180Parcial, 0)} L</span>}
               </p>
               <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                <p>Por batelada: {num(k180c.kclKgHa / k180.doseHa * volBatelada, 1)} kg KCl + {num(k180c.tshLHa / k180.doseHa * volBatelada, 1)} L TSH</p>
-                <p>Completar com água até {num(volBatelada, 0)} L</p>
+                {k180.doseHa > 0
+                  ? <p>Por batelada: {num(k180c.kclKgHa / k180.doseHa * vBat, 1)} kg KCl + {num(k180c.tshLHa / k180.doseHa * vBat, 1)} L TSH</p>
+                  : <p>Informe a dose L/ha para ver a receita por batelada</p>}
+                <p>Completar com água até {num(vBat, 0)} L</p>
               </div>
             </div>
           </div>
