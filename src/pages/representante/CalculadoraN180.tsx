@@ -63,25 +63,21 @@ function calcSAUsado(adubo: AduboKey, dose: number): number {
   return dose;
 }
 
-// Distribuição do volume de cobertura em aplicações (L/ha por estágio)
-const COB_LIMITS = [
-  { stage: "V2",  max: 120 },
-  { stage: "V4",  max: 100 },
-  { stage: "V6",  max: 80  },
-  { stage: "V8",  max: 60  },
-  { stage: "R1",  max: 40  },
+// Estágios de cobertura e limites de referência (L/ha)
+const COB_STAGES = [
+  { stage: "V2", max: 120, min: 50  },
+  { stage: "V4", max: 100, min: 50  },
+  { stage: "V6", max: 80,  min: 30  },
+  { stage: "V8", max: 60,  min: 0   },
+  { stage: "R1", max: 40,  min: 0   },
 ];
 
-function distribuirCobertura(totalHa: number): { stage: string; vol: number }[] {
-  const apps: { stage: string; vol: number }[] = [];
-  let remaining = totalHa;
-  for (const lim of COB_LIMITS) {
-    if (remaining < 0.5) break;
-    const vol = Math.min(remaining, lim.max);
-    apps.push({ stage: lim.stage, vol });
-    remaining -= vol;
-  }
-  return apps;
+// Divide cobertura igualmente pelo número de aplicações escolhido
+function distribuirCobertura(totalHa: number, nCoberturas: number): { stage: string; vol: number; max: number; min: number }[] {
+  const n = Math.max(1, Math.min(nCoberturas, COB_STAGES.length));
+  const volPorApp = totalHa / n;
+  return COB_STAGES.slice(0, n).map(s => ({ stage: s.stage, vol: volPorApp, max: s.max, min: s.min }));
+}
 }
 
 function isLiquidoForma(forma: FormaAplicacao) {
@@ -127,7 +123,8 @@ export default function CalculadoraN180() {
   const [doseHa, setDoseHa] = useState(200);           // kg/ha do adubo selecionado
   const [formaAplicacao, setFormaAplicacao] = useState<FormaAplicacao>("pulverizador");
   const [possuiMicron, setPossuiMicron] = useState(false);
-  const [vazaoMicron, setVazaoMicron] = useState(50);  // L/ha antes do ajuste -10
+  const [vazaoMicron, setVazaoMicron] = useState(50);   // L/ha antes do ajuste -10
+  const [nCoberturas, setNCoberturas] = useState(2);    // número de aplicações de cobertura
   const [complexanteSulco, setComplexanteSulco] = useState<"tsh" | "lifegrow">("tsh");
   const [complexanteV2, setComplexanteV2] = useState<Complexante>("tsh");
   const [complexanteGeral, setComplexanteGeral] = useState<Complexante>("tsh");
@@ -173,7 +170,7 @@ export default function CalculadoraN180() {
 
     const sulcoVolHa      = possuiMicron ? Math.max(0, Math.min(vazaoMicron - 10, volCaldaHa)) : 0;
     const coberturaVolHa  = volCaldaHa - sulcoVolHa;
-    const coberturaApps   = possuiMicron ? distribuirCobertura(coberturaVolHa) : [];
+    const coberturaApps   = possuiMicron ? distribuirCobertura(coberturaVolHa, nCoberturas) : [];
 
     const cxPorL = (cx: Complexante) => CX_L_1000[cx] / 1000; // L cx por L de N180
 
@@ -220,7 +217,7 @@ export default function CalculadoraN180() {
       totalCx, custoPorHa,
       volTotalL, ureiaTotal, saTotal, cxTotal, custoTotal,
     };
-  }, [adubo, doseHa, possuiMicron, vazaoMicron, complexanteSulco, complexanteV2, complexanteGeral, meta.areaHa, precos]);
+  }, [adubo, doseHa, possuiMicron, vazaoMicron, nCoberturas, complexanteSulco, complexanteV2, complexanteGeral, meta.areaHa, precos]);
 
   const vBat          = Math.max(volBatelada, 100);
   const batCheias     = Math.floor(calc.volTotalL / vBat);
@@ -349,35 +346,61 @@ export default function CalculadoraN180() {
           </div>
 
           {possuiMicron && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-              <Lbl t="Vazão Micron (L/ha)">
-                <Input type="number" step="5" value={vazaoMicron || ""} onFocus={e => e.target.select()}
-                  onChange={e => setVazaoMicron(parseFloat(e.target.value) || 0)} />
-              </Lbl>
-              <Lbl t="Dose no Sulco (L/ha)">
-                <div className="h-10 flex items-center px-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <span className="font-bold text-blue-700 text-sm">{num(calc.sulcoVolHa, 0)} L/ha</span>
-                </div>
-              </Lbl>
-              <Lbl t="Complexante — Sulco">
-                <Select value={complexanteSulco} onValueChange={v => setComplexanteSulco(v as "tsh" | "lifegrow")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tsh">TSH</SelectItem>
-                    <SelectItem value="lifegrow">Life Grow</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Lbl>
-              <Lbl t="Complexante — V2 (1ª cobertura)">
-                <Select value={complexanteV2} onValueChange={v => setComplexanteV2(v as Complexante)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tsh">TSH</SelectItem>
-                    <SelectItem value="lifegrow">Life Grow</SelectItem>
-                    {allowLeg && <SelectItem value="leg">LEG</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </Lbl>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Lbl t="Vazão Micron (L/ha)">
+                  <Input type="number" step="5" value={vazaoMicron || ""} onFocus={e => e.target.select()}
+                    onChange={e => setVazaoMicron(parseFloat(e.target.value) || 0)} />
+                </Lbl>
+                <Lbl t="Dose no Sulco (L/ha)">
+                  <div className="h-10 flex items-center px-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <span className="font-bold text-blue-700 text-sm">{num(calc.sulcoVolHa, 0)} L/ha</span>
+                  </div>
+                </Lbl>
+                <Lbl t="N° de Coberturas">
+                  <Select value={String(nCoberturas)} onValueChange={v => setNCoberturas(parseInt(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 cobertura (V2)</SelectItem>
+                      <SelectItem value="2">2 coberturas (V2, V4)</SelectItem>
+                      <SelectItem value="3">3 coberturas (V2, V4, V6)</SelectItem>
+                      <SelectItem value="4">4 coberturas (V2, V4, V6, V8)</SelectItem>
+                      <SelectItem value="5">5 coberturas (V2, V4, V6, V8, R1)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Lbl>
+                <Lbl t="Vol. cobertura/ha">
+                  <div className="h-10 flex items-center px-3 bg-green-50 border border-green-200 rounded-md">
+                    <span className="font-bold text-green-700 text-sm">{num(calc.coberturaVolHa / nCoberturas, 0)} L/aplic.</span>
+                  </div>
+                </Lbl>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Lbl t="Complexante — Sulco">
+                  <Select value={complexanteSulco} onValueChange={v => setComplexanteSulco(v as "tsh" | "lifegrow")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tsh">TSH</SelectItem>
+                      <SelectItem value="lifegrow">Life Grow</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Lbl>
+                <Lbl t="Complexante — V2 (1ª cobertura)">
+                  <Select value={complexanteV2} onValueChange={v => setComplexanteV2(v as Complexante)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tsh">TSH</SelectItem>
+                      <SelectItem value="lifegrow">Life Grow</SelectItem>
+                      {allowLeg && <SelectItem value="leg">LEG</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                </Lbl>
+              </div>
+              {/* Referência de limites por estágio */}
+              <div className="text-[10px] text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed">
+                <span className="font-semibold">Limites de referência: </span>
+                V2 50–120 L/ha · V4 50–100 L/ha · V6 30–80 L/ha · V8 máx 60 L/ha · R1 máx 40 L/ha
+              </div>
             </div>
           )}
 
@@ -481,11 +504,18 @@ export default function CalculadoraN180() {
               {/* Coberturas */}
               {calc.coberturaApps.map((app, i) => {
                 const cx: Complexante = i === 0 ? complexanteV2 : "leg";
+                const fora = app.vol > app.max || (app.min > 0 && app.vol < app.min);
                 return (
-                  <div key={app.stage} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                  <div key={app.stage} className={`flex items-center justify-between py-2.5 border-b last:border-0 ${fora ? "bg-amber-50 -mx-2 px-2 rounded" : ""}`}>
                     <div>
-                      <p className="text-sm font-medium">{app.stage}</p>
-                      <p className="text-xs text-muted-foreground">{CX_LABEL[cx]} · {num(app.vol, 0)} L/ha</p>
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        {app.stage}
+                        {fora && <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1 py-0.5 rounded">fora do limite</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {CX_LABEL[cx]} · {num(app.vol, 0)} L/ha
+                        <span className="ml-1 opacity-60">(lim: {app.min > 0 ? `${app.min}–` : "máx "}{app.max} L/ha)</span>
+                      </p>
                     </div>
                     <div className="text-right text-xs">
                       <p className="font-semibold">{num(app.vol * meta.areaHa, 0)} L total</p>
