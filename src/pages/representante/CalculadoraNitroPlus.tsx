@@ -294,16 +294,213 @@ export default function CalculadoraNitroPlus() {
   };
 
   const irParaRecomendacao = () => {
-    sessionStorage.setItem("nutrir.proposta_tpd_draft", JSON.stringify({
-      origem: "calc_nitroplus", produtor: meta.produtor, fazenda: meta.fazenda,
-      area: meta.areaHa, cultura: meta.cultura,
-      n180LHa: calc.volTotalHa, n180CustoHa: calc.custoPorHa,
-      ureiaKgHa: calc.ureiaKgHa, ureiaPrecoTon: precos.ureia,
-      tshLHa: 0, tshPrecoL: precos.tsh,
-      lifeGrowLHa: cxSulco === "lifegrow" ? (calc.sulcoVolHa * 0.075) : 0,
-      lifeGrowPrecoL: precos.lifeGrow,
-    }));
-    navigate("/app/rep/proposta-tpd");
+    const area = meta.areaHa || 1;
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const emSacos = (kg: number, saco = 50) => `${Math.ceil(kg / saco)} saco${Math.ceil(kg / saco) !== 1 ? "s" : ""} &times; ${saco}&nbsp;kg`;
+    const emTambores = (l: number, tam = 200) => `${Math.ceil(l / tam)} tambor${Math.ceil(l / tam) !== 1 ? "es" : ""} &times; ${tam}&nbsp;L`;
+
+    // Custo convencional: dose completa do adubo base
+    const nPct = ADUBOS[adubo].nPct;
+    const precoPorKg = precos.ureia / 1000;
+    const custoConvHa = doseHa * precoPorKg;
+    const diffRha  = custoConvHa - calc.custoPorHa;
+    const diffPct  = custoConvHa > 0 ? (diffRha / custoConvHa) * 100 : 0;
+
+    // Salts with qty > 0
+    const saltsAtivos = MICRO_SALTS.filter(s => (calc.saisKgHa[s.elem] || 0) > 0);
+
+    // Compras: sacos para sólidos, tambores para líquidos
+    const compras: {nome: string; necessario: string; comprar: string; unit: string; total: string}[] = [];
+    compras.push({
+      nome: "Ureia Branca",
+      necessario: `${n2(calc.ureiaTotal, 1)} kg`,
+      comprar: emSacos(calc.ureiaTotal, 50),
+      unit: `${moedaP(precoPorKg)}/kg`,
+      total: moedaP(calc.ureiaTotal * precoPorKg),
+    });
+    if (calc.legTotal > 0) compras.push({
+      nome: "LEG (complexante)",
+      necessario: `${n2(calc.legTotal, 1)} L`,
+      comprar: emTambores(calc.legTotal, 200),
+      unit: `${moedaP(precos.leg)}/L`,
+      total: moedaP(calc.legTotal * precos.leg),
+    });
+    if (calc.abTotal > 0) compras.push({
+      nome: "&Aacute;cido B&oacute;rico",
+      necessario: `${n2(calc.abTotal, 2)} kg`,
+      comprar: emSacos(calc.abTotal, 25),
+      unit: `${moedaP(precos.acidoBorico)}/kg`,
+      total: moedaP(calc.abTotal * precos.acidoBorico),
+    });
+    if (calc.borTotal > 0) compras.push({
+      nome: "Complex Bor",
+      necessario: `${n2(calc.borTotal, 1)} L`,
+      comprar: emTambores(calc.borTotal, 200),
+      unit: `${moedaP(precos.complexBor)}/L`,
+      total: moedaP(calc.borTotal * precos.complexBor),
+    });
+    saltsAtivos.filter(s => s.cat === "micro").forEach(s => {
+      const totalKg = (calc.saisKgHa[s.elem] || 0) * area;
+      compras.push({
+        nome: s.sal,
+        necessario: `${n2(totalKg, 3)} kg`,
+        comprar: emSacos(totalKg, 25),
+        unit: "—",
+        total: "—",
+      });
+    });
+    const estimullTotal = estimullLHa * area;
+    const aminoTotal    = aminoLHa    * area;
+    if (estimullTotal > 0) compras.push({
+      nome: "Estimull",
+      necessario: `${n2(estimullTotal, 2)} L`,
+      comprar: emTambores(estimullTotal, 20),
+      unit: `${moedaP(precos.estimull)}/L`,
+      total: moedaP(estimullTotal * precos.estimull),
+    });
+    if (aminoTotal > 0) compras.push({
+      nome: "Amino+",
+      necessario: `${n2(aminoTotal, 2)} L`,
+      comprar: emTambores(aminoTotal, 20),
+      unit: `${moedaP(precos.aminoplus)}/L`,
+      total: moedaP(aminoTotal * precos.aminoplus),
+    });
+    if (possuiIon && calc.ionLHa > 0) {
+      const ionTotal = calc.ionLHa * area;
+      compras.push({
+        nome: "&iacute;ON Complex",
+        necessario: `${n2(ionTotal, 2)} L`,
+        comprar: emTambores(ionTotal, 20),
+        unit: `${moedaP(precos.ion)}/L`,
+        total: moedaP(ionTotal * precos.ion),
+      });
+    }
+
+    // Receita por 1000 L — ordem de incorporação
+    const f = calc.formula1000;
+    const receitaSteps: {prod: string; qty: string; inst: string}[] = [];
+    receitaSteps.push({ prod: "Iniciar com &Aacute;gua", qty: "~300 L", inst: "Encher incorporador/tanque com &aacute;gua limpa" });
+    if (possuiIon && f.ion > 0.01) receitaSteps.push({ prod: "&iacute;ON Complex", qty: `${n2(f.ion, 2)} L`, inst: "Adicionar e agitar 3 min" });
+    if (f.bor > 0) receitaSteps.push({ prod: "Complex Bor", qty: `${n2(f.bor, 1)} L`, inst: "Adicionar e agitar 3 min" });
+    if (f.ab > 0) receitaSteps.push({ prod: "&Aacute;cido B&oacute;rico", qty: `${n2(f.ab, 1)} kg`, inst: "Dissolver com agita&ccedil;&atilde;o por 10 min" });
+    f.salts.filter(s => s.qty1000 > 0.001 && s.cat !== "boro").forEach(s => {
+      receitaSteps.push({ prod: s.sal, qty: `${n2(s.qty1000, s.elem === "Se" || s.elem === "Co" ? 2 : 1)} kg`, inst: "Adicionar no incorporador e agitar 5 min" });
+    });
+    receitaSteps.push({ prod: "Ureia Branca", qty: `${n2(f.ureia, 0)} kg`, inst: "Adicionar aos poucos com agita&ccedil;&atilde;o constante" });
+    receitaSteps.push({ prod: "LEG (complexante)", qty: `${n2(f.leg, 1)} L`, inst: "Adicionar e agitar 5 min" });
+    if (f.estimull > 0.01) receitaSteps.push({ prod: "Estimull", qty: `${n2(f.estimull * 1000, 0)} mL`, inst: "Adicionar e homogeneizar" });
+    if (f.amino > 0.01)    receitaSteps.push({ prod: "Amino+",   qty: `${n2(f.amino, 2)} L`,             inst: "Adicionar e homogeneizar" });
+    receitaSteps.push({ prod: "Completar com &Aacute;gua", qty: "at&eacute; 1.000 L", inst: "Misturar por 1 hora antes de aplicar" });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recomendação NitroPlus</title>
+<style>
+@page{size:A4;margin:16mm 14mm}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1a1a1a;background:#fff}
+.hdr{background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;padding:18px 22px;border-radius:8px;margin-bottom:14px}
+.hdr h1{font-size:20px;font-weight:700}.hdr .sub{font-size:11px;opacity:.88;margin-top:4px}
+.hdr .badge{display:inline-block;background:rgba(255,255,255,.25);border-radius:99px;padding:3px 10px;font-size:10px;font-weight:600;margin-top:8px}
+.sec{margin-bottom:14px}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4c1d95;border-bottom:2px solid #a78bfa;padding-bottom:4px;margin-bottom:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #d1d5db;border-radius:6px;overflow:hidden}
+.g3c{padding:10px 12px;text-align:center}.g3c+.g3c{border-left:1px solid #d1d5db}
+.g3l{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.g3v{font-size:16px;font-weight:700}.g3s{font-size:9px;color:#6b7280;margin-top:2px}
+.red{color:#ef4444}.vio{color:#7c3aed}.green{color:#16a34a}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f3ff;font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#4c1d95;padding:6px 8px;border-bottom:1px solid #c4b5fd;text-align:left}
+td{padding:7px 8px;border-bottom:1px solid #f3f4f6;font-size:10.5px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:7px}
+.snum{width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sprod{font-weight:600}.sqty{color:#7c3aed;font-weight:700;font-size:12px}.sinst{font-size:10px;color:#6b7280;margin-top:1px}
+.footer{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between;color:#9ca3af;font-size:9px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body>
+
+<div class="hdr">
+  <h1>NitroPlus &mdash; N180 + Micronutrientes</h1>
+  <div class="sub">${[meta.produtor && `Produtor: ${meta.produtor}`, meta.fazenda && `Fazenda: ${meta.fazenda}`, `Cultura: ${meta.cultura}`, `&Aacute;rea: ${n2(area, 0)} ha`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</div>
+  <div class="badge">${ADUBOS[adubo].label} ${n2(doseHa, 0)} kg/ha &nbsp;&middot;&nbsp; ${n2(calc.pontosN, 1)} kg N/ha &nbsp;&middot;&nbsp; Complexa&ccedil;&atilde;o: ${complexLevel} &nbsp;&middot;&nbsp; ${n2(calc.volTotalHa, 0)} L/ha</div>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Comparativo de Custos</div>
+  <div class="grid3">
+    <div class="g3c">
+      <div class="g3l">Convencional (${ADUBOS[adubo].label})</div>
+      <div class="g3v red">${moedaP(custoConvHa)}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">${n2(doseHa, 0)} kg &times; R$&nbsp;${n2(precoPorKg, 2)}/kg</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(custoConvHa * area)}</div>
+    </div>
+    <div class="g3c" style="background:#f5f3ff">
+      <div class="g3l">NitroPlus NUTRIR</div>
+      <div class="g3v vio">${moedaP(calc.custoPorHa)}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">${n2(calc.ureiaKgHa, 1)} kg Ureia + complexantes</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(calc.custoTotal)}</div>
+    </div>
+    <div class="g3c">
+      <div class="g3l">Diferen&ccedil;a</div>
+      <div class="g3v ${diffRha > 0 ? "green" : "red"}">${diffRha > 0 ? "&#9660; " : "&#9650; "}${moedaP(Math.abs(diffRha))}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">${n2(Math.abs(diffPct), 1)}% ${diffRha > 0 ? "economia" : "adicional"}</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(Math.abs(diffRha * area))}</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Volume Total de Aplica&ccedil;&atilde;o</div>
+  <table><thead><tr><th>Volume/ha</th><th>Total na &Aacute;rea</th><th>N&deg; Bateladas (${n2(volBatelada, 0)} L)</th><th>N&deg; Coberturas</th></tr></thead>
+  <tbody><tr>
+    <td>${n2(calc.volTotalHa, 0)} L/ha</td>
+    <td>${n2(calc.volTotalL, 0)} L</td>
+    <td>${batCheias} bat.${batParcial > 0 ? ` + 1 parcial de ${n2(batParcial, 0)} L` : ""}</td>
+    <td>${nCoberturas} cobertura${nCoberturas !== 1 ? "s" : ""}${possuiMicron ? " + sulco" : ""}</td>
+  </tr></tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Aplica&ccedil;&otilde;es por Est&aacute;gio Fenol&oacute;gico</div>
+  <table><thead><tr><th>#</th><th>Est&aacute;gio</th><th>Tipo</th><th>Volume/ha</th><th>Volume Total</th></tr></thead>
+  <tbody>
+    ${possuiMicron ? `<tr><td>—</td><td>Sulco de Plantio</td><td>N180 puro (${cxSulco === "lifegrow" ? "Life Grow" : "TSH"})</td><td>${n2(calc.sulcoVolHa, 0)} L/ha</td><td>${n2(calc.sulcoVolHa * area, 0)} L</td></tr>` : ""}
+    ${calc.coberturaApps.map((app, i) => `<tr><td>${i + 1}</td><td>${app.stage} &mdash; NitroPlus</td><td>N180 + Micros (cobertura)</td><td>${n2(app.vol, 0)} L/ha</td><td>${n2(app.vol * area, 0)} L</td></tr>`).join("")}
+  </tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Lista de Compras</div>
+  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>Comprar</th><th>R$/un</th><th>Total</th></tr></thead>
+  <tbody>
+    ${compras.map(c => `<tr><td><strong>${c.nome}</strong></td><td>${c.necessario}</td><td>${c.comprar}</td><td>${c.unit}</td><td>${c.total}</td></tr>`).join("")}
+    <tr style="background:#f5f3ff;font-weight:700">
+      <td colspan="4" style="text-align:right;padding-right:12px">Total Geral</td>
+      <td>${moedaP(calc.custoTotal)}</td>
+    </tr>
+  </tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Receita de Preparo da Calda (por 1.000 L)</div>
+  <div style="padding:4px 0">
+    ${receitaSteps.map((s, i) => `
+    <div class="step">
+      <div class="snum">${i + 1}</div>
+      <div><div class="sprod">${s.prod}</div><div class="sqty">${s.qty}</div><div class="sinst">${s.inst}</div></div>
+    </div>`).join("")}
+  </div>
+</div>
+
+<div class="footer">
+  <span>NUTRIR &mdash; Programa de Aduba&ccedil;&atilde;o NitroPlus &middot; Gerado em ${hoje}</span>
+  <span>NitroPlus Fertagro &middot; ${meta.cultura} &middot; ${n2(area, 0)} ha &middot; Complexa&ccedil;&atilde;o ${complexLevel}</span>
+</div>
+<script>window.print();</script>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   const listaCulturas  = culturas.length > 0 ? culturas.map(c => c.nome) : CULTURAS_FALLBACK;

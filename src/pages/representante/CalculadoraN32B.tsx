@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useGlobalTable } from "@/lib/nutrir/useNutrirData";
-import { Leaf, ShoppingCart } from "lucide-react";
+import { Leaf, ShoppingCart, FileText } from "lucide-react";
 
 // ─── N32+B — Foliar Nitrogenado + Boro ────────────────────────────────────
 // Formula N:  n32 × 32% = kg.N → +15% eficiência → /45% = kg Ureia
@@ -116,6 +116,158 @@ export default function CalculadoraN32B() {
 
   const listaCulturas = culturas.length > 0 ? culturas.map(c => c.nome) : CULTURAS_FALLBACK;
 
+  const irParaRecomendacao = () => {
+    const area = meta.areaHa || 1;
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    const n2 = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const moedaP = (v: number) => "R$&nbsp;" + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const emSacos = (kg: number, saco = 50) => `${Math.ceil(kg / saco)} saco${Math.ceil(kg / saco) !== 1 ? "s" : ""} &times; ${saco}&nbsp;kg`;
+    const emTambores = (l: number, tam = 200) => `${Math.ceil(l / tam)} tambor${Math.ceil(l / tam) !== 1 ? "es" : ""} &times; ${tam}&nbsp;L`;
+
+    const diffRha   = calc.custoConvHa - calc.custoTpdHa;
+    const diffTotal = diffRha * area;
+    const diffPct   = calc.custoConvHa > 0 ? (diffRha / calc.custoConvHa) * 100 : 0;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recomendação N32+B TPD</title>
+<style>
+@page{size:A4;margin:16mm 14mm}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1a1a1a;background:#fff}
+.hdr{background:linear-gradient(135deg,#059669,#065f46);color:#fff;padding:18px 22px;border-radius:8px;margin-bottom:14px}
+.hdr h1{font-size:20px;font-weight:700}.hdr .sub{font-size:11px;opacity:.88;margin-top:4px}
+.hdr .badge{display:inline-block;background:rgba(255,255,255,.25);border-radius:99px;padding:3px 10px;font-size:10px;font-weight:600;margin-top:8px}
+.sec{margin-bottom:14px}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#065f46;border-bottom:2px solid #34d399;padding-bottom:4px;margin-bottom:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #d1d5db;border-radius:6px;overflow:hidden}
+.g3c{padding:10px 12px;text-align:center}.g3c+.g3c{border-left:1px solid #d1d5db}
+.g3l{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.g3v{font-size:16px;font-weight:700}.g3s{font-size:9px;color:#6b7280;margin-top:2px}
+.red{color:#ef4444}.em{color:#059669}.green{color:#16a34a}
+table{width:100%;border-collapse:collapse}
+th{background:#ecfdf5;font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#065f46;padding:6px 8px;border-bottom:1px solid #6ee7b7;text-align:left}
+td{padding:7px 8px;border-bottom:1px solid #f3f4f6;font-size:10.5px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:7px}
+.snum{width:22px;height:22px;border-radius:50%;background:#059669;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sprod{font-weight:600}.sqty{color:#059669;font-weight:700;font-size:12px}.sinst{font-size:10px;color:#6b7280;margin-top:1px}
+.footer{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between;color:#9ca3af;font-size:9px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body>
+
+<div class="hdr">
+  <h1>N32+B TPD &mdash; Foliar Nitrogenado + Boro</h1>
+  <div class="sub">${[meta.produtor && `Produtor: ${meta.produtor}`, meta.fazenda && `Fazenda: ${meta.fazenda}`, `Cultura: ${meta.cultura}`, `&Aacute;rea: ${n2(area, 0)} ha`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</div>
+  <div class="badge">N32+B TPD &nbsp;&middot;&nbsp; ${formaAplicacao} &nbsp;&middot;&nbsp; ${n2(boroGrHa, 0)} g B/ha &nbsp;&middot;&nbsp; ${n2(calc.volTotalHa, 0)} L/ha</div>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Comparativo de Custos</div>
+  <div class="grid3">
+    <div class="g3c">
+      <div class="g3l">Convencional (N32 + B)</div>
+      <div class="g3v red">${moedaP(calc.custoConvHa)}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">N32 ${n2(n32Lha, 1)} L + &Aacute;c. B&oacute;rico</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(calc.custoConvHa * area)}</div>
+    </div>
+    <div class="g3c" style="background:#ecfdf5">
+      <div class="g3l">N32+B TPD NUTRIR</div>
+      <div class="g3v em">${moedaP(calc.custoTpdHa)}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">${n2(calc.volTotalHa, 0)} L/ha (N + B)</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(calc.custoTpdHa * area)}</div>
+    </div>
+    <div class="g3c">
+      <div class="g3l">Diferen&ccedil;a</div>
+      <div class="g3v ${diffRha > 0 ? "green" : "red"}">${diffRha > 0 ? "&#9660; " : "&#9650; "}${moedaP(Math.abs(diffRha))}<span style="font-size:10px;font-weight:400">/ha</span></div>
+      <div class="g3s">${n2(Math.abs(diffPct), 1)}% ${diffRha > 0 ? "economia" : "adicional"}</div>
+      <div class="g3s" style="margin-top:4px">Total: ${moedaP(Math.abs(diffTotal))}</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Volume Total de Aplica&ccedil;&atilde;o</div>
+  <table><thead><tr><th>Vol. Nitrog&ecirc;nio/ha</th><th>Vol. Boro/ha</th><th>Total/ha</th><th>Total na &Aacute;rea</th><th>N&deg; Bateladas</th></tr></thead>
+  <tbody><tr>
+    <td>${n2(calc.volUreia, 0)} L (ureia)</td>
+    <td>${n2(calc.volBorico, 0)} L (&aacute;c. b&oacute;rico)</td>
+    <td>${n2(calc.volTotalHa, 0)} L/ha</td>
+    <td>${n2(calc.volTotal, 0)} L</td>
+    <td>${batCheias} bat.${batParcial > 0 ? ` + 1 parcial` : ""} (${n2(volBatelada, 0)} L)</td>
+  </tr></tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Aplica&ccedil;&otilde;es por Est&aacute;gio Fenol&oacute;gico</div>
+  <table><thead><tr><th>#</th><th>Est&aacute;gio / Fase</th><th>Tipo de Aplica&ccedil;&atilde;o</th><th>Volume</th></tr></thead>
+  <tbody><tr>
+    <td>1</td>
+    <td>Foliar &mdash; ${meta.cultura}</td>
+    <td>N32+B TPD (Ureia + Boro + LEG) &mdash; ${formaAplicacao}</td>
+    <td>${n2(calc.volTotalHa, 0)} L/ha &nbsp;&middot;&nbsp; Total: ${n2(calc.volTotal, 0)} L</td>
+  </tr></tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Lista de Compras</div>
+  <table><thead><tr><th>Produto</th><th>Necess&aacute;rio</th><th>Comprar</th><th>R$/un</th><th>Total</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Ureia Branca</strong></td>
+      <td>${n2(calc.ureiaTotal, 1)} kg</td>
+      <td>${emSacos(calc.ureiaTotal, 50)}</td>
+      <td>${moedaP(precoUreia / 1000)}/kg</td>
+      <td>${moedaP(calc.ureiaTotal * precoUreia / 1000)}</td>
+    </tr>
+    <tr>
+      <td><strong>LEG (complexante)</strong></td>
+      <td>${n2(calc.legTotal, 1)} L</td>
+      <td>${emTambores(calc.legTotal, 200)}</td>
+      <td>${moedaP(precoLeg)}/L</td>
+      <td>${moedaP(calc.legTotal * precoLeg)}</td>
+    </tr>
+    <tr>
+      <td><strong>&Aacute;cido B&oacute;rico</strong></td>
+      <td>${n2(calc.abTotal, 2)} kg</td>
+      <td>${emSacos(calc.abTotal, 25)}</td>
+      <td>${moedaP(precoAB)}/kg</td>
+      <td>${moedaP(calc.abTotal * precoAB)}</td>
+    </tr>
+    <tr>
+      <td><strong>Complex Bor</strong></td>
+      <td>${n2(calc.borTotal, 1)} L</td>
+      <td>${emTambores(calc.borTotal, 200)}</td>
+      <td>${moedaP(precoBor)}/L</td>
+      <td>${moedaP(calc.borTotal * precoBor)}</td>
+    </tr>
+    <tr style="background:#ecfdf5;font-weight:700">
+      <td colspan="4" style="text-align:right;padding-right:12px">Total Geral</td>
+      <td>${moedaP(calc.custoTotal)}</td>
+    </tr>
+  </tbody></table>
+</div>
+
+<div class="sec">
+  <div class="sec-title">Receita de Preparo da Calda (por 1.000 L)</div>
+  <div style="padding:4px 0">
+    <div class="step"><div class="snum">1</div><div><div class="sprod">Iniciar com &Aacute;gua</div><div class="sqty">~300 L</div><div class="sinst">Encher o incorporador/tanque com &aacute;gua limpa</div></div></div>
+    <div class="step"><div class="snum">2</div><div><div class="sprod">Complex Bor</div><div class="sqty">${calc.bor1000} L</div><div class="sinst">Adicionar e agitar 3 minutos</div></div></div>
+    <div class="step"><div class="snum">3</div><div><div class="sprod">&Aacute;cido B&oacute;rico</div><div class="sqty">${calc.ab1000} kg</div><div class="sinst">Adicionar aos poucos e agitar 10 minutos at&eacute; dissolver</div></div></div>
+    <div class="step"><div class="snum">4</div><div><div class="sprod">LEG (complexante)</div><div class="sqty">${calc.leg1000} L</div><div class="sinst">Adicionar e agitar 5 minutos</div></div></div>
+    <div class="step"><div class="snum">5</div><div><div class="sprod">Ureia Branca</div><div class="sqty">${calc.urei1000} kg</div><div class="sinst">Adicionar aos poucos com agita&ccedil;&atilde;o constante</div></div></div>
+    <div class="step"><div class="snum">6</div><div><div class="sprod">Completar com &Aacute;gua</div><div class="sqty">at&eacute; 1.000 L</div><div class="sinst">Misturar por 30 minutos antes de aplicar</div></div></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>NUTRIR &mdash; Programa de Aduba&ccedil;&atilde;o Foliar &middot; Gerado em ${hoje}</span>
+  <span>N32+B TPD Fertagro &middot; ${meta.cultura} &middot; ${n2(area, 0)} ha</span>
+</div>
+<script>window.print();</script>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
   const irParaPedido = () => {
     sessionStorage.setItem("nutrir.pedido_draft", JSON.stringify({
       origem: "calc_n32b",
@@ -138,7 +290,12 @@ export default function CalculadoraN32B() {
       <PageHeader
         title={<span className="flex items-center gap-2"><Leaf className="w-5 h-5 text-emerald-600" />N32+B — Foliar N + Boro</span> as any}
         description="Substituição foliar de N32 + complemento de Boro · pulverizador, drone ou avião"
-        actions={<Button onClick={irParaPedido} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><ShoppingCart className="w-4 h-4" />Gerar Pedido</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button onClick={irParaRecomendacao} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><FileText className="w-4 h-4" />Recomendação</Button>
+            <Button onClick={irParaPedido} variant="outline" className="gap-1.5"><ShoppingCart className="w-4 h-4" />Pedido</Button>
+          </div>
+        }
       />
 
       <div className="px-4 space-y-4">
@@ -287,7 +444,10 @@ export default function CalculadoraN32B() {
             <div><p className="text-xs text-muted-foreground">Custo TPD/ha</p><p className="font-bold text-emerald-700">{moeda(calc.custoTpdHa)}</p></div>
             <div><p className="text-xs text-muted-foreground">Total {num(meta.areaHa, 0)} ha</p><p className="font-bold text-primary">{moeda(calc.custoTotal)}</p></div>
           </div>
-          <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={irParaPedido}>
+          <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={irParaRecomendacao}>
+            <FileText className="h-4 w-4" />Gerar Recomendação PDF
+          </Button>
+          <Button variant="outline" className="w-full gap-2 mt-2" onClick={irParaPedido}>
             <ShoppingCart className="h-4 w-4" />Gerar Pedido Fertagro
           </Button>
         </CardContent></Card>

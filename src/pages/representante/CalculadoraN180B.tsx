@@ -215,15 +215,95 @@ export default function CalculadoraN180B() {
   const borPor1000 = calc.volCaldaHa > 0 ? (boro.complexBorLHa   / calc.volCaldaHa) * 1000 : 0;
 
   const irParaRecomendacao = () => {
-    sessionStorage.setItem("nutrir.proposta_tpd_draft", JSON.stringify({
-      origem: "calc_n180b", produtor: meta.produtor, fazenda: meta.fazenda,
-      area: meta.areaHa, cultura: meta.cultura,
-      n180LHa: calc.volCaldaHa, n180CustoHa: calc.custoPorHa,
-      ureiaKgHa: calc.ureiaKgHa, ureiaPrecoTon: precos.ureia,
-      lifeGrowLHa: calc.cxTotal.lifegrow ?? 0, lifeGrowPrecoL: precos.lifeGrow,
-      tshLHa: (calc.cxTotal.tsh ?? 0) + (calc.cxTotal.leg ?? 0), tshPrecoL: precos.tsh,
-    }));
-    navigate("/app/rep/proposta-tpd");
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    const area = meta.areaHa || 0;
+    const emSacos = (kg: number, s = 50) => { const n = Math.ceil(kg/s); return `${(n*s).toLocaleString("pt-BR")} kg (${n} saco${n!==1?"s":""} × ${s} kg)`; };
+    const emTam   = (l:  number, t = 200) => { const n = Math.ceil(l/t);  return `${(n*t).toLocaleString("pt-BR")} L (${n} tambor${n!==1?"es":""} × ${t} L)`; };
+    const m = (v: number) => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+    const n = (v: number, d=1) => v.toLocaleString("pt-BR",{maximumFractionDigits:d,minimumFractionDigits:d});
+
+    const precoKg   = precos.ureia / 1000;
+    const convHa    = doseHa * precoKg;
+    const difHa     = calc.custoPorHa - convHa;
+    const difPct    = convHa > 0 ? (difHa/convHa)*100 : 0;
+
+    // Aplicações
+    const apps: {idx:number;etapa:string;tipo:string;desc:string}[] = [];
+    let idx = 1;
+    if (possuiMicron && calc.sulcoVolHa > 0)
+      apps.push({idx:idx++,etapa:"Sulco de Plantio",tipo:"Solo/Micron",desc:`${n(calc.sulcoVolHa,0)} L/ha — N180+B com ${CX_LABEL[complexanteSulco]}`});
+    calc.coberturaApps.forEach((app,i) => {
+      const cx:Complexante = (i===0||isLiquidoForma(formaAplicacao))?complexanteV2:"leg";
+      apps.push({idx:idx++,etapa:app.stage,tipo:FORMAS[formaAplicacao],desc:`${n(app.vol,0)} L/ha — N180+B com ${CX_LABEL[cx]}`});
+    });
+
+    // Lista de compras
+    type CI = {produto:string;necessario:string;comprar:string;prUn:string;total:string};
+    const compras:CI[] = [];
+    const add = (prod:string,necessario:string,comprar:string,prUn:string,val:number) =>
+      compras.push({produto:prod,necessario,comprar,prUn,total:m(val)});
+    add("Ureia",`${n(calc.ureiaTotal,0)} kg`,emSacos(calc.ureiaTotal),`R$ ${n(precoKg,2)}/kg`,calc.ureiaTotal*precoKg);
+    if(calc.saTotal>0) add("Sulfato de Amônio",`${n(calc.saTotal,0)} kg`,emSacos(calc.saTotal,50),`R$ 1,20/kg`,calc.saTotal*1.2);
+    add("Ácido Bórico",`${n(calc.abTotal,1)} kg`,emSacos(calc.abTotal,25),`R$ ${n(precos.acidoBorico,2)}/kg`,calc.abTotal*precos.acidoBorico);
+    add("Complex Bor",`${n(calc.borTotal,1)} L`,emTam(calc.borTotal),`R$ ${n(precos.complexBor,2)}/L`,calc.borTotal*precos.complexBor);
+    (["tsh","lifegrow","leg"] as Complexante[]).forEach(k=>{
+      const v=calc.cxTotal[k]; if(!v||v<0.01) return;
+      const pr=k==="tsh"?precos.tsh:k==="lifegrow"?precos.lifeGrow:precos.leg;
+      add(CX_LABEL[k],`${n(v,0)} L`,emTam(v),`R$ ${n(pr,2)}/L`,v*pr);
+    });
+    const totalCompras = compras.reduce((s,c)=>{const v=parseFloat(c.total.replace(/[R$\s.]/g,"").replace(",","."));return s+(isNaN(v)?0:v);},0);
+
+    // Receita por 1.000L (usando 1ª cobertura como referência)
+    const cxRec = complexanteV2;
+    const cxL   = CX_L_1000[cxRec];
+
+    const css=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:28px 32px;max-width:960px;margin:0 auto}.btn{background:#0891b2;color:#fff;padding:9px 22px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold;margin-bottom:20px}.hdr{border-bottom:3px solid #0891b2;padding-bottom:12px;margin-bottom:6px}.hdr-top{display:flex;justify-content:space-between;align-items:flex-start}.hdr h1{color:#0891b2;font-size:18px;font-weight:bold;margin-bottom:2px}.hdr .sub{color:#555;font-size:11px}.badge{background:#0891b2;color:#fff;padding:3px 13px;border-radius:20px;font-size:11px;font-weight:bold}h2{color:#0e7490;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;border-bottom:1px solid #a5f3fc;padding-bottom:3px}table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}th,td{padding:6px 8px;text-align:left;border:1px solid #e5e7eb}thead th{background:#0891b2;color:#fff;font-weight:bold}.comp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#e5e7eb;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px}.comp-cell{background:#fff;padding:10px 12px;text-align:center}.comp-cell.header{background:#ecfeff;font-size:10px;font-weight:bold;color:#0e7490;text-transform:uppercase}.comp-cell .val{font-size:15px;font-weight:bold;margin:3px 0}.comp-cell .lbl{font-size:10px;color:#666}.comp-cell.nutrir .val{color:#0891b2}.comp-cell.dif .val{color:${difHa>0?"#dc2626":"#15803d"}}.rec-title{font-size:11px;font-weight:bold;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 5px;padding:5px 8px;background:#f1f5f9;border-radius:4px}.total-box{background:#ecfeff;border:2px solid #a5f3fc;border-radius:8px;padding:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center}.total-box .big{font-size:20px;font-weight:bold;color:#0891b2}.total-box .sm{font-size:12px;color:#0e7490}.footer{margin-top:20px;border-top:1px solid #e5e7eb;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#888}tbody tr:nth-child(even) td{background:#f8fffe}.b{font-weight:bold}.g{color:#0891b2;font-weight:bold}.num{text-align:right}@media print{.btn{display:none}body{padding:16px}@page{margin:15mm}}`;
+
+    const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recomendação N180+B</title><style>${css}</style></head><body>
+<button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+<div class="hdr"><div class="hdr-top"><div><h1>Recomendação N180+B — Nitrogênio + Boro</h1><div class="sub">${[meta.produtor,meta.fazenda,meta.cultura,`${n(area,0)} ha`,hoje].filter(Boolean).join(" · ")}</div></div><span class="badge">N180+B</span></div></div>
+<h2>Comparativo de Custos: Convencional × NUTRIR N180+B</h2>
+<div class="comp">
+  <div class="comp-cell header">Convencional</div><div class="comp-cell header nutrir">NUTRIR N180+B</div><div class="comp-cell header dif">Diferença</div>
+  <div class="comp-cell"><div class="lbl">R$/ha</div><div class="val">${m(convHa)}</div></div>
+  <div class="comp-cell nutrir"><div class="lbl">R$/ha</div><div class="val">${m(calc.custoPorHa)}</div></div>
+  <div class="comp-cell dif"><div class="lbl">R$/ha</div><div class="val">${difHa>=0?"+":""}${m(difHa)}</div></div>
+  <div class="comp-cell"><div class="lbl">Total na área</div><div class="val">${m(convHa*area)}</div></div>
+  <div class="comp-cell nutrir"><div class="lbl">Total na área</div><div class="val">${m(calc.custoTotal)}</div></div>
+  <div class="comp-cell dif"><div class="lbl">${difHa>=0?"Investimento":"Economia"}</div><div class="val">${m(Math.abs(difHa*area))}</div></div>
+  <div class="comp-cell"></div><div class="comp-cell nutrir"></div>
+  <div class="comp-cell dif"><div class="lbl">%</div><div class="val">${difPct>=0?"+":""}${n(difPct,1)}%</div></div>
+</div>
+<h2>Volume Total de Aplicação</h2>
+<table><thead><tr><th>Volume N180+B/ha</th><th>Volume total</th><th>Nº bateladas</th><th>Nº aplicações</th><th>Boro/ha</th></tr></thead>
+<tbody><tr><td class="b">${n(calc.volCaldaHa,0)} L/ha</td><td class="b">${n(calc.volTotalL,0)} L</td><td>${batCheias}${batParcialVol>0?" + 1 parcial":""}</td><td>${apps.length}</td><td>${n(boro.acidoBoricoKgHa,2)} kg AB + ${n(boro.complexBorLHa,1)} L Bor</td></tr></tbody></table>
+<h2>Aplicações por Estágio Fenológico</h2>
+<table><thead><tr><th>#</th><th>Estágio</th><th>Tipo Aplicação</th><th>Descrição</th></tr></thead>
+<tbody>${apps.map(a=>`<tr><td class="b">${a.idx}</td><td class="b">${a.etapa}</td><td>${a.tipo}</td><td>${a.desc}</td></tr>`).join("")}</tbody></table>
+<h2>Lista de Compras (Matérias-primas)</h2>
+<table><thead><tr><th>Produto</th><th>Necessário</th><th>Comprar</th><th>R$/un</th><th class="num">Total</th></tr></thead>
+<tbody>${compras.map(c=>`<tr><td class="b">${c.produto}</td><td>${c.necessario}</td><td>${c.comprar}</td><td>${c.prUn}</td><td class="num g">${c.total}</td></tr>`).join("")}
+<tr style="background:#ecfeff"><td colspan="4" style="font-weight:bold;text-align:right">TOTAL</td><td class="num g" style="font-weight:bold;font-size:13px">${m(totalCompras)}</td></tr></tbody></table>
+<h2>Receita de Preparo da Calda (por 1.000 L)</h2>
+<div class="rec-title">${possuiMicron?"Coberturas — ":""}1ª Cobertura — ${CX_LABEL[cxRec]} + Boro</div>
+<table><thead><tr><th style="width:40px">#</th><th>Ingrediente</th><th>Quantidade</th><th>Instrução</th></tr></thead>
+<tbody>
+<tr><td class="b">1</td><td>Água</td><td class="b">400 L</td><td>Adicionar água limpa ao tanque misturador</td></tr>
+<tr><td class="b">2</td><td>Complex Bor</td><td class="b">${n(borPor1000,1)} L</td><td>Adicionar o complexador de Boro</td></tr>
+<tr><td class="b">3</td><td>Ácido Bórico</td><td class="b">${n(abPor1000,1)} kg</td><td>Adicionar e agitar por 5 minutos</td></tr>
+<tr><td class="b">4</td><td>${CX_LABEL[cxRec]}</td><td class="b">${cxL} L</td><td>Adicionar o complexador de Nitrogênio</td></tr>
+<tr><td class="b">5</td><td>Ureia</td><td class="b">400 kg</td><td>Adicionar ureia e agitar por 10 minutos</td></tr>
+<tr><td class="b">6</td><td>Completar com água</td><td class="b">até 1.000 L</td><td>Após dissolução completa</td></tr>
+<tr style="background:#ecfeff"><td colspan="2" class="b">Volume da batelada</td><td class="b">${n(vBat,0)} L</td><td>Produção para ${n(area,0)} ha</td></tr>
+<tr style="background:#ecfeff"><td colspan="2" class="b">Aplicação</td><td class="b">${n(calc.volCaldaHa/nCoberturas,0)} L/ha</td><td>${FORMAS[formaAplicacao]}</td></tr>
+</tbody></table>
+<div class="total-box">
+  <div><div class="big">${m(calc.custoTotal)}</div><div class="sm">Custo total N180+B · ${n(area,0)} ha</div></div>
+  <div style="text-align:right"><div class="big">${m(calc.custoPorHa)}</div><div class="sm">por hectare</div></div>
+</div>
+<div class="footer"><span>NUTRIR — Programa de Adubação N180+B</span><span>Gerado em ${hoje}</span></div>
+</body></html>`;
+    const w=window.open("","_blank"); if(w){w.document.write(html);w.document.close();}
   };
 
   const irParaPedidoFertagro = () => {
