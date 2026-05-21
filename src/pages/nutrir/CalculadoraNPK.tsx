@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useOrgTable, useGlobalTable } from "@/lib/nutrir/useNutrirData";
 import { useSaisNPK } from "@/lib/nutrir/useCatalogoQuimico";
+import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
 import { useOrg } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +39,7 @@ export default function CalculadoraNPK() {
   const { data: mp } = useOrgTable<MateriaPrima>("nutrir_materias_primas", { orderBy: "nome" });
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
   const { sais: saisCatalogo, loading: loadingCatalogo } = useSaisNPK(mp);
+  const { params: motorParams, loading: motorLoading } = useMotorConfig();
 
   const [meta, setMeta] = useState({ produtor: "", fazenda: "", cultura: "Soja", areaHa: 100 });
   const [modoEntrada, setModoEntrada] = useState<ModoEntradaNPK>("nutrientes");
@@ -47,8 +49,19 @@ export default function CalculadoraNPK() {
   const [modoAplicacao, setModoAplicacao] = useState<ModoAplicacao>("drench");
   const [entradasLavoura, setEntradasLavoura] = useState(2);
   const [vazao, setVazao] = useState(500);
-  const [precos, setPrecos] = useState({ tsh: 28, lifeGrow: 19, leg: 22 });
+  const [precos, setPrecos] = useState({ tsh: 18, lifeGrow: 22, leg: 22 });
   const [resultado, setResultado] = useState<NPKResult | null>(null);
+
+  // Sincroniza preços com o Motor de Cálculos ao carregar
+  useEffect(() => {
+    if (motorLoading) return;
+    const cfg = paramMap(motorParams);
+    setPrecos({
+      tsh:      cfg.preco_tsh_l      ?? 18,
+      lifeGrow: cfg.preco_lifegrow_l ?? 22,
+      leg:      cfg.preco_leg_l      ?? 22,
+    });
+  }, [motorLoading]); // eslint-disable-line react-hooks/exhaustive-deps
   const [salvando, setSalvando] = useState(false);
 
   // Filtra sais que carregam cada nutriente (usa garantias reais do banco)

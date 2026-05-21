@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useOrgTable, useGlobalTable } from "@/lib/nutrir/useNutrirData";
 import { useFatoresComplexacao, useSaisCatalog } from "@/lib/nutrir/useCatalogoQuimico";
+import { useMotorConfig, paramMap } from "@/lib/nutrir/useMotorConfig";
 import { toast } from "@/hooks/use-toast";
 import {
   calcularFoliar, TEMPLATE_NUTRIENTES_BASE, type FoliarInput,
@@ -39,6 +40,7 @@ export default function CalculadoraFoliar() {
   const { data: mp } = useOrgTable<MateriaPrima>("nutrir_materias_primas", { orderBy: "nome" });
   const { data: culturas } = useGlobalTable<Cultura>("nutrir_culturas", "nome");
   const [salvandoHistorico, setSalvandoHistorico] = useState(false);
+  const { params: motorParams, loading: motorLoading } = useMotorConfig();
 
   const irParaPedido = () => {
     if (!resultado) return;
@@ -73,9 +75,25 @@ export default function CalculadoraFoliar() {
     condicionadorSoloMlHa: 0,
   });
   const [precos, setPrecos] = useState({
-    legPorL: 22, tshPorL: 28, ionPorL: 25, borPorL: 18,
-    estimullPorL: 32, aminoPorL: 38, carboAlgaPorL: 24, lifeGrowPorL: 19,
+    legPorL: 22, tshPorL: 28, ionPorL: 75, borPorL: 32,
+    estimullPorL: 90, aminoPorL: 32, carboAlgaPorL: 50, lifeGrowPorL: 22,
   });
+
+  // Sincroniza preços com o Motor de Cálculos ao carregar
+  useEffect(() => {
+    if (motorLoading) return;
+    const cfg = paramMap(motorParams);
+    setPrecos({
+      legPorL:       cfg.preco_leg_l        ?? 22,
+      tshPorL:       cfg.preco_tsh_l        ?? 28,
+      ionPorL:       cfg.preco_ion_l        ?? 75,
+      borPorL:       cfg.preco_bor_l        ?? 32,
+      estimullPorL:  cfg.preco_estimull_l   ?? 90,
+      aminoPorL:     cfg.preco_amino_l      ?? 32,
+      carboAlgaPorL: cfg.preco_carbo_alga_l ?? 50,
+      lifeGrowPorL:  cfg.preco_lifegrow_l   ?? 22,
+    });
+  }, [motorLoading]); // eslint-disable-line react-hooks/exhaustive-deps
   const [nutrientes, setNutrientes] = useState<NutrienteEntrada[]>(TEMPLATE_NUTRIENTES_BASE);
   const [resultado, setResultado] = useState<FoliarResultado | null>(null);
   const [calculando, setCalculando] = useState(false);

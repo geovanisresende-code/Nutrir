@@ -67,6 +67,10 @@ export const MOTOR_DEFAULTS: MotorParam[] = [
   { chave: "preco_map_kg",             categoria: "precos",     label: "MAP purificado (R$/kg)",               valor: 4.50,  unidade: "R$/kg",descricao: "Preço padrão MAP" },
   { chave: "preco_acido_borico_kg",    categoria: "precos",     label: "Ácido Bórico (R$/kg)",                 valor: 18.0,  unidade: "R$/kg",descricao: "Preço padrão ácido bórico" },
   { chave: "preco_bor_l",              categoria: "precos",     label: "Bor complexado (R$/L)",                valor: 32.0,  unidade: "R$/L", descricao: "Preço padrão Bor líquido" },
+  { chave: "preco_ion_l",              categoria: "precos",     label: "ÍON complexado (R$/L)",                valor: 75.0,  unidade: "R$/L", descricao: "Preço padrão complexador ÍON (foliar)" },
+  { chave: "preco_estimull_l",         categoria: "precos",     label: "ESTIMULL (R$/L)",                      valor: 90.0,  unidade: "R$/L", descricao: "Preço padrão bioestimulante ESTIMULL" },
+  { chave: "preco_amino_l",            categoria: "precos",     label: "AMINO+ (R$/L)",                        valor: 32.0,  unidade: "R$/L", descricao: "Preço padrão aminoácidos AMINO+" },
+  { chave: "preco_carbo_alga_l",       categoria: "precos",     label: "Carbo Alga (R$/L)",                    valor: 50.0,  unidade: "R$/L", descricao: "Preço padrão extrato de algas Carbo Alga" },
 ];
 
 /** Converte array de params em mapa chave → valor */
