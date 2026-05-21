@@ -223,24 +223,91 @@ export default function CalculadoraN180() {
   const batCheias     = Math.floor(calc.volTotalL / vBat);
   const batParcialVol = Math.round(calc.volTotalL % vBat);
 
-  // Gerar Recomendação — abre PropostaTpd pré-preenchido com dados do N180
+  // ENTER → próximo input
+  const onEnter = (nextId: string) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { e.preventDefault(); document.getElementById(nextId)?.focus(); }
+  };
+
+  // Gerar Recomendação — abre janela print-to-PDF
   const irParaRecomendacao = () => {
-    sessionStorage.setItem("nutrir.proposta_tpd_draft", JSON.stringify({
-      origem:         "calc_n180",
-      produtor:       meta.produtor,
-      fazenda:        meta.fazenda,
-      area:           meta.areaHa,
-      cultura:        meta.cultura,
-      n180LHa:        calc.volCaldaHa,
-      n180CustoHa:    calc.custoPorHa,
-      ureiaKgHa:      calc.ureiaKgHa,
-      ureiaPrecoTon:  precos.ureia,
-      lifeGrowLHa:    calc.cxTotal.lifegrow ?? 0,
-      lifeGrowPrecoL: precos.lifeGrow,
-      tshLHa:         (calc.cxTotal.tsh ?? 0) + (calc.cxTotal.leg ?? 0),
-      tshPrecoL:      precos.tsh,
-    }));
-    navigate("/app/rep/proposta-tpd");
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    const distribRows = [
+      ...(possuiMicron && calc.sulcoVolHa > 0 ? [{
+        etapa: "Sulco de Plantio", cx: CX_LABEL[complexanteSulco],
+        volHa: calc.sulcoVolHa, totL: calc.sulcoVolHa * meta.areaHa, ureiaHa: calc.sulcoVolHa * 0.4,
+      }] : []),
+      ...calc.coberturaApps.map((app, i) => {
+        const cx: Complexante = (i === 0 || isLiquidoForma(formaAplicacao)) ? complexanteV2 : "leg";
+        return { etapa: app.stage, cx: CX_LABEL[cx], volHa: app.vol, totL: app.vol * meta.areaHa, ureiaHa: app.vol * 0.4 };
+      }),
+    ];
+    const row = (a: string, b: string, c: string, d: string) =>
+      `<tr><th>${a}</th><td>${b}</td><th>${c}</th><td>${d}</td></tr>`;
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Recomendação N180 — ${meta.produtor || meta.fazenda || meta.cultura}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:32px;max-width:900px;margin:0 auto}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #15803d;padding-bottom:14px;margin-bottom:20px}
+.hdr h1{color:#15803d;font-size:20px;margin-bottom:3px}.hdr p{color:#666;font-size:11px}
+.badge{background:#15803d;color:#fff;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap}
+h2{color:#166534;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 7px;border-bottom:1px solid #bbf7d0;padding-bottom:3px}
+table{width:100%;border-collapse:collapse;margin-bottom:10px}
+th,td{padding:6px 9px;text-align:left;border:1px solid #e5e7eb;font-size:12px}
+th{background:#f0fdf4;font-weight:bold;color:#166534;width:22%}
+.b{font-weight:bold}.g{color:#15803d;font-weight:bold}
+.recipe{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:8px}
+.recipe h3{font-size:11px;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.total{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:8px;padding:16px;margin-top:12px;text-align:center}
+.total .v{font-size:24px;color:#15803d;font-weight:bold}.total .s{color:#166534;font-size:13px;margin-top:2px}
+.btn{background:#15803d;color:#fff;padding:10px 24px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:bold;margin-bottom:22px}
+@media print{.btn{display:none}body{padding:16px}}
+</style></head><body>
+<button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+<div class="hdr">
+  <div><h1>Recomendação N180 — Nitrogênio Líquido</h1><p>Programa Nutrir TPD · ${hoje}</p></div>
+  <span class="badge">N180</span>
+</div>
+<h2>Identificação</h2>
+<table>
+  ${row("Produtor", meta.produtor || "—", "Fazenda", meta.fazenda || "—")}
+  ${row("Cultura", meta.cultura, "Área", `<span class="b">${num(meta.areaHa, 0)} ha</span>`)}
+</table>
+<h2>Configuração N180</h2>
+<table>
+  ${row("Adubo substituído", ADUBOS[adubo].label, "Dose original", `${num(doseHa, 0)} kg/ha`)}
+  ${row("Pontos de N", `${num(calc.pontosN, 1)} kg N/ha`, "Forma de aplicação", FORMAS[formaAplicacao])}
+  ${row("Ureia N180/ha", `<span class="b">${num(calc.ureiaKgHa, 1)} kg</span>`, "Volume N180/ha", `<span class="b">${num(calc.volCaldaHa, 0)} L</span>`)}
+  ${calc.saKgHa > 0 ? row("SA à lanço", `${num(calc.saKgHa, 0)} kg/ha`, "", "") : ""}
+</table>
+<h2>Distribuição de Aplicações</h2>
+<table>
+  <tr><th>Etapa</th><th>Complexante</th><th>L/ha</th><th>Volume total</th><th>Ureia/ha</th></tr>
+  ${distribRows.map(r => `<tr><td class="b">${r.etapa}</td><td>${r.cx}</td><td>${num(r.volHa, 0)}</td><td>${num(r.totL, 0)} L</td><td>${num(r.ureiaHa, 1)} kg</td></tr>`).join("")}
+</table>
+<h2>Fórmula por 1.000 L de N180</h2>
+${possuiMicron && calc.sulcoVolHa > 0 ? `<div class="recipe"><h3>Sulco — ${CX_LABEL[complexanteSulco]}</h3><p>400 L água + 400 kg ureia + ${CX_L_1000[complexanteSulco]} L ${CX_LABEL[complexanteSulco]} + água até 1.000 L</p></div>` : ""}
+<div class="recipe"><h3>${possuiMicron ? "V2 — 1ª cobertura" : "1ª cobertura"} — ${CX_LABEL[complexanteV2]}</h3><p>400 L água + 400 kg ureia + ${CX_L_1000[complexanteV2]} L ${CX_LABEL[complexanteV2]} + água até 1.000 L</p></div>
+${calc.coberturaApps.length > 1 && !isLiquidoForma(formaAplicacao) ? `<div class="recipe"><h3>V4 em diante — LEG</h3><p>400 L água + 400 kg ureia + 25 L LEG + água até 1.000 L</p></div>` : ""}
+<h2>Bateladas de Produção</h2>
+<table>
+  ${row("Volume por batelada", `${num(vBat, 0)} L`, "Volume total N180", `${num(calc.volTotalL, 0)} L`)}
+  ${row("Bateladas completas", `<span class="b">${batCheias} × ${num(vBat, 0)} L</span>`, "Batelada parcial", batParcialVol > 0 ? `${num(batParcialVol, 0)} L` : "—")}
+  ${row("Ureia por batelada", `${num(vBat * 0.4, 0)} kg`, `${CX_LABEL[complexanteV2]} por bat.`, `${num(CX_L_1000[complexanteV2] * vBat / 1000, 1)} L`)}
+</table>
+<h2>Resumo de Insumos</h2>
+<table>
+  <tr><th>Ureia total</th><td class="b">${num(calc.ureiaTotal, 0)} kg · ${num(calc.ureiaTotal / 1000, 3)} t</td></tr>
+  ${calc.saTotal > 0 ? `<tr><th>Sulfato de Amônio</th><td>${num(calc.saTotal, 0)} kg</td></tr>` : ""}
+  ${(["tsh", "lifegrow", "leg"] as Complexante[]).map(k => { const v = calc.cxTotal[k]; return v && v > 0.01 ? `<tr><th>${CX_LABEL[k]} total</th><td>${num(v, 0)} L</td></tr>` : ""; }).join("")}
+</table>
+<div class="total">
+  <div class="v">${moeda(calc.custoTotal)}</div>
+  <div class="s">Custo total N180 · ${num(meta.areaHa, 0)} ha · ${moeda(calc.custoPorHa)}/ha</div>
+</div>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   // Gerar Pedido Fertagro — apenas complexantes (TSH, Life Grow, LEG), sem ureia/KCl/SA
@@ -296,10 +363,14 @@ export default function CalculadoraN180() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Lbl t="Produtor">
-              <Input value={meta.produtor} onChange={e => setMeta({ ...meta, produtor: e.target.value })} placeholder="Nome do produtor" />
+              <Input id="n180-produtor" value={meta.produtor} placeholder="Nome do produtor"
+                onChange={e => setMeta({ ...meta, produtor: e.target.value })}
+                onKeyDown={onEnter("n180-fazenda")} />
             </Lbl>
             <Lbl t="Fazenda">
-              <Input value={meta.fazenda} onChange={e => setMeta({ ...meta, fazenda: e.target.value })} placeholder="Nome da fazenda" />
+              <Input id="n180-fazenda" value={meta.fazenda} placeholder="Nome da fazenda"
+                onChange={e => setMeta({ ...meta, fazenda: e.target.value })}
+                onKeyDown={onEnter("n180-area")} />
             </Lbl>
             <Lbl t="Cultura">
               <Select value={meta.cultura} onValueChange={v => setMeta({ ...meta, cultura: v })}>
@@ -308,8 +379,9 @@ export default function CalculadoraN180() {
               </Select>
             </Lbl>
             <Lbl t="Área (ha)">
-              <Input type="number" value={meta.areaHa || ""} onFocus={e => e.target.select()}
-                onChange={e => setMeta({ ...meta, areaHa: parseFloat(e.target.value) || 0 })} />
+              <Input id="n180-area" type="number" value={meta.areaHa || ""} onFocus={e => e.target.select()}
+                onChange={e => setMeta({ ...meta, areaHa: parseFloat(e.target.value) || 0 })}
+                onKeyDown={onEnter("n180-dose")} />
             </Lbl>
           </div>
         </CardContent></Card>
@@ -336,8 +408,9 @@ export default function CalculadoraN180() {
 
             {/* Dose */}
             <Lbl t="Dose (kg/ha)">
-              <Input type="number" step="10" value={doseHa || ""} onFocus={e => e.target.select()}
-                onChange={e => setDoseHa(parseFloat(e.target.value) || 0)} />
+              <Input id="n180-dose" type="number" step="10" value={doseHa || ""} onFocus={e => e.target.select()}
+                onChange={e => setDoseHa(parseFloat(e.target.value) || 0)}
+                onKeyDown={onEnter("n180-preco-ureia")} />
             </Lbl>
 
             {/* Pontos de N — auto */}
@@ -422,12 +495,11 @@ export default function CalculadoraN180() {
             </div>
           )}
 
-          {/* Referência de limites */}
-          <div className="text-[10px] text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed mt-2">
-            <span className="font-semibold">Limites de referência: </span>
-            V2 50–120 L/ha · V4 50–100 L/ha · V6 30–80 L/ha · V8 máx 60 L/ha · R1 máx 40 L/ha
-            {!allowLeg && <span className="ml-2 text-amber-600 font-semibold">· Forma líquida: LEG não permitido</span>}
-          </div>
+          {!allowLeg && (
+            <div className="text-[10px] text-amber-600 font-semibold bg-amber-50 rounded-md px-3 py-2 mt-2">
+              Forma líquida: LEG não permitido
+            </div>
+          )}
         </CardContent></Card>
 
         {/* Resultado por hectare */}
@@ -508,7 +580,6 @@ export default function CalculadoraN180() {
                 </div>
                 <div className="text-right text-xs">
                   <p className="font-semibold">{num(calc.sulcoVolHa * meta.areaHa, 0)} L total</p>
-                  <p className="text-muted-foreground">{num(calc.sulcoVolHa * 0.4, 1)} kg ureia/ha</p>
                 </div>
               </div>
             )}
@@ -526,12 +597,10 @@ export default function CalculadoraN180() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {CX_LABEL[cx]} · {num(app.vol, 0)} L/ha
-                      <span className="ml-1 opacity-60">(lim: {app.min > 0 ? `${app.min}–` : "máx "}{app.max} L/ha)</span>
                     </p>
                   </div>
                   <div className="text-right text-xs">
                     <p className="font-semibold">{num(app.vol * meta.areaHa, 0)} L total</p>
-                    <p className="text-muted-foreground">{num(app.vol * 0.4, 1)} kg ureia/ha</p>
                   </div>
                 </div>
               );
@@ -539,14 +608,19 @@ export default function CalculadoraN180() {
           </div>
         </CardContent></Card>
 
-        {/* Preços de insumos */}
+        {/* Preços de insumos — só ureia editável; complexantes puxam do banco */}
         <Card><CardContent className="pt-4">
-          <p className="text-sm font-semibold text-primary mb-3">Preços de Insumos</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <PrecoInput label="Ureia (R$/t)"     value={precos.ureia}    step="100"  onChange={v => setPrecos({ ...precos, ureia: v })} />
-            <PrecoInput label="TSH (R$/L)"        value={precos.tsh}      step="0.50" onChange={v => setPrecos({ ...precos, tsh: v })} />
-            <PrecoInput label="Life Grow (R$/L)"  value={precos.lifeGrow} step="0.50" onChange={v => setPrecos({ ...precos, lifeGrow: v })} />
-            <PrecoInput label="LEG (R$/L)"        value={precos.leg}      step="0.50" onChange={v => setPrecos({ ...precos, leg: v })} />
+          <p className="text-sm font-semibold text-primary mb-1">Preço do Adubo</p>
+          <p className="text-[11px] text-muted-foreground mb-3">Complexantes carregados automaticamente do banco de dados</p>
+          <div className="max-w-[200px]">
+            <Lbl t="Ureia (R$/t)">
+              <div className="flex items-center">
+                <span className="text-xs text-muted-foreground px-2 border border-r-0 rounded-l-md h-10 flex items-center bg-muted shrink-0">R$</span>
+                <Input id="n180-preco-ureia" type="number" step="10" value={precos.ureia || ""} onFocus={e => e.target.select()}
+                  onChange={e => setPrecos({ ...precos, ureia: parseFloat(e.target.value) || 0 })}
+                  onKeyDown={onEnter("n180-vol-batelada")} className="rounded-l-none" />
+              </div>
+            </Lbl>
           </div>
         </CardContent></Card>
 
@@ -555,7 +629,7 @@ export default function CalculadoraN180() {
           <p className="text-sm font-semibold text-primary mb-3">Bateladas de Produção</p>
           <div className="max-w-xs mb-4">
             <Lbl t="Volume por batelada (L)">
-              <Input type="number" value={volBatelada || ""} onFocus={e => e.target.select()}
+              <Input id="n180-vol-batelada" type="number" value={volBatelada || ""} onFocus={e => e.target.select()}
                 onChange={e => setVolBatelada(parseFloat(e.target.value) || 1000)} />
             </Lbl>
           </div>
